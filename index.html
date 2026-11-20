@@ -205,12 +205,13 @@ select:focus-visible{outline:2px solid var(--yellow); outline-offset:2px}
 .grade b{font:400 44px/1 var(--f-ui); color:var(--yellow)}
 h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.12em}
 
-.sus .delta{color:var(--red); margin-left:6px}
-.sus.bump{animation:bump .5s steps(2) 4}
-@keyframes bump{50%{background:var(--red); color:var(--win)}}
+.sus{display:inline-flex; align-items:center; gap:8px}
+.sus .meter{width:110px; height:12px; border:1px solid currentColor; background:var(--shadow)}
+.sus .fill{display:block; height:100%; background:currentColor}
+.sus .delta{color:var(--red)}
 .watch{border:2px solid var(--red); color:var(--red); padding:8px 12px}
 .watch.clean{border-color:var(--green); color:var(--green)}
-@media (prefers-reduced-motion:reduce){ .lamp.on,.sus.bump{animation:none} }
+@media (prefers-reduced-motion:reduce){ .lamp.on{animation:none} }
 </style>
 
 <header class="bar">
@@ -1399,11 +1400,21 @@ function openEnding(){
 
 // A suspicion increase as text: one decimal, "<0.1" for the tiny ones so they never read as zero.
 const susPct = d => d * 100 < 0.1 ? "<" + fmt(0.1) : fmt(Math.round(d * 1000) / 10);
+// One bar. Right after a run that raised suspicion it is drawn at the old level and riseMeter() animates it up.
 function suspicionChip(){
-  const pct = suspicion(state.save, state.caseIx), on = Math.min(10, Math.round(pct * 10)), d = state.result?.sus;
-  return `<span class="sus ${pct >= 0.75 ? "hot" : ""} ${state.bump ? "bump" : ""}" title="${t("How much I/O the insider has seen: {n}% of what gets noticed", {n:Math.round(pct * 100)})}">` +
-    `${t("SUSPICION")} <span aria-hidden="true">${"▮".repeat(on)}${"▯".repeat(10 - on)}</span>` +
-    (d > 0 ? `<span class="delta">+${susPct(d)}%</span>` : "") + `</span>`;
+  const pct = suspicion(state.save, state.caseIx), d = state.result?.sus, w = p => Math.min(100, p * 100).toFixed(1);
+  return `<span class="sus ${pct >= 0.75 ? "hot" : ""}" title="${t("How much I/O the insider has seen: {n}% of what gets noticed", {n:Math.round(pct * 100)})}">` +
+    `${t("SUSPICION")}<span class="meter" role="meter" aria-label="${t("SUSPICION")}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct * 100)}">` +
+    `<span class="fill" style="width:${w(state.bump ? pct - d : pct)}%" data-to="${w(pct)}"></span></span>` +
+    `<span>${Math.round(pct * 100)}%</span>` + (d > 0 ? `<span class="delta">+${susPct(d)}%</span>` : "") + `</span>`;
+}
+// Rises in 12 pixel-style steps over 1.2 s (JS timers rather than a CSS transition, so it is testable headless).
+function riseMeter(){
+  const f = document.querySelector(".sus .fill");
+  if (!f) return;
+  const from = parseFloat(f.style.width), to = parseFloat(f.dataset.to);
+  if (reduceMotion || from === to){ f.style.width = to + "%"; return; }
+  for (let k = 1; k <= 12; k++) setTimeout(() => { if (f.isConnected) f.style.width = (from + (to - from) * k / 12) + "%"; }, k * 100);
 }
 const caseLabel = (c, i) => c.practice ? t("PRACTICE") : t("CASE {n}", {n:String(i+1).padStart(2,"0")});
 function renderBar(){
@@ -1658,8 +1669,8 @@ async function execute(){
   state.result.sus = suspicion(state.save, state.caseIx) - before;
   storeSave();
   state.result.done = true;
-  state.bump = state.result.sus > 0;   // flash the header meter once, for this run only
-  renderBar(); state.bump = false;
+  state.bump = state.result.sus > 0;   // draw the meter at its old level once, then let it rise
+  renderBar(); state.bump = false; riseMeter();
   renderReport(); renderResults(); renderNotebook();
 }
 
