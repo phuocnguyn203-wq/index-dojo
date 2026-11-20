@@ -287,7 +287,6 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
         <span><span class="lamp" id="lamp"></span>HDD</span>
         <span><span data-t>PAGES READ</span> <span class="pages" id="pages">000000</span></span>
         <div class="prog"><div id="prog"></div></div>
-        <span id="susbox"></span>
       </div>
     </section>
     <section class="win" id="reswin">
@@ -651,10 +650,10 @@ const CASE1 = {
   }],
 };
 
-const CASES = [
-  CASE1,
-  { id:"practice", title:"Practice", practice:true, missions:PRACTICE.slice(6) },
-];
+// The practice set is off for now: the story comes first. To bring it back, add PRACTICE_CASE to CASES.
+// (The tests still play it.)
+const PRACTICE_CASE = { id:"practice", title:"Practice", practice:true, missions:PRACTICE.slice(6) };
+const CASES = [CASE1];
 </script>
 <script>
 // Vietnamese text for Index Dojo. Each key is the English string exactly as the game shows it;
@@ -1614,8 +1613,7 @@ function renderBar(){
   const c = CASES[state.caseIx];
   $("casebar").innerHTML = CASES.map((x,i) =>
     `<button data-case="${i}" ${i===state.caseIx?'aria-current="true"':''} title="${esc(t(x.title))}">${caseLabel(x, i)}</button>`).join("") +
-    (c.intro ? `<button id="brief">${t("BRIEFING")}</button>` + accuseButton(c) : "");
-  $("susbox").innerHTML = c.intro ? suspicionChip() : "";
+    (c.intro ? `<button id="brief">${t("BRIEFING")}</button>` + accuseButton(c) + suspicionChip() : "");
   $("lvbar").innerHTML = c.missions.map((l,i) => {
     const s = starsAt(state.save.stars, state.caseIx, i), open = i === state.lv || unlocked(state.save.stars, state.caseIx, i);
     return `<button data-lv="${i}" ${i===state.lv?'aria-current="true"':''} ${open?"":"disabled"} title="${esc(t(l.name))}">M${String(i+1).padStart(2,"0")} ${"★".repeat(s)}${"☆".repeat(3-s)}</button>`;
