@@ -466,7 +466,7 @@ const CASE1 = {
   intro:[
     "A man is found dead at 06:10 on 20 November, in the level-3 stairwell of the Kanayama Station parking garage. Time of death: between 23:30 and 00:30.",
     "On him: a Kinjo Logistics staff badge, number 1180. No wallet. No phone.",
-    "In his coat, a notebook. The last line reads: “Sato, 23:30. The numbers don't lie.”",
+    "In his coat, a notebook. The last line reads: “Embezzlement. 23:30, Kanayama garage, level 3.”",
   ],
   witness:"Night guard Tetsuya Hara: “A dark sedan left around half past midnight. The plate ended in 12. That's all I got.”",
   suspects:[
@@ -532,15 +532,15 @@ const CASE1 = {
     results:[{columns:["paid_on","payee","amount","requested_by","approved_by"],
       rows:Array.from({length:14}, (_, i) => {
         const d = new Date(Date.UTC(2025, 9 + i, 1));
-        return [d.toISOString().slice(0,10), KAITO[i % 4], "¥4,800,000", "SALES-07", "FIN-01"];
+        return [d.toISOString().slice(0,10), KAITO[i % 4], "¥4,800,000", "K. SATO (SALES-07)", "FIN-01"];
       })}],
-    clue:{id:"E3", title:"¥67.2 million", text:"14 monthly payments of ¥4,800,000 to Kaito Trading, ¥67.2M in total. All requested by SALES-07 and approved by FIN-01."},
+    clue:{id:"E3", title:"¥67.2 million", text:"14 monthly payments of ¥4,800,000 to Kaito Trading, ¥67.2M in total. All requested by K. Sato (SALES-07) and approved by FIN-01."},
     bonus:{title:"A dead company", text:"Company registry: Kaito Trading was dissolved in 2019. Nobody has delivered anything for these payments."},
   },{
     name:"Who Signs",
     table:"employees", rows:50000, perPage:50, maxCols:2,
     cols:{department:40, first_name:2000, last_name:625, employee_id:50000, manager_id:5000, hire_year:35},
-    story:"Two codes sign every payment: SALES-07 and FIN-01. Mori's notebook names a Sato. Q1 finds the Satos in Sales; Q2 lists the eight people in the executive office, where codes like FIN-01 sit. Both queries have to share one index.",
+    story:"Every payment request is signed K. Sato, SALES-07, and approved by FIN-01. Q1 finds the Satos in Sales; Q2 lists the eight people in the executive office, where codes like FIN-01 sit. Both queries have to share one index.",
     queries:[
       {label:"Q1", who:"The Satos in Sales", where:[eq("department","'SALES'"), eq("last_name","'SATO'")]},
       {label:"Q2", who:"The executive office", where:[ON("department","'EXEC'",8/50000)]}],
@@ -828,11 +828,11 @@ const VI = {
   /* ---------- Case 1: The Last Train ---------- */
   "The Last Train": "Chuyến tàu cuối",
   "A man is found dead at 06:10 on 20 November, in the level-3 stairwell of the Kanayama Station parking garage. Time of death: between 23:30 and 00:30.":
-    "06:10 ngày 20 tháng 11, một người đàn ông được phát hiện đã chết ở cầu thang tầng 3 của bãi đỗ xe ga Kanayama. Thời điểm tử vong: từ 23:30 đến 00:30.",
+    "06:10 ngày 20 tháng 11, một người đàn ông được phát hiện đã chết ở cầu thang tầng 3 của tòa nhà đỗ xe nhiều tầng ở ga Kanayama. Thời điểm tử vong: từ 23:30 đến 00:30.",
   "On him: a Kinjo Logistics staff badge, number 1180. No wallet. No phone.":
     "Trên người có thẻ nhân viên Kinjo Logistics, số 1180. Không ví. Không điện thoại.",
-  "In his coat, a notebook. The last line reads: “Sato, 23:30. The numbers don't lie.”":
-    "Trong túi áo khoác có một cuốn sổ. Dòng cuối ghi: “Sato, 23:30. Con số không biết nói dối.”",
+  "In his coat, a notebook. The last line reads: “Embezzlement. 23:30, Kanayama garage, level 3.”":
+    "Trong túi áo khoác có một cuốn sổ. Dòng cuối ghi: “Biển thủ. 23:30, tòa nhà đỗ xe Kanayama, tầng 3.”",
   "Night guard Tetsuya Hara: “A dark sedan left around half past midnight. The plate ended in 12. That's all I got.”":
     "Bảo vệ ca đêm Tetsuya Hara: “Khoảng mười hai giờ rưỡi có một chiếc sedan màu tối chạy ra. Biển số đuôi 12. Tôi chỉ thấy được vậy.”",
   "Sales manager · SALES-07": "Trưởng phòng kinh doanh · SALES-07",
@@ -895,16 +895,16 @@ const VI = {
   "A function hides a column from its index. An index on payee holds the text as typed, but the query compares UPPER(payee). Index the expression and the lookup is an ordinary index scan again.":
     "Một hàm sẽ che cột khỏi index của nó. Index trên payee lưu chữ đúng như lúc nhập, còn truy vấn lại so sánh UPPER(payee). Index chính biểu thức đó thì việc tra cứu lại là một lần quét index bình thường.",
   "¥67.2 million": "67,2 triệu yên",
-  "14 monthly payments of ¥4,800,000 to Kaito Trading, ¥67.2M in total. All requested by SALES-07 and approved by FIN-01.":
-    "14 khoản chi hằng tháng, mỗi khoản 4.800.000 yên, cho Kaito Trading, tổng cộng 67,2 triệu yên. Tất cả do SALES-07 đề nghị và FIN-01 phê duyệt.",
+  "14 monthly payments of ¥4,800,000 to Kaito Trading, ¥67.2M in total. All requested by K. Sato (SALES-07) and approved by FIN-01.":
+    "14 khoản chi hằng tháng, mỗi khoản 4.800.000 yên, cho Kaito Trading, tổng cộng 67,2 triệu yên. Tất cả do K. Sato (SALES-07) đề nghị và FIN-01 phê duyệt.",
   "A dead company": "Một công ty đã chết",
   "Company registry: Kaito Trading was dissolved in 2019. Nobody has delivered anything for these payments.":
     "Sổ đăng ký doanh nghiệp: Kaito Trading đã giải thể từ năm 2019. Chẳng ai giao hàng hay làm gì cho những khoản chi này.",
 
   // M04
   "Who Signs": "Ai ký duyệt",
-  "Two codes sign every payment: SALES-07 and FIN-01. Mori's notebook names a Sato. Q1 finds the Satos in Sales; Q2 lists the eight people in the executive office, where codes like FIN-01 sit. Both queries have to share one index.":
-    "Mọi khoản chi đều mang hai mã: SALES-07 và FIN-01. Sổ của Mori nhắc tới một người họ Sato. Q1 tìm những người họ Sato ở phòng kinh doanh; Q2 liệt kê tám người ở văn phòng điều hành, nơi có những mã như FIN-01. Cả hai truy vấn phải dùng chung một index.",
+  "Every payment request is signed K. Sato, SALES-07, and approved by FIN-01. Q1 finds the Satos in Sales; Q2 lists the eight people in the executive office, where codes like FIN-01 sit. Both queries have to share one index.":
+    "Mọi đề nghị chi đều do K. Sato, SALES-07, ký và FIN-01 phê duyệt. Q1 tìm những người họ Sato ở phòng kinh doanh; Q2 liệt kê tám người ở văn phòng điều hành, nơi có những mã như FIN-01. Cả hai truy vấn phải dùng chung một index.",
   "The Satos in Sales": "Những người họ Sato ở phòng kinh doanh",
   "The executive office": "Văn phòng điều hành",
   "Both queries filter on department.": "Cả hai truy vấn đều lọc theo department.",
@@ -948,8 +948,8 @@ const VI = {
   // M07
   "Ends in 12": "Đuôi 12",
   "Hara remembers a plate ending in 12. The garage entrance camera logged every car that night.":
-    "Hara nhớ biển số có đuôi 12. Camera ở lối vào bãi xe đã ghi lại mọi chiếc xe đêm đó.",
-  "Plates ending in 12 at the garage": "Biển số đuôi 12 ở bãi xe",
+    "Hara nhớ biển số có đuôi 12. Camera ở lối vào tòa nhà đỗ xe đã ghi lại mọi chiếc xe đêm đó.",
+  "Plates ending in 12 at the garage": "Biển số đuôi 12 ở tòa nhà đỗ xe",
   "LIKE '%-12' can't be searched in a sorted list. What else in the WHERE clause can?":
     "LIKE '%-12' không tìm được trong một danh sách đã sắp xếp. Trong WHERE còn điều kiện nào tìm được?",
   "Index (camera, plate): search by camera, check the plate in the leaf pages.":
