@@ -199,6 +199,7 @@ svg{display:block; width:100%; height:auto; max-width:100%}
 .nb p{margin:6px 0 0}
 .msg{border-left:3px solid var(--cyan); padding:4px 10px}
 .msg b{font-family:var(--f-ui); font-weight:400; color:var(--cyan)}
+.debug{background:var(--win); color:var(--red); font-family:var(--f-ui); padding:2px 8px; letter-spacing:.04em}   /* not .sus: the tour points at .sus */
 .nb .role{color:var(--dim); font-size:12px; font-weight:normal}
 .sus{background:var(--win); color:var(--yellow); font-family:var(--f-ui); padding:2px 8px; letter-spacing:.04em}
 .sus.hot{color:var(--red)}
@@ -2069,7 +2070,7 @@ function riseMeter(){
 const caseLabel = (c, i) => c.practice ? t("PRACTICE") : t("CASE {n}", {n:String(i+1).padStart(2,"0")});
 function renderBar(){
   const c = CASES[state.caseIx];
-  $("casebar").innerHTML = (DEBUG ? `<span class="sus hot">DEBUG</span>` : "") + CASES.map((x,i) =>
+  $("casebar").innerHTML = (DEBUG ? `<span class="debug">DEBUG</span>` : "") + CASES.map((x,i) =>
     `<button data-case="${i}" ${i===state.caseIx?'aria-current="true"':''} ${caseOpen(state.save, i) ? "" : "disabled"} title="${esc(caseOpen(state.save, i) ? t(x.title) : t("Solve case {n} first", {n:String(i).padStart(2,"0")}))}">${caseLabel(x, i)}</button>`).join("") +
     (c.intro ? `<button id="brief">${t("BRIEFING")}</button>` + accuseButton(c) + suspicionChip() : "");
   $("lvbar").innerHTML = c.missions.map((l,i) => {
