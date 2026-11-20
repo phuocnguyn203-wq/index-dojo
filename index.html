@@ -1040,7 +1040,7 @@ function unlocked(stars, caseIx, i){
 /* ---------- save and evidence ---------- */
 const SAVE_KEY = "index-dojo-v2";
 const CANCEL_LINE = "ORA-01013: user requested cancel of current operation";
-const emptySave = () => ({stars:{}, clues:{}, io:{}, fails:{}, solved:{}});
+const emptySave = () => ({stars:{}, clues:{}, scans:{}, fails:{}, solved:{}});
 function loadSave(raw){
   try { const s = JSON.parse(raw); if (s && typeof s === "object" && !Array.isArray(s)) return {...emptySave(), ...s}; } catch {}
   return emptySave();
@@ -1056,16 +1056,17 @@ function earn(save, caseIx, i, stars){
 /* ---------- pressure: hints and suspicion ---------- */
 // fails = runs below 2★ on this mission. First miss: general hint; third: the specific one.
 function hintFor(m, fails){ return fails <= 0 ? null : fails < 3 ? m.hint : m.hint2; }
-// Every story EXECUTE adds its pages to the case's I/O; a run below 2★ also counts as a fail.
+// Every story EXECUTE adds its pages as a share of that mission's full scan, so a blind scan of a small
+// table counts as much as one of a huge table. A run below 2★ also counts as a fail.
 function logRun(save, caseIx, i, pages, stars){
   if (CASES[caseIx].practice) return save;
-  save.io[caseIx] = (save.io[caseIx] ?? 0) + pages;
+  save.scans[caseIx] = (save.scans[caseIx] ?? 0) + pages / bestOf(CASES[caseIx].missions[i]).none;
   if (stars < 2){ const f = save.fails[caseIx] ??= []; f[i] = (f[i] ?? 0) + 1; }
   return save;
 }
-// What the insider shrugs off: the cost of one full table scan per mission.
-function budget(c){ return c.missions.reduce((s, m) => s + bestOf(m).none, 0); }
-function suspicion(save, caseIx){ return (save.io[caseIx] ?? 0) / budget(CASES[caseIx]); }
+// Full scans the insider shrugs off per case: three blind scans = 5% suspicion.
+const NOTICED = 60;
+function suspicion(save, caseIx){ return (save.scans[caseIx] ?? 0) / NOTICED; }
 function rating(pct){ return pct < 0.25 ? "S" : pct < 0.5 ? "A" : pct < 0.75 ? "B" : "C"; }
 
 /* ---------- accusation ---------- */
@@ -1077,7 +1078,7 @@ function accuse(c, suspect, slots){
 }
 function fileAccusation(save, caseIx, suspect, slots){
   const c = CASES[caseIx], verdict = accuse(c, suspect, slots);
-  if (verdict === "wrong") save.io[caseIx] = (save.io[caseIx] ?? 0) + 0.25 * budget(c);
+  if (verdict === "wrong") save.scans[caseIx] = (save.scans[caseIx] ?? 0) + 0.25 * NOTICED;
   if (verdict === "right") save.solved[caseIx] = true;
   return verdict;
 }
