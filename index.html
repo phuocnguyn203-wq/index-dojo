@@ -454,10 +454,8 @@ const PRACTICE = [{
 function like(col, sql, sel){ return {col, sql, kind:"filter", sel, why:WILDCARD}; }
 
 /* ---------- Case 1: The Last Train ----------
-   Truth (never shown as such): Daisuke Ono (CFO, FIN-01) approved ¥4.8M a month to Kaito Trading, a dead
-   company; Kenji Sato (SALES-07) filed the requests for a ¥500,000 cut. Mika Sato gave Mori a copy of the
-   ledger at 23:41 and caught the 23:58 train. At 00:07 Mori texted Ono to meet in the garage; they argued,
-   Ono pushed him down the stairs, took his phone and wallet, then went after Mika. */
+   The truth behind the case lives in the story bible (docs/superpowers/specs), never here:
+   this file ships inside the public build. */
 const ON = (col, val, sel) => ({...eq(col, val), sel});
 const KAITO = ["Kaito Trading", "KAITO TRADING", "kaito trading", "Kaito trading"];
 
