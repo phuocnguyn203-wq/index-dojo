@@ -208,7 +208,8 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
 .sus{display:inline-flex; align-items:center; gap:8px}
 .sus .meter{width:110px; height:12px; border:1px solid currentColor; background:var(--shadow)}
 .sus .fill{display:block; height:100%; background:currentColor}
-.sus .delta{color:var(--red)}
+.sus .delta{color:var(--red); transition:opacity .8s}
+.sus .delta.gone{opacity:0}
 .sus.flash{background:var(--red); color:var(--win)} .sus.flash .delta{color:var(--win)} .sus.flash .meter{background:transparent}
 .watch{border:2px solid var(--red); color:var(--red); padding:8px 12px}
 .watch.clean{border-color:var(--green); color:var(--green)}
@@ -1407,7 +1408,7 @@ function suspicionChip(){
   return `<span class="sus ${pct >= 0.75 ? "hot" : ""}" title="${t("How much I/O the insider has seen: {n}% of what gets noticed", {n:Math.round(pct * 100)})}">` +
     `${t("SUSPICION")}<span class="meter" role="meter" aria-label="${t("SUSPICION")}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct * 100)}">` +
     `<span class="fill" style="width:${w(state.bump ? pct - d : pct)}%" data-to="${w(pct)}"></span></span>` +
-    `<span>${Math.round(pct * 100)}%</span>` + (d > 0 ? `<span class="delta">+${susPct(d)}%</span>` : "") + `</span>`;
+    `<span>${Math.round(pct * 100)}%</span>` + (state.bump && d > 0 ? `<span class="delta">+${susPct(d)}%</span>` : "") + `</span>`;
 }
 // Rises in 12 pixel-style steps over 1.2 s (JS timers rather than a CSS transition, so it is testable headless).
 function riseMeter(){
@@ -1415,6 +1416,8 @@ function riseMeter(){
   if (!f) return;
   const from = parseFloat(f.style.width), to = parseFloat(f.dataset.to), chip = f.closest(".sus");
   if (to > from) [0, 200, 400, 600].forEach((ms, k) => setTimeout(() => chip.classList.toggle("flash", k % 2 === 0), ms));   // two red flashes
+  const delta = chip.querySelector(".delta");   // "+4.2%": shows, fades, goes
+  if (delta){ setTimeout(() => delta.classList.add("gone"), 1500); setTimeout(() => delta.remove(), 2400); }
   if (reduceMotion || from === to){ f.style.width = to + "%"; return; }
   for (let k = 1; k <= 12; k++) setTimeout(() => { if (f.isConnected) f.style.width = (from + (to - from) * k / 12) + "%"; }, k * 100);
 }
