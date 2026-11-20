@@ -372,8 +372,11 @@ const PRACTICE = [{
   brief:"From this tier on you can also rewrite the queries. Q1 is the daily sales report; Q2 is a live ticker that shows the last hour. One index with one column has to serve both.",
   queries:[
     {label:"Q1", who:"Daily report: yesterday's sales", variants:[
-      {tag:"As written", where:[eq("TRUNC(sale_time)","DATE '2026-11-19'")]},
-      {tag:"Explicit range", where:[range("sale_time","sale_time >= DATE '2026-11-19' AND sale_time < DATE '2026-11-20'",1/3650)]}]},
+      {where:[eq("TRUNC(sale_time)","DATE '2026-11-19'")]},
+      {where:[{col:"TO_CHAR(sale_time)", sql:"TO_CHAR(sale_time, 'YYYY-MM-DD') = '2026-11-19'", kind:"eq", sel:1/3650}]},
+      {where:[range("sale_time","sale_time >= DATE '2026-11-19' AND sale_time < DATE '2026-11-20'",1/3650)]},
+      {where:[range("sale_time","sale_time BETWEEN DATE '2026-11-19' AND DATE '2026-11-20'",1/3650)],
+       wrong:"BETWEEN includes both ends, so this also returns sales made at exactly midnight on 20 November."}]},
     {label:"Q2", who:"Live ticker: the last hour", where:[range("sale_time","sale_time >= SYSDATE - INTERVAL '1' HOUR",1/(3650*24))]}
   ],
   hint:"An index on TRUNC(sale_time) can't help the ticker. Can Q1 be written so it compares sale_time itself?",
@@ -385,14 +388,18 @@ const PRACTICE = [{
   brief:"One search form, three optional fields. The developers wrote a single 'smart' query that ignores any field left empty. Q1 is a lookup with subsidiary and employee number filled in; Q2 lists a subsidiary's staff. One index, up to two columns. Rewrites allowed.",
   queries:[
     {label:"Q1", who:"Form: subsidiary + employee no.", variants:[
-      {tag:"One smart query", binds:":sub = 12, :emp = 345, :name = NULL",
+      {binds:":sub = 12, :emp = 345, :name = NULL",
        where:[smart("subsidiary_id",":sub",true), smart("employee_id",":emp",true), smart("last_name",":name",false)]},
-      {tag:"Dynamic SQL", binds:":sub = 12, :emp = 345",
-       where:[eq("subsidiary_id",":sub"), eq("employee_id",":emp")]}]},
+      {binds:":emp = 345", where:[eq("employee_id",":emp")],
+       wrong:"Employee numbers repeat in every subsidiary, so this returns employee 345 of all 200 subsidiaries."},
+      {binds:":sub = 12, :emp = 345", where:[eq("subsidiary_id",":sub"), eq("employee_id",":emp")]},
+      {binds:":sub = 12, :emp = 345", where:[eq("subsidiary_id",":sub"), smart("employee_id",":emp",true)]}]},
     {label:"Q2", who:"Form: subsidiary only", variants:[
-      {tag:"One smart query", binds:":sub = 12, :emp = NULL, :name = NULL",
+      {binds:":sub = 12, :emp = NULL, :name = NULL",
        where:[smart("subsidiary_id",":sub",true), smart("employee_id",":emp",false), smart("last_name",":name",false)]},
-      {tag:"Dynamic SQL", binds:":sub = 12", where:[eq("subsidiary_id",":sub")]}]}
+      {binds:":sub = 12, :emp = NULL", where:[eq("subsidiary_id",":sub"), eq("employee_id",":emp")],
+       wrong:"employee_id = NULL is never true, so the staff list comes back empty."},
+      {binds:":sub = 12", where:[eq("subsidiary_id",":sub")]}]}
   ],
   hint:"An index can't be searched by a condition that might be switched off. Which fields are actually filled in for each query?",
   lesson:"A single statement for every combination of filters needs one plan that works even when a field is empty, so no condition can be used to search an index. Build the WHERE clause from the fields actually filled in, still with bind parameters, and each statement gets its own plan. Then one index on (subsidiary_id, employee_id) serves both: the lookup uses both columns, the staff list only the first."
@@ -411,9 +418,12 @@ const PRACTICE = [{
   cols:{topic_id:200, post_id:1000000, author_id:20000},
   brief:"A busy forum topic has 5,000 posts, 20 per page, newest first. Readers who scroll far back make the database work hard. One index, up to two columns. Rewrites allowed.",
   queries:[{label:"Q1", who:"Topic 7, page 101", variants:[
-    {tag:"OFFSET", where:[eq("topic_id","7")], order:{col:"post_id", dir:"DESC"}, offset:2000, fetch:20},
-    {tag:"Seek (keyset)", binds:":last_seen = id of the last post on page 100",
-     where:[eq("topic_id","7"), range("post_id","post_id < :last_seen",0.6)], order:{col:"post_id", dir:"DESC"}, fetch:20}]}],
+    {where:[eq("topic_id","7")], order:{col:"post_id", dir:"DESC"}, offset:2000, fetch:20},
+    {binds:":last_seen = id of the last post on page 100",
+     where:[eq("topic_id","7"), range("post_id","post_id < :last_seen",0.6)], order:{col:"post_id", dir:"DESC"}, fetch:20},
+    {binds:":last_seen = id of the last post on page 100",
+     where:[eq("topic_id","7"), range("post_id","post_id <= :last_seen",0.6)], order:{col:"post_id", dir:"DESC"}, fetch:20,
+     wrong:"<= also matches the last post the reader saw, so page 101 starts with a post from page 100."}]}],
   hint:"OFFSET still reads every row it skips. What if the query started right after the last post the reader saw?",
   lesson:"OFFSET makes the database find, read and throw away every row before the page you want, so page 101 costs a hundred times page 1. The seek method remembers the last post_id the reader saw and asks for the 20 posts before it. With (topic_id, post_id) that is a pipelined top-N query, and every page costs the same 23 pages."
 },{
@@ -502,7 +512,7 @@ const CASE1 = {
   },{
     name:"Open Items",
     table:"tasks", rows:200000, perPage:50, maxCols:1,
-    cols:{task_id:200000, assignee_id:50000, status:4, project_id:500},
+    cols:{task_id:200000, reporter_id:50000, assignee_id:50000, status:4, project_id:500, due_date:1500},
     story:"Mori was an internal auditor. What was he working on when he died? The company task tracker lists every open item, assigned by employee id.",
     queries:[{label:"Q1", who:"Mori's open work", where:[eq("assignee_id","1180"), eq("status","'OPEN'")]}],
     hint:"Compare how many rows one value of each column matches.",
@@ -514,7 +524,7 @@ const CASE1 = {
   },{
     name:"The Numbers",
     table:"payments", rows:1000000, perPage:50, maxCols:1,
-    cols:{payment_id:1000000, payee:71429, "UPPER(payee)":71429, approver:300},
+    cols:{payment_id:1000000, payee:71429, "LOWER(payee)":71429, "UPPER(payee)":71429, approver:300, paid_on:3650},
     story:"AUD-2611 is about payments to Kaito Trading. Clerks typed the payee name any way they liked, so the query compares it in upper case. Find every payment.",
     queries:[{label:"Q1", who:"Every payment to Kaito Trading", where:[eq("UPPER(payee)","'KAITO TRADING'")]}],
     hint:"The query never compares payee directly.",
@@ -530,7 +540,7 @@ const CASE1 = {
   },{
     name:"Who Signs",
     table:"employees", rows:50000, perPage:50, maxCols:2,
-    cols:{department:40, last_name:625, employee_id:50000, hire_year:35},
+    cols:{department:40, first_name:2000, last_name:625, employee_id:50000, manager_id:5000, hire_year:35},
     story:"Two codes sign every payment: SALES-07 and FIN-01. Mori's notebook names a Sato. Q1 finds the Satos in Sales; Q2 lists the eight people in the executive office, where codes like FIN-01 sit. Both queries have to share one index.",
     queries:[
       {label:"Q1", who:"The Satos in Sales", where:[eq("department","'SALES'"), eq("last_name","'SATO'")]},
@@ -555,7 +565,7 @@ const CASE1 = {
   },{
     name:"Last Words",
     table:"messages", rows:2000000, perPage:50, maxCols:3,
-    cols:{sender:500000, recipient:500000, sent_at:86400, body:2000000},
+    cols:{sender:500000, recipient:500000, sent_at:86400, "TRUNC(sent_at)":365, cell_id:8000, body:2000000},
     story:"The phone company only hands over metadata, so the query asks for two columns: who Mori texted that day, and when.",
     queries:[{label:"Q1", who:"Mori's messages on 19 Nov", select:["recipient","sent_at"], where:[eq("sender","'090-5518-2204'")]}],
     hint:"The query reads two columns from the table: recipient and sent_at.",
@@ -568,7 +578,7 @@ const CASE1 = {
   },{
     name:"The Ticket Gates",
     table:"swipes", rows:1000000, perPage:50, maxCols:2,
-    cols:{station:100, swipe_time:86400, card_id:300000, gate:8},
+    cols:{station:100, line:12, swipe_time:86400, card_id:300000, gate:8, fare:200},
     story:"Mika said she went straight home. Kanayama's ticket gates log every card. Check every swipe there between 23:00 and 00:30.",
     queries:[{label:"Q1", who:"Kanayama, 23:00 to 00:30", where:[eq("station","'KANAYAMA'"),
       range("swipe_time","swipe_time BETWEEN '23:00' AND '00:30'",0.0006)]}],
@@ -582,7 +592,7 @@ const CASE1 = {
   },{
     name:"Ends in 12",
     table:"garage_cam", rows:500000, perPage:50, maxCols:2,
-    cols:{camera:1250, plate:100000, cam_time:86400, lane:4},
+    cols:{camera:1250, plate:100000, "UPPER(plate)":100000, cam_time:86400, lane:4, direction:2},
     story:"Hara remembers a plate ending in 12. The garage entrance camera logged every car that night.",
     queries:[{label:"Q1", who:"Plates ending in 12 at the garage", where:[eq("camera","'KANAYAMA-ENT'"),
       like("plate","plate LIKE '%-12'",0.01)]}],
@@ -596,23 +606,21 @@ const CASE1 = {
   },{
     name:"Half a Plate",
     table:"vehicles", rows:2000000, perPage:50, maxCols:1,
-    cols:{plate:2000000, owner_type:5, model_year:30, color:12},
-    story:"The camera only half-read the second car: NGY 300 SE 4?-12. Search the vehicle registry for plates that start with the part you have and end in -12.",
-    queries:[{label:"Q1", who:"NGY 300 SE 4?-12", where:[
-      range("plate","plate LIKE 'NGY 300 SE 4%'",0.00015), like("plate","plate LIKE '%-12'",0.01)]}],
-    hint:"A LIKE pattern that starts with fixed text can be searched.",
+    cols:{plate:2000000, owner_type:5, body_type:8, model_year:30, color:12, make:40},
+    story:"The camera only half-read the second car: NGY 300 SE 4?-12. Hara saw a dark sedan. Search the vehicle registry for sedans whose plate starts with the part you have and ends in -12.",
+    queries:[{label:"Q1", who:"NGY 300 SE 4?-12, a sedan", where:[
+      range("plate","plate LIKE 'NGY 300 SE 4%'",0.00015), like("plate","plate LIKE '%-12'",0.01), eq("body_type","'SEDAN'")]}],
+    hint:"One plate pattern starts with a wildcard. Does the other one?",
     hint2:"Index plate. 'NGY 300 SE 4%' becomes a range scan; the '%-12' part is checked while scanning.",
-    lesson:"LIKE 'NGY 300 SE 4%' has a fixed prefix, so the database searches it as a range, from 'NGY 300 SE 4' up to the next prefix. The '%-12' part can only be checked while scanning that range.",
+    lesson:"A wildcard only hurts at the start of a pattern. LIKE 'NGY 300 SE 4%' has a fixed prefix, so the database searches it as a range, from 'NGY 300 SE 4' up to the next prefix, and checks '%-12' and the body type while scanning it. body_type looks safer, but 'SEDAN' matches 250,000 cars, more work than reading the whole table.",
     results:[{columns:["plate","owner","vehicle"], rows:[
-      ["NGY 300 SE 41-12","Private, Toyota City","white minivan"],
-      ["NGY 300 SE 47-12","Kinjo Logistics (executive pool)","black sedan"],
-      ["NGY 300 SE 49-12","Private, Gifu","silver hatchback"]]}],
+      ["NGY 300 SE 47-12","Kinjo Logistics (executive pool)","black sedan"]]}],
     clue:{id:"E8", title:"The company car", text:"NGY 300 SE 47-12 is a black sedan in Kinjo Logistics' executive car pool."},
     bonus:{title:"Someone got there first", text:"Query log: session SYS_MAINT looked up this plate four minutes before you did."},
   },{
     name:"Who Had the Keys",
     table:"pool_bookings", rows:300000, perPage:50, maxCols:2,
-    cols:{plate:200, booked_at:300000, employee_id:50000, purpose:20},
+    cols:{plate:200, booked_at:300000, "TRUNC(booked_at)":730, employee_id:50000, returned_at:300000, purpose:20},
     story:"Car 47-12 belongs to the executive pool, and pool cars are booked. Q1 asks who had it that night, and Q2 lists its whole booking history, both through the same index.",
     queries:[
       {label:"Q1", who:"Bookings on the night of 19 Nov", where:[eq("plate","'NGY 300 SE 47-12'"),
@@ -630,7 +638,7 @@ const CASE1 = {
   },{
     name:"Home All Night",
     table:"door_log", rows:5000000, perPage:50, maxCols:3, two:2,
-    cols:{resident_id:20000, event_time:5000000, event:4, gate:10},
+    cols:{resident_id:20000, unit:5000, event_time:5000000, "TRUNC(event_time)":1825, event:4, gate:10},
     story:"Ono says he was home all night at Chikusa Tower, unit 3302: resident R-3302. The building logs every door event. You only need the event and its time.",
     queries:[{label:"Q1", who:"R-3302, night of 19 Nov", select:["event","event_time"], where:[eq("resident_id","'R-3302'"),
       range("event_time","event_time BETWEEN '2026-11-19 22:00' AND '2026-11-20 03:00'",0.012)]}],
@@ -955,13 +963,14 @@ const VI = {
 
   // M08
   "Half a Plate": "Nửa biển số",
-  "The camera only half-read the second car: NGY 300 SE 4?-12. Search the vehicle registry for plates that start with the part you have and end in -12.":
-    "Camera chỉ đọc được một nửa biển số chiếc xe thứ hai: NGY 300 SE 4?-12. Hãy tìm trong sổ đăng ký xe những biển số bắt đầu bằng phần bạn có và kết thúc bằng -12.",
-  "A LIKE pattern that starts with fixed text can be searched.": "Mẫu LIKE bắt đầu bằng phần chữ cố định thì tìm được.",
+  "The camera only half-read the second car: NGY 300 SE 4?-12. Hara saw a dark sedan. Search the vehicle registry for sedans whose plate starts with the part you have and ends in -12.":
+    "Camera chỉ đọc được một nửa biển số chiếc xe thứ hai: NGY 300 SE 4?-12. Hara thấy một chiếc sedan màu tối. Hãy tìm trong sổ đăng ký xe những chiếc sedan có biển số bắt đầu bằng phần bạn có và kết thúc bằng -12.",
+  "NGY 300 SE 4?-12, a sedan": "NGY 300 SE 4?-12, xe sedan",
+  "One plate pattern starts with a wildcard. Does the other one?": "Một mẫu biển số bắt đầu bằng ký tự đại diện. Mẫu còn lại thì sao?",
   "Index plate. 'NGY 300 SE 4%' becomes a range scan; the '%-12' part is checked while scanning.":
     "Hãy index plate. 'NGY 300 SE 4%' trở thành một lần quét theo khoảng; phần '%-12' được kiểm tra trong lúc quét.",
-  "LIKE 'NGY 300 SE 4%' has a fixed prefix, so the database searches it as a range, from 'NGY 300 SE 4' up to the next prefix. The '%-12' part can only be checked while scanning that range.":
-    "LIKE 'NGY 300 SE 4%' có tiền tố cố định, nên database tìm nó như một khoảng, từ 'NGY 300 SE 4' tới tiền tố kế tiếp. Phần '%-12' chỉ kiểm tra được trong lúc quét khoảng đó.",
+  "A wildcard only hurts at the start of a pattern. LIKE 'NGY 300 SE 4%' has a fixed prefix, so the database searches it as a range, from 'NGY 300 SE 4' up to the next prefix, and checks '%-12' and the body type while scanning it. body_type looks safer, but 'SEDAN' matches 250,000 cars, more work than reading the whole table.":
+    "Ký tự đại diện chỉ gây hại khi đứng đầu mẫu. LIKE 'NGY 300 SE 4%' có tiền tố cố định, nên database tìm nó như một khoảng, từ 'NGY 300 SE 4' tới tiền tố kế tiếp, rồi kiểm tra '%-12' và loại xe trong lúc quét. body_type trông an toàn hơn, nhưng 'SEDAN' khớp 250.000 xe, tốn công hơn cả đọc hết bảng.",
   "The company car": "Xe công ty",
   "NGY 300 SE 47-12 is a black sedan in Kinjo Logistics' executive car pool.":
     "NGY 300 SE 47-12 là một chiếc sedan đen trong đội xe dành cho ban điều hành của Kinjo Logistics.",
@@ -1011,7 +1020,8 @@ const VI = {
     "Từ cấp này bạn còn được viết lại truy vấn. Q1 là báo cáo doanh số hằng ngày; Q2 là bảng tin trực tiếp hiển thị một giờ vừa qua. Một index một cột phải phục vụ cả hai.",
   "Daily report: yesterday's sales": "Báo cáo ngày: doanh số hôm qua",
   "As written": "Như đang viết",
-  "Explicit range": "Khoảng tường minh",
+  "BETWEEN includes both ends, so this also returns sales made at exactly midnight on 20 November.":
+    "BETWEEN lấy cả hai đầu mút, nên câu này trả thêm cả các giao dịch đúng 0:00 ngày 20 tháng 11.",
   "Live ticker: the last hour": "Bảng tin trực tiếp: một giờ qua",
   "An index on TRUNC(sale_time) can't help the ticker. Can Q1 be written so it compares sale_time itself?":
     "Index trên TRUNC(sale_time) không giúp được bảng tin. Có thể viết Q1 sao cho nó so sánh chính sale_time không?",
@@ -1023,8 +1033,10 @@ const VI = {
     "Một form tìm kiếm, ba ô không bắt buộc. Lập trình viên viết một truy vấn 'thông minh' duy nhất, bỏ qua mọi ô để trống. Q1 tra cứu khi đã điền công ty con và mã nhân viên; Q2 liệt kê nhân viên của một công ty con. Một index, tối đa hai cột. Được viết lại truy vấn.",
   "Form: subsidiary + employee no.": "Form: công ty con + mã nhân viên",
   "Form: subsidiary only": "Form: chỉ công ty con",
-  "One smart query": "Một truy vấn thông minh",
-  "Dynamic SQL": "SQL động",
+  "Employee numbers repeat in every subsidiary, so this returns employee 345 of all 200 subsidiaries.":
+    "Mã nhân viên lặp lại ở mọi công ty con, nên câu này trả về nhân viên số 345 của cả 200 công ty con.",
+  "employee_id = NULL is never true, so the staff list comes back empty.":
+    "employee_id = NULL không bao giờ đúng, nên danh sách nhân viên trả về rỗng.",
   "An index can't be searched by a condition that might be switched off. Which fields are actually filled in for each query?":
     "Không thể tìm trong index bằng một điều kiện có thể bị tắt. Với mỗi truy vấn, những ô nào thực sự được điền?",
   "A single statement for every combination of filters needs one plan that works even when a field is empty, so no condition can be used to search an index. Build the WHERE clause from the fields actually filled in, still with bind parameters, and each statement gets its own plan. Then one index on (subsidiary_id, employee_id) serves both: the lookup uses both columns, the staff list only the first.":
@@ -1043,7 +1055,11 @@ const VI = {
   "A busy forum topic has 5,000 posts, 20 per page, newest first. Readers who scroll far back make the database work hard. One index, up to two columns. Rewrites allowed.":
     "Một chủ đề diễn đàn sôi nổi có 5.000 bài, 20 bài mỗi trang, mới nhất lên đầu. Người đọc lướt ngược thật xa khiến database phải làm việc vất vả. Một index, tối đa hai cột. Được viết lại truy vấn.",
   "Topic 7, page 101": "Chủ đề 7, trang 101",
-  "Seek (keyset)": "Seek (keyset)",
+  "<= also matches the last post the reader saw, so page 101 starts with a post from page 100.":
+    "<= khớp cả bài cuối cùng người đọc đã xem, nên trang 101 mở đầu bằng một bài của trang 100.",
+  "Faster, but it returns different rows. A rewrite has to keep the result exactly the same.":
+    "Nhanh hơn, nhưng trả về các dòng khác. Viết lại query thì kết quả phải giữ nguyên y hệt.",
+  "WRONG ROWS": "SAI DÒNG",
   "OFFSET still reads every row it skips. What if the query started right after the last post the reader saw?":
     "OFFSET vẫn đọc mọi dòng nó bỏ qua. Sẽ thế nào nếu truy vấn bắt đầu ngay sau bài cuối cùng người đọc đã thấy?",
   "OFFSET makes the database find, read and throw away every row before the page you want, so page 101 costs a hundred times page 1. The seek method remembers the last post_id the reader saw and asks for the 20 posts before it. With (topic_id, post_id) that is a pipelined top-N query, and every page costs the same 23 pages.":
@@ -1130,12 +1146,13 @@ function earn(save, caseIx, i, stars){
 function hintFor(m, fails){ return fails <= 0 ? null : fails < 3 ? m.hint : m.hint2; }
 // Every story EXECUTE adds its wasted reads: 0 for the best answer, 1 for a blind full scan, whatever the
 // table size. Later missions weigh more (M1 ×1 … M10 ×2.5): by then SYS_MAINT is reading along.
-// A run below 2★ also counts as a fail.
+// A run below 2★ also counts as a fail, and after a fail on a mission its wasted reads count double: guessing
+// costs more than one honest mistake.
 const watchWeight = i => 1 + i / 6;
 function logRun(save, caseIx, i, pages, stars){
   if (CASES[caseIx].practice) return save;
-  const {best, none} = bestOf(CASES[caseIx].missions[i]);
-  save.scans[caseIx] = (save.scans[caseIx] ?? 0) + Math.max(0, (pages - best) / (none - best)) * watchWeight(i);
+  const {best, none} = bestOf(CASES[caseIx].missions[i]), again = save.fails[caseIx]?.[i] ? 2 : 1;
+  save.scans[caseIx] = (save.scans[caseIx] ?? 0) + Math.max(0, (pages - best) / (none - best)) * watchWeight(i) * again;
   if (stars < 2){ const f = save.fails[caseIx] ??= []; f[i] = (f[i] ?? 0) + 1; }
   return save;
 }
@@ -1224,7 +1241,13 @@ function score(lv, ixs, picks){
   const plans = lv.queries.map((q,i) => plan(lv, ixs, variantOf(lv, i, picks)));
   const reads = plans.reduce((s,p,i) => s + p.cost * (lv.queries[i].freq ?? 1), 0);
   const writes = (lv.inserts ?? 0) * INSERT_PAGES * ixs.filter(ix => ix.length).length;
-  return {plans, reads, writes, total: reads + writes};
+  const wrong = lv.queries.map((q, i) => variantOf(lv, i, picks).wrong ? i : -1).filter(i => i >= 0);
+  return {plans, reads, writes, total: reads + writes, wrong};
+}
+// A rewrite that returns different rows earns nothing, however fast it is.
+function judge(lv, ixs, picks){
+  const sc = score(lv, ixs, picks), s = starsFor(lv, sc.total);
+  return {...sc, ...s, stars: sc.wrong.length ? 0 : s.stars};
 }
 
 function allIndexes(lv){
@@ -1239,7 +1262,8 @@ function allIndexSets(lv){
     for (let i = start; i < one.length; i++) go(i + 1, [...cur, one[i]]); };
   go(0, []); return res;
 }
-const allPicks = lv => lv.queries.reduce((acc, q) => acc.flatMap(a => q.variants.map((_, k) => [...a, k])), [[]]);
+const allPicks = lv => lv.queries.reduce((acc, q) =>
+  acc.flatMap(a => q.variants.flatMap((v, k) => v.wrong ? [] : [[...a, k]])), [[]]);
 function bestOf(lv){
   if (lv._best == null){
     const picks = allPicks(lv);
@@ -1618,7 +1642,7 @@ function renderMission(){
       const v = variantOf(lv, i);
       const seg = q.variants.length > 1
         ? `<div class="seg"><span>${t("REWRITE")}</span>` + q.variants.map((x,k) =>
-            `<button data-pick="${i}" data-v="${k}" aria-pressed="${(state.pick[i] ?? 0) === k}">${esc(t(x.tag))}</button>`).join("") + `</div>` : "";
+            `<button data-pick="${i}" data-v="${k}" aria-pressed="${(state.pick[i] ?? 0) === k}">${k ? "ABC"[k - 1] : t("As written")}</button>`).join("") + `</div>` : "";
       return `<div class="qlabel"><b>${q.label}</b> · ${esc(t(q.who))}${q.freq ? ` · <em>${t("runs {n}×/day", {n:fmt(q.freq)})}</em>` : ""}</div>${seg}<pre>${hl(sqlOf(lv, v))}</pre>`;
     }).join("") +
     `<div class="stats">${t("{table}: {rows} rows · {pages} table pages · {leaf} index entries per leaf page", {table:lv.table, rows:fmt(lv.rows), pages:fmt(tablePages(lv)), leaf:LEAF_ROWS})}</div>` +
@@ -1671,6 +1695,8 @@ function showQuery(i, instant){
 }
 
 function hintBlock(lv, stars){
+  if (state.result?.wrong?.length)
+    return `<p class="hint">${t("Faster, but it returns different rows. A rewrite has to keep the result exactly the same.")}</p>`;
   if (CASES[state.caseIx].practice)
     return `<p class="hint">${stars ? t("Good, but there's a cheaper solution.") : t("Still slower than no index at all.")} ${t("Hint:")} ${esc(t(lv.hint))}</p>`;
   const fails = state.save.fails[state.caseIx]?.[state.lv] ?? 0;
@@ -1704,7 +1730,8 @@ function renderReport(){
       : r.sus > 0 ? `<p class="watch">${t("Not the best plan: SUSPICION +{n}%. SYS_MAINT logs every page read beyond the best index, and later missions are watched more closely.", {n:susPct(r.sus)})}</p>`
       : `<p class="watch clean">${t("Best plan. SYS_MAINT saw nothing unusual.")}</p>`) +
     r.plans.map((p,i) => {
-      const q = lv.queries[i];
+      const q = lv.queries[i], v = variantOf(lv, i);
+      if (v.wrong) return `<div class="qres bad"><div><b>${q.label}</b> <span class="tag">${t("WRONG ROWS")}</span></div><p>${esc(t(v.wrong))}</p></div>`;
       return `<div class="qres ${p.kind==="index"?"good":"bad"}"><div><b>${q.label}</b> <span class="tag">${scanLabel(lv, p, variantOf(lv, i))}</span> ${t("{n} pages", {n:fmt(p.cost)})}${q.freq ? ` × ${t("{n}/day", {n:fmt(q.freq)})}` : ""}</div><p>${esc(explain(lv, p, variantOf(lv, i)))}</p></div>`;
     }).join("") +
     (r.stars < 3 ? hintBlock(lv, r.stars) : "") +
@@ -1836,9 +1863,8 @@ function goCase(ci){
 
 async function execute(){
   const lv = cur();
-  const sc = score(lv, state.ixs, state.pick);
-  const {best, none, stars} = starsFor(lv, sc.total);
-  state.result = {...sc, best, none, stars, done:false};
+  const sc = judge(lv, state.ixs, state.pick), {none, stars} = sc;
+  state.result = {...sc, done:false};
   const run = animTok + 1;
   $("run").disabled = true;
   $("report").innerHTML = `<p class="empty">${t("Running…")}</p>`;
@@ -1852,7 +1878,7 @@ async function execute(){
   row[state.lv] = Math.max(row[state.lv] ?? 0, stars);
   if (!CASES[state.caseIx].practice) earn(state.save, state.caseIx, state.lv, stars);
   const before = suspicion(state.save, state.caseIx);
-  logRun(state.save, state.caseIx, state.lv, sc.total, stars);
+  logRun(state.save, state.caseIx, state.lv, sc.wrong.length ? none : sc.total, stars);   // wrong rows = the work was wasted
   state.result.sus = suspicion(state.save, state.caseIx) - before;
   storeSave();
   state.result.done = true;
