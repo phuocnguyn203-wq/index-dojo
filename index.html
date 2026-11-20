@@ -57,7 +57,10 @@ body{
 .bar .lv button{border:0; padding:2px 6px; color:var(--win); font-size:15px; letter-spacing:0}
 .bar .prefs{display:flex; flex-wrap:wrap; gap:6px 14px}
 .bar .lang{display:flex; align-items:center; gap:6px}
-.bar .icon{border:2px solid var(--win); background:var(--line); color:var(--win); padding:1px 6px; font-size:15px; line-height:1.2; min-width:2em}
+.bar .icon{border:2px solid var(--win); background:var(--line); color:var(--win); padding:1px 6px; font-size:15px; line-height:1.2; min-width:2em;
+  display:inline-flex; align-items:center; justify-content:center; height:26px}
+.px{display:block; fill:currentColor}
+.px-label{display:inline-flex; color:var(--win)}
 /* Interactive tour: a pixel hand points at the target, a small window explains it. No backdrop, so the target stays clickable. */
 #tour-hand{position:fixed; z-index:20; width:28px; height:32px; pointer-events:none; animation:bob .8s steps(2) infinite}
 #tour-hand.up{transform:scaleY(-1)}
@@ -231,13 +234,13 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
   <div class="lv" id="casebar"></div>
   <div class="prefs">
     <button id="guide" class="icon">?</button>
-    <button id="restart" class="icon">🔄</button>
-    <button id="music" class="icon" aria-pressed="true" aria-label="Music · Nhạc" title="Alex Morgan, “Noir Jazz Detective: Midnight Mystery”">🔊</button>
+    <button id="restart" class="icon" data-icon="restart"></button>
+    <button id="music" class="icon" aria-pressed="true" aria-label="Music · Nhạc" title="Alex Morgan, “Noir Jazz Detective: Midnight Mystery”"></button>
     <input type="range" id="vol" min="0" max="100" step="5" aria-label="Volume · Âm lượng">
     <audio id="bgm" src="audio/noir-midnight.mp3" loop preload="none"></audio>
-    <label class="lang"><span aria-hidden="true">🎨</span><select id="theme" aria-label="Theme · Giao diện">
+    <label class="lang"><span class="px-label" data-icon="theme"></span><select id="theme" aria-label="Theme · Giao diện">
       <option value="pc98">PC-98</option><option value="sumi">Sumi</option><option value="washi">Washi</option><option value="fuji">Fuji</option></select></label>
-    <label class="lang"><span aria-hidden="true">🌐</span><select id="lang" aria-label="Language · Ngôn ngữ">
+    <label class="lang"><span class="px-label" data-icon="lang"></span><select id="lang" aria-label="Language · Ngôn ngữ">
       <option value="en">English</option><option value="vi">Tiếng Việt</option></select></label>
   </div>
   <div class="lv" id="lvbar"></div>
@@ -1740,12 +1743,27 @@ function setTheme(name){
 }
 function readTheme(){ try { return localStorage.getItem(THEME_KEY); } catch { return null; } }
 
+// Header icons as pixel art (X = ink), drawn in the text colour at 2x like the pixel font. No emoji.
+const ICONS = {
+  restart:["..XXXX.X.", ".X....XX.", "X....XXX.", "X........", "X.......X", "X.......X", ".X.....X.", "..XXXXX.."],
+  sound:["...X.....", "..XX...X.", "XXXX.X..X", "XXXX..X.X", "XXXX..X.X", "XXXX.X..X", "..XX...X.", "...X....."],
+  mute:["...X.....", "..XX.....", "XXXX.X..X", "XXXX..XX.", "XXXX..XX.", "XXXX.X..X", "..XX.....", "...X....."],
+  theme:["XXXXXXXX", "X...XXXX", "X...XXXX", "X...XXXX", "X...XXXX", "X...XXXX", "X...XXXX", "XXXXXXXX"],
+  lang:["..XXXXX..", ".X..X..X.", "X..X.X..X", "XXXXXXXXX", "X..X.X..X", ".X..X..X.", "..XXXXX.."],
+};
+function icon(name){
+  const g = ICONS[name], w = g[0].length, h = g.length;
+  return `<svg class="px" viewBox="0 0 ${w} ${h}" width="${w * 2}" height="${h * 2}" shape-rendering="crispEdges" aria-hidden="true">` +
+    g.flatMap((row, y) => [...row].map((c, x) => c === "X" ? `<rect x="${x}" y="${y}" width="1" height="1"/>` : "")).join("") + `</svg>`;
+}
+document.querySelectorAll("[data-icon]").forEach(e => { e.innerHTML = icon(e.dataset.icon); });
+
 // Background music: quiet, looped, on by default. Browsers only allow sound after a click or key press.
 const MUSIC_KEY = "index-dojo-music", VOLUME_KEY = "index-dojo-volume";
 let musicOn = true;
 function setMusic(on){
   musicOn = on;
-  $("music").setAttribute("aria-pressed", on); $("music").textContent = on ? "🔊" : "🔇";
+  $("music").setAttribute("aria-pressed", on); $("music").innerHTML = icon(on ? "sound" : "mute");
   try { localStorage.setItem(MUSIC_KEY, on ? "on" : "off"); } catch {}
   on ? $("bgm").play().catch(() => {}) : $("bgm").pause();   // play() is refused until the first user gesture; startMusic retries then
 }
