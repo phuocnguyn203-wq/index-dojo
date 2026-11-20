@@ -46,6 +46,7 @@ body{
   color:var(--ink); font-family:var(--f-code); font-size:14px; line-height:1.55;
 }
 .bar{
+  position:sticky; top:0; z-index:10; box-shadow:0 3px 0 var(--shadow);
   display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; justify-content:space-between;
   background:var(--line); color:var(--win); font-family:var(--f-ui); font-size:15px;
   padding-block:6px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
@@ -204,7 +205,12 @@ select:focus-visible{outline:2px solid var(--yellow); outline-offset:2px}
 .grade b{font:400 44px/1 var(--f-ui); color:var(--yellow)}
 h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.12em}
 
-@media (prefers-reduced-motion:reduce){ .lamp.on{animation:none} }
+.sus .delta{color:var(--red); margin-left:6px}
+.sus.bump{animation:bump .5s steps(2) 4}
+@keyframes bump{50%{background:var(--red); color:var(--win)}}
+.watch{border:2px solid var(--red); color:var(--red); padding:8px 12px}
+.watch.clean{border-color:var(--green); color:var(--green)}
+@media (prefers-reduced-motion:reduce){ .lamp.on,.sus.bump{animation:none} }
 </style>
 
 <header class="bar">
@@ -683,7 +689,9 @@ const VI = {
   "Total per day": "Tổng mỗi ngày",
   "Best possible": "Tốt nhất có thể",
   "Without an index": "Không có index",
-  "Suspicion": "Nghi ngờ",
+  "Not the best plan: SUSPICION +{n}%. SYS_MAINT logs every page read beyond the best index, and later missions are watched more closely.":
+    "Chưa phải cách tối ưu: NGHI NGỜ +{n}%. SYS_MAINT ghi lại mọi trang đọc thừa so với index tốt nhất, và càng về các nhiệm vụ sau càng bị soi kỹ.",
+  "Best plan. SYS_MAINT saw nothing unusual.": "Cách tối ưu. SYS_MAINT không thấy gì bất thường.",
   "{n} pages": "{n} trang",
   "{n}/day": "{n}/ngày",
   "LESSON": "BÀI HỌC",
@@ -1389,10 +1397,13 @@ function openEnding(){
     `<div class="row"><button class="go" data-close="1">${t("CLOSE")}</button></div>`);
 }
 
+// A suspicion increase as text: one decimal, "<0.1" for the tiny ones so they never read as zero.
+const susPct = d => d * 100 < 0.1 ? "<" + fmt(0.1) : fmt(Math.round(d * 1000) / 10);
 function suspicionChip(){
-  const pct = suspicion(state.save, state.caseIx), on = Math.min(10, Math.round(pct * 10));
-  return `<span class="sus ${pct >= 0.75 ? "hot" : ""}" title="${t("How much I/O the insider has seen: {n}% of what gets noticed", {n:Math.round(pct * 100)})}">` +
-    `${t("SUSPICION")} <span aria-hidden="true">${"▮".repeat(on)}${"▯".repeat(10 - on)}</span></span>`;
+  const pct = suspicion(state.save, state.caseIx), on = Math.min(10, Math.round(pct * 10)), d = state.result?.sus;
+  return `<span class="sus ${pct >= 0.75 ? "hot" : ""} ${state.bump ? "bump" : ""}" title="${t("How much I/O the insider has seen: {n}% of what gets noticed", {n:Math.round(pct * 100)})}">` +
+    `${t("SUSPICION")} <span aria-hidden="true">${"▮".repeat(on)}${"▯".repeat(10 - on)}</span>` +
+    (d > 0 ? `<span class="delta">+${susPct(d)}%</span>` : "") + `</span>`;
 }
 const caseLabel = (c, i) => c.practice ? t("PRACTICE") : t("CASE {n}", {n:String(i+1).padStart(2,"0")});
 function renderBar(){
@@ -1507,7 +1518,10 @@ function renderReport(){
       (lv.inserts ? `<dt>${perDay ? t("Pages read per day") : t("Pages read")}</dt><dd>${fmt(r.reads)}</dd><dt>${t("Index upkeep per day")}</dt><dd>${fmt(r.writes)}</dd>` : "") +
       `<dt>${lv.inserts ? t("Total per day") : t("Pages read")}</dt><dd>${fmt(r.total)}</dd>` +
       `<dt>${t("Best possible")}</dt><dd>${r.stars===3 ? fmt(r.best) : "?"}</dd><dt>${t("Without an index")}</dt><dd>${fmt(r.none)}</dd>` +
-      (r.sus != null && !CASES[state.caseIx].practice ? `<dt>${t("Suspicion")}</dt><dd class="${r.sus > 0.005 ? "cancel" : ""}">+${fmt(Math.round(r.sus * 1000) / 10)}%</dd>` : "") + `</dl>` +
+      `</dl>` +
+    (r.sus == null || CASES[state.caseIx].practice ? ""
+      : r.sus > 0 ? `<p class="watch">${t("Not the best plan: SUSPICION +{n}%. SYS_MAINT logs every page read beyond the best index, and later missions are watched more closely.", {n:susPct(r.sus)})}</p>`
+      : `<p class="watch clean">${t("Best plan. SYS_MAINT saw nothing unusual.")}</p>`) +
     r.plans.map((p,i) => {
       const q = lv.queries[i];
       return `<div class="qres ${p.kind==="index"?"good":"bad"}"><div><b>${q.label}</b> <span class="tag">${scanLabel(lv, p, variantOf(lv, i))}</span> ${t("{n} pages", {n:fmt(p.cost)})}${q.freq ? ` × ${t("{n}/day", {n:fmt(q.freq)})}` : ""}</div><p>${esc(explain(lv, p, variantOf(lv, i)))}</p></div>`;
@@ -1644,7 +1658,9 @@ async function execute(){
   state.result.sus = suspicion(state.save, state.caseIx) - before;
   storeSave();
   state.result.done = true;
-  renderBar(); renderReport(); renderResults(); renderNotebook();
+  state.bump = state.result.sus > 0;   // flash the header meter once, for this run only
+  renderBar(); state.bump = false;
+  renderReport(); renderResults(); renderNotebook();
 }
 
 document.addEventListener("click", e => {
