@@ -704,11 +704,11 @@ const CASE2 = {
     hint:"The query never compares shift_start itself.",
     hint2:"Index the expression TRUNC(shift_start).",
     lesson:"TRUNC(shift_start) hides shift_start from a plain index. An index on the expression itself holds exactly the values the query compares. It only helps queries written with TRUNC, though. The next mission shows the other fix.",
-    results:[{columns:["shift","guard","post","note"], rows:[
-      ["06:00-14:00","OTA Jun","Gate 1","—"],
-      ["14:00-22:00","ISOBE Kai","Gate 1","—"],
-      ["22:00-06:00","AOKI Shin","W7 rounds","swap with HIRATA Ken, requested 18:05"]]}],
-    clue:{id:"E1", title:"The night shift", text:"Shin Aoki took the 22:00 to 06:00 shift at warehouse 7. It was Ken Hirata's shift until Hirata asked to swap at 18:05 that evening."},
+    results:[{columns:["shift","guard","badge_no","post","note"], rows:[
+      ["06:00-14:00","OTA Jun","0412","Gate 1","—"],
+      ["14:00-22:00","ISOBE Kai","0398","Gate 1","—"],
+      ["22:00-06:00","AOKI Shin","0417","W7 rounds","swap with HIRATA Ken, requested 18:05"]]}],
+    clue:{id:"E1", title:"The night shift", text:"Shin Aoki, badge 0417, took the 22:00 to 06:00 shift at warehouse 7. It was Ken Hirata's shift until Hirata asked to swap at 18:05 that evening."},
   },{
     name:"The Archive Door",
     table:"door_events", rows:5000000, perPage:50, maxCols:2,
@@ -1356,8 +1356,8 @@ const VI = {
     "TRUNC(shift_start) che shift_start khỏi một index thông thường. Index trên chính biểu thức đó chứa đúng những giá trị truy vấn so sánh. Nhưng nó chỉ giúp được các truy vấn viết bằng TRUNC. Nhiệm vụ sau sẽ cho thấy cách sửa còn lại.",
   "The night shift":
     "Ca đêm hôm ấy",
-  "Shin Aoki took the 22:00 to 06:00 shift at warehouse 7. It was Ken Hirata's shift until Hirata asked to swap at 18:05 that evening.":
-    "Shin Aoki trực ca 22:00 đến 06:00 ở kho 7. Đó vốn là ca của Ken Hirata, cho tới khi Hirata xin đổi ca lúc 18:05 tối hôm đó.",
+  "Shin Aoki, badge 0417, took the 22:00 to 06:00 shift at warehouse 7. It was Ken Hirata's shift until Hirata asked to swap at 18:05 that evening.":
+    "Shin Aoki, thẻ 0417, trực ca 22:00 đến 06:00 ở kho 7. Đó vốn là ca của Ken Hirata, cho tới khi Hirata xin đổi ca lúc 18:05 tối hôm đó.",
   "Shifts at warehouse 7 on 27 Nov":
     "Các ca trực ở kho 7 ngày 27/11",
   "The Archive Door":
