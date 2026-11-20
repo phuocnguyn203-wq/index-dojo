@@ -56,11 +56,9 @@ body{
 .bar .lv{display:flex; flex-wrap:wrap; gap:4px 8px}
 .bar .lv button{border:0; padding:2px 6px; color:var(--win); font-size:15px; letter-spacing:0}
 .bar .prefs{display:flex; flex-wrap:wrap; gap:6px 14px}
-.bar .lang{display:flex; align-items:center; gap:6px}
 .bar .icon{border:2px solid var(--win); background:var(--line); color:var(--win); padding:1px 6px; font-size:15px; line-height:1.2; min-width:2em;
   display:inline-flex; align-items:center; justify-content:center; height:26px}
 .px{display:block; fill:currentColor}
-.px-label{display:inline-flex; color:var(--win)}
 /* Interactive tour: a pixel hand points at the target, a small window explains it. No backdrop, so the target stays clickable. */
 #tour-hand{position:fixed; z-index:20; width:28px; height:32px; pointer-events:none; animation:bob .8s steps(2) infinite}
 #tour-hand.up{transform:scaleY(-1)}
@@ -74,9 +72,6 @@ body{
 .menu button[aria-pressed="true"]{background:var(--line); color:var(--win)}
 .menu input[type=range]{accent-color:var(--yellow); width:140px}
 @media (max-width:480px){ .menu .opt{grid-template-columns:1fr} }
-.bar #music[aria-pressed="false"]{opacity:.6}
-.bar #vol{width:84px; accent-color:var(--title); cursor:pointer; align-self:center}
-.bar .lang select{width:auto; background:var(--line); color:var(--win); border:2px solid var(--win); font:15px var(--f-ui); padding:1px 4px; cursor:pointer}
 .bar .lv button[aria-current="true"],.bar .lv button:hover:not(:disabled){background:var(--title); color:var(--white)}
 .bar #lvbar{flex-basis:100%}
 /* UI font: VT323 for Latin and Vietnamese (bold, clear pixels); kana/kanji and symbols fall back to DotGothic16,
@@ -238,14 +233,8 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
   <div class="lv" id="casebar"></div>
   <div class="prefs">
     <button id="guide" class="icon">?</button>
-    <button id="restart" class="icon" data-icon="restart"></button>
-    <button id="music" class="icon" aria-pressed="true" aria-label="Music · Nhạc" title="Alex Morgan, “Noir Jazz Detective: Midnight Mystery”"></button>
-    <input type="range" id="vol" min="0" max="100" step="5" aria-label="Volume · Âm lượng">
+    <button id="settings" class="icon" data-icon="gear"></button>
     <audio id="bgm" src="audio/noir-midnight.mp3" loop preload="none"></audio>
-    <label class="lang"><span class="px-label" data-icon="theme"></span><select id="theme" aria-label="Theme · Giao diện">
-      <option value="pc98">PC-98</option><option value="sumi">Sumi</option><option value="washi">Washi</option><option value="fuji">Fuji</option></select></label>
-    <label class="lang"><span class="px-label" data-icon="lang"></span><select id="lang" aria-label="Language · Ngôn ngữ">
-      <option value="en">English</option><option value="vi">Tiếng Việt</option></select></label>
   </div>
   <div class="lv" id="lvbar"></div>
 </header>
@@ -298,6 +287,7 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
         <span><span class="lamp" id="lamp"></span>HDD</span>
         <span><span data-t>PAGES READ</span> <span class="pages" id="pages">000000</span></span>
         <div class="prog"><div id="prog"></div></div>
+        <span id="susbox"></span>
       </div>
     </section>
     <section class="win" id="reswin">
@@ -767,7 +757,8 @@ const VI = {
   "RATING · suspicion {n}%": "XẾP HẠNG · mức nghi ngờ {n}%",
   "CLOSE": "ĐÓNG",
   "PLAY THIS CASE AGAIN": "CHƠI LẠI HỒ SƠ NÀY",
-  "Restart this case": "Chơi lại hồ sơ này",
+  "Settings": "Cài đặt",
+  "CONTINUE ▶": "TIẾP TỤC ▶",
   "RESTART THIS CASE?": "CHƠI LẠI HỒ SƠ NÀY?",
   "This clears the stars, evidence and suspicion of {case}. Other cases and your settings stay.":
     "Thao tác này xóa sao, bằng chứng và mức nghi ngờ của {case}. Các hồ sơ khác và cài đặt của bạn vẫn giữ nguyên.",
@@ -1474,7 +1465,7 @@ function openEnding(){
 // Every launch: the start menu (language, settings, START), then the briefing; the tour follows on the first visit.
 const GUIDE_KEY = "index-dojo-tour";   // not "index-dojo-guide": that marked the old text guide, so its readers never saw the tour
 function guideSeen(){ try { return localStorage.getItem(GUIDE_KEY) === "seen"; } catch { return false; } }
-function openStartMenu(){
+function openStartMenu(midGame = false){
   const opt = (label, control) => `<div class="opt"><span class="eyebrow">${label}</span>${control}</div>`;
   openDialog("DBOS-98 ◆ INDEX DOJO",
     `<p>${t("Find the killer by reading as few pages as possible.")}</p>` +
@@ -1482,11 +1473,13 @@ function openStartMenu(){
       opt(t("LANGUAGE"), `<div class="row">` + [["en", "English"], ["vi", "Tiếng Việt"]].map(([l, name]) =>
         `<button data-menulang="${l}" aria-pressed="${LANG === l}">${name}</button>`).join("") + `</div>`) +
       opt(t("THEME"), `<select data-menutheme aria-label="${t("THEME")}">` + THEMES.map(th =>
-        `<option value="${th}" ${$("theme").value === th ? "selected" : ""}>${$("theme").querySelector(`[value="${th}"]`).textContent}</option>`).join("") + `</select>`) +
+        `<option value="${th}" ${theme === th ? "selected" : ""}>${THEME_NAMES[th]}</option>`).join("") + `</select>`) +
       opt(t("MUSIC"), `<div class="row"><button data-menumusic aria-pressed="${musicOn}">${musicOn ? t("ON") : t("OFF")}</button>` +
-        `<input type="range" data-menuvol min="0" max="100" step="5" value="${$("vol").value}" aria-label="${t("Volume")}"></div>`) +
+        `<input type="range" data-menuvol min="0" max="100" step="5" value="${volume}" aria-label="${t("Volume")}"></div>`) +
     `</div>` +
-    `<div class="row"><button class="go" id="start-go">${t("START ▶")}</button><button id="start-tour">${t("HOW TO PLAY")}</button></div>`);
+    (midGame ? `<div class="row"><button class="go" data-close="1">${t("CONTINUE ▶")}</button><button data-act="restart">${t("PLAY THIS CASE AGAIN")}</button></div>`
+             : `<div class="row"><button class="go" id="start-go">${t("START ▶")}</button><button id="start-tour">${t("HOW TO PLAY")}</button></div>`));
+  state.menuMidGame = midGame;
 }
 function startGame(withTour = !guideSeen()){
   if (withTour) state.tourPending = true;   // the tour starts when the briefing closes
@@ -1597,7 +1590,8 @@ function renderBar(){
   const c = CASES[state.caseIx];
   $("casebar").innerHTML = CASES.map((x,i) =>
     `<button data-case="${i}" ${i===state.caseIx?'aria-current="true"':''} title="${esc(t(x.title))}">${caseLabel(x, i)}</button>`).join("") +
-    (c.intro ? `<button id="brief">${t("BRIEFING")}</button>` + accuseButton(c) + suspicionChip() : "");
+    (c.intro ? `<button id="brief">${t("BRIEFING")}</button>` + accuseButton(c) : "");
+  $("susbox").innerHTML = c.intro ? suspicionChip() : "";
   $("lvbar").innerHTML = c.missions.map((l,i) => {
     const s = starsAt(state.save.stars, state.caseIx, i), open = i === state.lv || unlocked(state.save.stars, state.caseIx, i);
     return `<button data-lv="${i}" ${i===state.lv?'aria-current="true"':''} ${open?"":"disabled"} title="${esc(t(l.name))}">M${String(i+1).padStart(2,"0")} ${"★".repeat(s)}${"☆".repeat(3-s)}</button>`;
@@ -1758,10 +1752,12 @@ function storeSave(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(state.
 function readSave(){ try { return localStorage.getItem(SAVE_KEY); } catch { return null; } }
 
 const THEME_KEY = "index-dojo-theme", THEMES = ["pc98", "sumi", "washi", "fuji"];
+const THEME_NAMES = {pc98:"PC-98", sumi:"Sumi", washi:"Washi", fuji:"Fuji"};
+let theme = "pc98";
 function setTheme(name){
   const th = THEMES.includes(name) ? name : "pc98";
   if (th === "pc98") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = th;
-  $("theme").value = th;
+  theme = th;
   try { localStorage.setItem(THEME_KEY, th); } catch {}
 }
 function readTheme(){ try { return localStorage.getItem(THEME_KEY); } catch { return null; } }
@@ -1771,8 +1767,7 @@ const ICONS = {
   restart:["..XXXX.X.", ".X....XX.", "X....XXX.", "X........", "X.......X", "X.......X", ".X.....X.", "..XXXXX.."],
   sound:["...X.....", "..XX...X.", "XXXX.X..X", "XXXX..X.X", "XXXX..X.X", "XXXX.X..X", "..XX...X.", "...X....."],
   mute:["...X.....", "..XX.....", "XXXX.X..X", "XXXX..XX.", "XXXX..XX.", "XXXX.X..X", "..XX.....", "...X....."],
-  theme:["XXXXXXXX", "X...XXXX", "X...XXXX", "X...XXXX", "X...XXXX", "X...XXXX", "X...XXXX", "XXXXXXXX"],
-  lang:["..XXXXX..", ".X..X..X.", "X..X.X..X", "XXXXXXXXX", "X..X.X..X", ".X..X..X.", "..XXXXX.."],
+  gear:["....X....", ".X.XXX.X.", "..XXXXX..", ".XXX.XXX.", "XXX...XXX", ".XXX.XXX.", "..XXXXX..", ".X.XXX.X.", "....X...."],
 };
 function icon(name){
   const g = ICONS[name], w = g[0].length, h = g.length;
@@ -1783,29 +1778,28 @@ document.querySelectorAll("[data-icon]").forEach(e => { e.innerHTML = icon(e.dat
 
 // Background music: quiet, looped, on by default. Browsers only allow sound after a click or key press.
 const MUSIC_KEY = "index-dojo-music", VOLUME_KEY = "index-dojo-volume";
-let musicOn = true;
+let musicOn = true, volume = 15;
 function setMusic(on){
   musicOn = on;
-  $("music").setAttribute("aria-pressed", on); $("music").innerHTML = icon(on ? "sound" : "mute");
   try { localStorage.setItem(MUSIC_KEY, on ? "on" : "off"); } catch {}
   on ? $("bgm").play().catch(() => {}) : $("bgm").pause();   // play() is refused until the first user gesture; startMusic retries then
 }
 function setVolume(pct){
   const v = Math.min(100, Math.max(0, Math.round(pct)));
-  $("bgm").volume = v / 100; $("vol").value = v;
+  volume = v; $("bgm").volume = v / 100;
   try { localStorage.setItem(VOLUME_KEY, v); } catch {}
 }
 function startMusic(){ if (musicOn && $("bgm").paused) setMusic(true); }
 function readMusic(){ try { return localStorage.getItem(MUSIC_KEY) !== "off"; } catch { return true; } }
 function readVolume(){ try { const v = parseFloat(localStorage.getItem(VOLUME_KEY)); return Number.isFinite(v) ? v : 15; } catch { return 15; } }
 document.addEventListener("input", e => {
-  if (e.target.id !== "vol" && e.target.dataset.menuvol == null) return;   // header slider or the start menu's
+  if (e.target.dataset.menuvol == null) return;
   setVolume(+e.target.value);
   if (+e.target.value > 0 && !musicOn) setMusic(true);   // moving the slider up means "I want sound"
   const m = document.querySelector("[data-menumusic]");
   if (m){ m.setAttribute("aria-pressed", musicOn); m.textContent = musicOn ? t("ON") : t("OFF"); }
 });
-document.addEventListener("pointerdown", e => { if (!e.target.closest("#music")) startMusic(); });
+document.addEventListener("pointerdown", e => { if (!e.target.closest("[data-menumusic]")) startMusic(); });
 document.addEventListener("keydown", startMusic);
 
 const LANG_KEY = "index-dojo-lang";
@@ -1819,9 +1813,8 @@ function setLang(l){
   try { localStorage.setItem(LANG_KEY, LANG); } catch {}
   document.documentElement.lang = LANG;
   document.querySelectorAll("[data-t]").forEach(e => { e.dataset.t ||= e.textContent; e.textContent = t(e.dataset.t); });
-  $("lang").value = LANG;
   $("tree").setAttribute("aria-label", t("B-tree index and table pages read by the query"));
-  for (const [id, label] of [["guide", t("How to play")], ["restart", t("Restart this case")]]){ $(id).title = label; $(id).setAttribute("aria-label", label); }
+  for (const [id, label] of [["guide", t("How to play")], ["settings", t("Settings")]]){ $(id).title = label; $(id).setAttribute("aria-label", label); }
 }
 
 function render(){ renderBar(); renderMission(); renderWizard(); renderTabs(); renderReport(); renderResults(); renderNotebook(); tourPlace(); }
@@ -1872,7 +1865,6 @@ async function execute(){
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b || b.disabled) return;
   const lv = cur(), d = b.dataset, ix = state.ixs[+d.s];
-  if (b.id === "music"){ setMusic(!musicOn); return; }
   if (d.add){
     const slot = state.ixs[state.active];
     if (slot.length < lv.maxCols){
@@ -1905,11 +1897,12 @@ document.addEventListener("click", e => {
   }
   else if (b.id === "guide") startTour();
   else if (d.tour) d.tour === "next" ? tourNext() : endTour();
-  else if (d.menulang){ setLang(d.menulang); legend(lv); if (!state.result) resetPlan(); render(); openStartMenu(); }
-  else if (d.menumusic != null){ setMusic(!musicOn); openStartMenu(); }
+  else if (d.menulang){ setLang(d.menulang); legend(lv); if (!state.result) resetPlan(); render(); openStartMenu(state.menuMidGame); }
+  else if (d.menumusic != null){ setMusic(!musicOn); openStartMenu(state.menuMidGame); }
   else if (b.id === "start-go") startGame();
   else if (b.id === "start-tour") startGame(true);
-  else if (b.id === "restart" || d.act === "restart") openRestart();
+  else if (b.id === "settings") openStartMenu(true);
+  else if (d.act === "restart") openRestart();
   else if (b.id === "restart-go") restartCase();
   else if (d.close){
     $("dlg").close();
@@ -1919,8 +1912,7 @@ document.addEventListener("click", e => {
 
 document.addEventListener("change", e => {
   const el = e.target;
-  if (el.id === "theme" || el.dataset.menutheme != null){ setTheme(el.value); return; }
-  if (el.id === "lang"){ setLang(el.value); legend(cur()); if (!state.result) resetPlan(); render(); return; }
+  if (el.dataset.menutheme != null){ setTheme(el.value); return; }
   if (el.name === "suspect") state.acc.suspect = el.value;
   else if (el.dataset.slotsel) state.acc[el.dataset.slotsel] = el.value;
   else return;
