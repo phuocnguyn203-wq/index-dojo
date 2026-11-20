@@ -1,0 +1,1672 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Index Dojo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=M+PLUS+1+Code:wght@400;700&display=swap">
+<style>
+/* Layout: PC-98 office desktop. Menu bar on top, two columns of windows: mission + index wizard | execution plan + report. Single dark look by design. */
+:root{
+  --desk-a:#0b0b29; --desk-b:#121246;
+  --win:#05051a; --cell:#1a1a4c; --line:#d6d6ff; --title:#2a3cc8; --white:#ffffff; --shadow:#000000;
+  --ink:#ececff; --dim:#8c8cc8;
+  --cyan:#5ee8ff; --yellow:#ffe14d; --magenta:#ff62d4; --red:#ff5c5c; --green:#62ff8f;
+  --f-ui:"VT323 VI","DotGothic16","MS Gothic",ui-monospace,monospace;
+  --f-code:"M PLUS 1 Code",ui-monospace,Consolas,"Courier New",monospace;
+  color-scheme:dark;
+}
+/* Softer themes in traditional Japanese colours (wa-iro). Body text ~12:1 instead of PC-98's ~17:1; dim text ~6:1. */
+:root[data-theme="sumi"]{   /* 墨 ink wash */
+  --desk-a:#1c1a18; --desk-b:#221f1c;
+  --win:#262320; --cell:#3d3934; --line:#b8ae9a; --title:#3f5470; --white:#f0e9da; --shadow:#121110;
+  --ink:#e4dccb; --dim:#ada493;
+  --cyan:#8fbcbc; --yellow:#dfb867; --magenta:#c98fab; --red:#db8a72; --green:#a3b98a;
+}
+:root[data-theme="washi"]{  /* 和紙 paper and sumi ink */
+  --desk-a:#d8cfbb; --desk-b:#ded6c4;
+  --win:#f5f0e4; --cell:#d6ccb6; --line:#5a5246; --title:#3e5573; --white:#f7f2e8; --shadow:#c2b8a2; --pre:#ebe5d7; --title-jp:#e8d9b0;
+  --ink:#2f2b25; --dim:#645b4d;
+  --cyan:#22656c; --yellow:#7a5512; --magenta:#8a3f63; --red:#a8402a; --green:#4a6630;
+  color-scheme:light;
+}
+:root[data-theme="fuji"]{   /* 藤 wisteria at dusk */
+  --desk-a:#221f29; --desk-b:#28242f;
+  --win:#2b2733; --cell:#433d4f; --line:#b9b0c9; --title:#6b52a0; --white:#f4effa; --shadow:#18161d;
+  --ink:#e8e1ef; --dim:#b0a8bd;
+  --cyan:#9cc4d6; --yellow:#e8c983; --magenta:#e0a3c0; --red:#e08f8a; --green:#a9cfa2;
+}
+html,body{min-height:100%}
+body{
+  background:var(--desk-a);
+  background-image:repeating-conic-gradient(var(--desk-a) 0 25%,var(--desk-b) 0 50%);
+  background-size:4px 4px;
+  color:var(--ink); font-family:var(--f-code); font-size:14px; line-height:1.55;
+}
+.bar{
+  display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; justify-content:space-between;
+  background:var(--line); color:var(--win); font-family:var(--f-ui); font-size:15px;
+  padding-block:6px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.bar b{font-weight:400; letter-spacing:.08em}
+.bar .lv{display:flex; flex-wrap:wrap; gap:4px 8px}
+.bar .lv button{border:0; padding:2px 6px; color:var(--win); font-size:15px; letter-spacing:0}
+.bar .prefs{display:flex; flex-wrap:wrap; gap:6px 14px}
+.bar .lang{display:flex; align-items:center; gap:6px}
+.bar .lang select{width:auto; background:var(--line); color:var(--win); border:2px solid var(--win); font:15px var(--f-ui); padding:1px 4px; cursor:pointer}
+.bar .lv button[aria-current="true"],.bar .lv button:hover:not(:disabled){background:var(--title); color:var(--white)}
+.bar #lvbar{flex-basis:100%}
+/* UI font: VT323 for Latin and Vietnamese (bold, clear pixels); kana/kanji and symbols fall back to DotGothic16,
+   which has no Vietnamese glyphs. VT323 draws small inside its em box (cap height .56em vs DotGothic16's .82em),
+   so it is declared here with size-adjust to match. Same files and subsets as Google Fonts serves. */
+@font-face{font-family:"VT323 VI"; font-display:swap; size-adjust:140%;
+  src:url(https://fonts.gstatic.com/s/vt323/v18/pxiKyp0ihIEF2isQFJXGdg.woff2) format("woff2");
+  unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB}
+@font-face{font-family:"VT323 VI"; font-display:swap; size-adjust:140%;
+  src:url(https://fonts.gstatic.com/s/vt323/v18/pxiKyp0ihIEF2isRFJXGdg.woff2) format("woff2");
+  unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"VT323 VI"; font-display:swap; size-adjust:140%;
+  src:url(https://fonts.gstatic.com/s/vt323/v18/pxiKyp0ihIEF2isfFJU.woff2) format("woff2");
+  unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+dialog.win{color:var(--ink); padding:0; width:min(680px, calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto}
+dialog.win::backdrop{background:rgba(0,0,0,.65)}
+dialog.win p{max-width:none}
+.desk{
+  display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.3fr); gap:20px; align-items:start;
+  max-width:1240px; margin:0 auto;
+  padding-block:20px 32px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.col{display:grid; gap:20px; min-width:0}
+@media (max-width:880px){ .desk{grid-template-columns:minmax(0,1fr)} }
+
+.win{background:var(--win); border:4px double var(--line); box-shadow:6px 6px 0 var(--shadow); min-width:0}
+.win>h2{
+  margin:0; display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  background:var(--title); color:var(--white); border-bottom:2px solid var(--line);
+  font:400 15px/1.2 var(--f-ui); letter-spacing:.08em; padding:6px 10px;
+}
+.win>h2 small{font-size:13px; color:var(--title-jp,var(--cyan)); letter-spacing:.15em}
+.pane{padding:14px; display:grid; gap:12px}
+.pane p{margin:0; max-width:65ch}
+h3{margin:0; font:400 20px/1.3 var(--f-ui); color:var(--yellow); text-wrap:balance}
+.eyebrow{font-family:var(--f-ui); color:var(--dim); font-size:13px; letter-spacing:.12em}
+.eyebrow b{font-weight:400; color:var(--cyan)}
+.stats{color:var(--dim); font-size:12.5px; font-variant-numeric:tabular-nums}
+.stats b{font-weight:400; color:var(--magenta)}
+
+pre{margin:0; font:13px/1.55 var(--f-code); overflow-x:auto; padding:10px 12px; background:var(--pre,var(--shadow)); border:1px solid var(--dim)}
+.k{color:var(--cyan)} .s{color:var(--yellow)} .n{color:var(--magenta)} .c{color:var(--dim)}
+.acc{color:var(--green)} .flt{color:var(--magenta)}
+.qlabel{font-family:var(--f-ui); font-size:13px; color:var(--dim); letter-spacing:.06em}
+.qlabel b{color:var(--ink); font-weight:400}
+.qlabel em{font-style:normal; color:var(--cyan)}
+
+button{
+  font:400 14px/1 var(--f-ui); color:var(--ink); background:transparent; cursor:pointer;
+  border:2px solid var(--line); padding:7px 12px; letter-spacing:.06em;
+}
+button:hover:not(:disabled){background:var(--line); color:var(--win)}
+button:disabled{opacity:.35; cursor:not-allowed}
+button:focus-visible{outline:2px solid var(--yellow); outline-offset:2px}
+button.go{background:var(--yellow); color:var(--win); border-color:var(--yellow); padding:10px 18px; font-size:16px}
+button.go:hover:not(:disabled){background:var(--white); border-color:var(--white)}
+
+.seg{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.seg>span{font-family:var(--f-ui); font-size:12px; color:var(--dim); letter-spacing:.1em}
+.seg button{padding:5px 10px; font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--line); color:var(--win)}
+
+.cols{display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px}
+.cols button{text-align:left; display:grid; gap:5px; padding:9px 10px; font-family:var(--f-code); font-size:14px; line-height:1.2}
+.cols button small{font-size:11.5px; color:var(--dim); font-variant-numeric:tabular-nums}
+.cols button:hover:not(:disabled) small{color:var(--win)}
+.slots{display:grid; gap:12px}
+.slot{display:grid; gap:6px}
+.chips{list-style:none; margin:0; padding:0; display:grid; gap:6px}
+.chips li{display:flex; align-items:center; gap:6px; border:1px dashed var(--dim); padding:5px 6px 5px 10px}
+.slot.on .chips li{border-color:var(--yellow)}
+.chips li span{flex:1; min-width:0; overflow-wrap:anywhere}
+.chips li i{font-style:normal; color:var(--yellow); font-family:var(--f-ui); width:1.4em}
+.chips button{padding:4px 8px; font-size:13px}
+.empty{color:var(--dim); font-size:13px}
+.row{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+
+.tabs{display:flex; gap:6px}
+.tabs button[aria-selected="true"]{background:var(--line); color:var(--win)}
+svg{display:block; width:100%; height:auto; max-width:100%}
+.nd{fill:var(--win); stroke:var(--dim); stroke-width:1.5}
+.ln{stroke:var(--cell); stroke-width:1}
+.leafbox{fill:var(--cell)}
+.tb{fill:var(--cell)}
+.nd.hit,.leafbox.hit{fill:var(--yellow); stroke:var(--yellow)}
+.tb.scan{fill:var(--cyan)}
+.tb.look{fill:var(--magenta)}
+.link{stroke:var(--magenta); stroke-width:1; opacity:.7}
+.lbl{fill:var(--dim); font:12px var(--f-ui); letter-spacing:.1em}
+.legend{display:flex; flex-wrap:wrap; gap:4px 16px; font-size:12px; color:var(--dim)}
+.legend span::before{content:""; display:inline-block; width:10px; height:10px; margin-right:6px; vertical-align:-1px; background:var(--sw)}
+
+.status{display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; border-top:2px solid var(--line); padding:8px 14px; font-family:var(--f-ui); font-size:14px}
+.lamp{display:inline-block; width:10px; height:10px; background:var(--cell); border:1px solid var(--dim); margin-right:6px; vertical-align:-1px}
+.lamp.on{background:var(--red); animation:blink .12s steps(2) infinite}
+@keyframes blink{50%{background:var(--cell)}}
+.pages{font-variant-numeric:tabular-nums; color:var(--yellow); letter-spacing:.08em}
+.prog{flex:1 1 140px; height:12px; border:1px solid var(--line); background:var(--shadow)}
+.prog div{height:100%; width:0; background:repeating-linear-gradient(90deg,var(--cyan) 0 8px,transparent 8px 10px)}
+
+.stars{font-family:var(--f-ui); font-size:30px; letter-spacing:.2em; color:var(--yellow); line-height:1}
+.stars .off{color:var(--cell)}
+.score{display:grid; grid-template-columns:auto auto; justify-content:start; gap:2px 16px; font-variant-numeric:tabular-nums; font-size:13px; margin:0}
+.score dt{color:var(--dim)} .score dd{margin:0; text-align:right}
+.qres{border-left:3px solid var(--dim); padding-left:10px; display:grid; gap:4px}
+.qres.good{border-color:var(--green)} .qres.bad{border-color:var(--red)}
+.tag{font-family:var(--f-ui); font-size:12px; letter-spacing:.08em; padding:1px 6px; border:1px solid currentColor}
+.good .tag{color:var(--green)} .bad .tag{color:var(--red)}
+.lesson{border:2px solid var(--green); padding:10px 12px; display:grid; gap:6px}
+.lesson b{font-family:var(--f-ui); font-weight:400; color:var(--green); letter-spacing:.1em}
+.hint{color:var(--cyan)}
+
+.rt-wrap{overflow-x:auto}
+.rt{border-collapse:collapse; font-size:12.5px; font-variant-numeric:tabular-nums}
+.rt th,.rt td{border:1px solid var(--cell); padding:3px 9px; text-align:left; white-space:nowrap}
+.rt th{color:var(--dim); font:400 12px var(--f-ui); letter-spacing:.06em}
+.cancel{color:var(--red); font-family:var(--f-ui)}
+.clue{border:2px solid var(--yellow); padding:8px 12px; display:grid; gap:4px}
+.clue b{font-family:var(--f-ui); font-weight:400; color:var(--yellow); letter-spacing:.08em}
+.clue.bonus{border-color:var(--magenta)} .clue.bonus b{color:var(--magenta)}
+.nb{display:grid; gap:6px}
+.nb details{border:1px dashed var(--dim); padding:6px 10px}
+.nb summary{cursor:pointer; font-family:var(--f-ui)}
+.nb summary b{font-weight:400; color:var(--yellow); margin-right:6px}
+.nb .bonus summary b{color:var(--magenta)}
+.nb p{margin:6px 0 0}
+.msg{border-left:3px solid var(--cyan); padding:4px 10px}
+.msg b{font-family:var(--f-ui); font-weight:400; color:var(--cyan)}
+.sus{background:var(--win); color:var(--yellow); font-family:var(--f-ui); padding:2px 8px; letter-spacing:.04em}
+.sus.hot{color:var(--red)}
+.sus-cards{border:0; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px}
+.sus-cards legend{padding:0; margin-bottom:6px}
+.sus-cards label{position:relative; border:2px solid var(--line); padding:8px 10px; display:grid; gap:2px; cursor:pointer}
+.sus-cards label small{color:var(--dim); font-size:12px}
+.sus-cards input{position:absolute; opacity:0; pointer-events:none}
+.sus-cards label:has(input:checked){background:var(--line); color:var(--win)}
+.sus-cards label:has(input:checked) small{color:var(--win)}
+.sus-cards label:has(input:focus-visible){outline:2px solid var(--yellow); outline-offset:2px}
+.slot-sel{display:grid; gap:4px}
+.slot-sel b{font-family:var(--f-ui); font-weight:400; color:var(--yellow); letter-spacing:.08em}
+select{font:14px var(--f-code); background:var(--win); color:var(--ink); border:2px solid var(--line); padding:6px; width:100%}
+select:focus-visible{outline:2px solid var(--yellow); outline-offset:2px}
+.grade{display:flex; align-items:center; gap:14px; border:2px solid var(--yellow); padding:8px 12px}
+.grade b{font:400 44px/1 var(--f-ui); color:var(--yellow)}
+h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.12em}
+
+@media (prefers-reduced-motion:reduce){ .lamp.on{animation:none} }
+</style>
+
+<header class="bar">
+  <b>DBOS-98 ◆ INDEX DOJO</b>
+  <div class="lv" id="casebar"></div>
+  <div class="prefs">
+    <label class="lang"><span aria-hidden="true">🎨</span><select id="theme" aria-label="Theme · Giao diện">
+      <option value="pc98">PC-98</option><option value="sumi">墨 Sumi</option><option value="washi">和紙 Washi</option><option value="fuji">藤 Fuji</option></select></label>
+    <label class="lang"><span aria-hidden="true">🌐</span><select id="lang" aria-label="Language · Ngôn ngữ">
+      <option value="en">English</option><option value="vi">Tiếng Việt</option></select></label>
+  </div>
+  <div class="lv" id="lvbar"></div>
+</header>
+
+<dialog class="win" id="dlg" aria-labelledby="dlg-title">
+  <h2><span id="dlg-title"></span><small id="dlg-jp"></small></h2>
+  <div class="pane" id="dlg-body"></div>
+</dialog>
+
+<main class="desk">
+  <div class="col">
+    <section class="win">
+      <h2><span id="m-title"></span><small>任務</small></h2>
+      <div class="pane" id="mission"></div>
+    </section>
+    <section class="win">
+      <h2><span data-t>INDEX WIZARD</span><small>索引</small></h2>
+      <div class="pane">
+        <pre id="ddl"></pre>
+        <div class="slots" id="slots"></div>
+        <div class="eyebrow" id="colhint"></div>
+        <div class="cols" id="cols"></div>
+        <div class="row">
+          <button class="go" id="run" data-t>EXECUTE ▶</button>
+          <button id="clear" data-t>CLEAR INDEXES</button>
+        </div>
+      </div>
+    </section>
+    <section class="win" id="nbwin">
+      <h2><span data-t>NOTEBOOK</span><small>手帳</small></h2>
+      <div class="pane" id="notebook"></div>
+    </section>
+  </div>
+  <div class="col">
+    <section class="win">
+      <h2><span data-t>EXECUTION PLAN</span><small>実行計画</small></h2>
+      <div class="pane">
+        <div class="tabs" id="tabs" role="tablist"></div>
+        <svg id="tree" viewBox="0 0 640 262" role="img" aria-label="B-tree index and table pages read by the query"></svg>
+        <div class="legend" id="legend"></div>
+        <pre id="plan"></pre>
+      </div>
+      <div class="status">
+        <span><span class="lamp" id="lamp"></span>HDD</span>
+        <span><span data-t>PAGES READ</span> <span class="pages" id="pages">000000</span></span>
+        <div class="prog"><div id="prog"></div></div>
+      </div>
+    </section>
+    <section class="win" id="reswin">
+      <h2><span data-t>RESULTS</span><small>結果</small></h2>
+      <div class="pane" id="results"></div>
+    </section>
+    <section class="win">
+      <h2><span data-t>REPORT</span><small>報告</small></h2>
+      <div class="pane" id="report"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+// Index Dojo mission data. Loaded by index-dojo.html before the game script.
+
+/* Predicates: {col, sql, kind, sel?, why?}. kind "eq" and "range" can search an index;
+   "filter" can only be checked (leading-wildcard LIKE, smart logic). sel defaults to 1/distinct. */
+function eq(col, val){ return {col, sql:`${col} = ${val}`, kind:"eq"}; }
+function range(col, sql, sel){ return {col, sql, kind:"range", sel}; }
+const WILDCARD = "starts with a wildcard, so there is no place in the sorted index to start searching.";
+const SMART = "can be switched off by a NULL parameter, so the database can't use it to search the index.";
+function smart(col, bind, given){ return {col, sql:`(${bind} IS NULL OR ${col} = ${bind})`, kind:"filter", sel: given ? undefined : 1, why:SMART}; }
+
+const PRACTICE = [{
+  tier:0, name:"Needle in a Haystack", jp:"干し草の針",
+  table:"employees", rows:100000, perPage:50, maxCols:1,
+  cols:{employee_id:100000, last_name:5000, department:10, hire_year:40},
+  brief:"HR's employee search hangs for seconds on every lookup. The query below runs hundreds of times an hour. You may create one index with one column. Pick the column that lets the database reach the matching rows by reading the fewest pages.",
+  queries:[{label:"Q1", who:"HR employee search", where:[eq("last_name","'SATO'"), eq("department","'SALES'")]}],
+  hint:"Compare how many rows one value of each column matches: rows ÷ distinct values.",
+  lesson:"Selectivity decides. An index finds the first matching entry in a few page reads, but every matching row still costs one read from the table. last_name matches about 20 rows, so the query costs 23 pages. department matches 10,000 rows, which is more work than scanning the whole table, so the optimizer ignores an index on it."
+},{
+  tier:0, name:"Shouting Names", jp:"大文字",
+  table:"employees", rows:100000, perPage:50, maxCols:1,
+  cols:{employee_id:100000, last_name:5000, "UPPER(last_name)":5000, department:10},
+  brief:"Users complained that searching for 'sato' found nothing, so the search box now ignores case. The query wraps the column in UPPER(). Same employees table as Mission 01, and again one index with one column. Find the index that still works.",
+  queries:[{label:"Q1", who:"Case-insensitive employee search", where:[eq("UPPER(last_name)","'SATO'")]}],
+  hint:"The query never compares last_name directly. Find the index entry that holds exactly what the WHERE clause compares.",
+  lesson:"A function hides the column from the index. An index on last_name is sorted by the stored text ('Sato'), but the query compares UPPER(last_name), a value that index doesn't contain. Index the expression itself, UPPER(last_name), and the search becomes a normal index lookup again."
+},{
+  tier:0, name:"One Index, Two Queries", jp:"二つの問い",
+  table:"orders", rows:1000000, perPage:50, maxCols:2,
+  cols:{order_no:2000, store_id:500, status:4, customer_id:50000},
+  brief:"Each order is identified by store_id plus order_no. Support staff run Q1 to open a single order. Store managers run Q2 to list every order from one store. The disk budget covers one index of up to two columns. Make both queries fast with that one index.",
+  queries:[
+    {label:"Q1", who:"Support: open one order", where:[eq("store_id","17"), eq("order_no","4711")]},
+    {label:"Q2", who:"Store manager: list a store's orders", where:[eq("store_id","17")]}
+  ],
+  hint:"Q2 filters on store_id only. Which column has to come first for Q2 to use the index?",
+  lesson:"Column order decides which queries an index can serve. An index on (store_id, order_no) is sorted by store_id first, then by order_no within each store, the way a phone book sorts by surname and then by first name. The database can search it by store_id alone or by both columns, but not by order_no alone. Put the column every query filters on first."
+},{
+  tier:0, name:"Never Touch the Table", jp:"索引だけ",
+  table:"orders", rows:1000000, perPage:50, maxCols:2,
+  cols:{store_id:500, amount:100000, order_date:3650, status:4},
+  brief:"The finance dashboard lists every order amount for one store. It needs only one column from the table. One index, up to two columns.",
+  queries:[{label:"Q1", who:"Finance dashboard", select:["amount"], where:[eq("store_id","17")]}],
+  hint:"Each of those 2,000 table reads fetches a single value: amount.",
+  lesson:"When the index holds every column the query needs, the database never reads the table. That is an index-only scan. (store_id, amount) answers the query from 22 index pages instead of 2,000 table reads. The price is a wider index that every INSERT and UPDATE has to maintain."
+},{
+  tier:0, name:"Between the Dates", jp:"期間",
+  table:"orders", rows:1000000, perPage:50, maxCols:2, two:6,
+  cols:{store_id:500, order_date:3650, status:4, customer_id:50000},
+  brief:"Store managers pull one quarter of orders for their store. The query mixes an exact match on store_id with a date range on order_date. One index, up to two columns. Try both column orders and compare the leaf pages read.",
+  queries:[{label:"Q1", who:"Quarterly orders of one store", where:[eq("store_id","17"),
+    range("order_date", "order_date BETWEEN DATE '2026-01-01' AND DATE '2026-03-31'", 90/3650)]}],
+  hint:"Watch the leaf pages. Which column, placed first, keeps the matching entries next to each other?",
+  lesson:"Put equality columns first and range columns last. With (store_id, order_date), store 17's orders sit together sorted by date, so the scan reads one quarter of one store. With (order_date, store_id), the scan walks every store's orders for that quarter and checks store_id along the way. A range ends the searchable part of an index; columns after it can only filter."
+},{
+  tier:0, name:"Wild Cards", jp:"伏せ字",
+  table:"customers", rows:500000, perPage:50, maxCols:2,
+  cols:{customer_id:500000, last_name:20000, city:100, birth_year:80},
+  brief:"Support searches customers by the end of their surname, like '%MOTO' to find Yamamoto, Sakamoto and Hashimoto, within one city. One index, up to two columns.",
+  queries:[{label:"Q1", who:"Surname-ending search", where:[eq("city","'NAGOYA'"),
+    {col:"last_name", sql:"last_name LIKE '%MOTO'", kind:"filter", sel:0.02, why:WILDCARD}]}],
+  hint:"LIKE '%MOTO' can't lead an index. Can it still help from the second position?",
+  lesson:"A pattern that starts with a wildcard has no starting point in a sorted list, so LIKE '%MOTO' can never be used to search the index. It still helps as a filter: with (city, last_name), the database searches by city, then checks last_name in the leaf pages before touching the table. Only 100 of the 5,000 Nagoya customers need a table read."
+},{
+  tier:1, name:"Midnight", jp:"真夜中",
+  table:"sales", rows:1000000, perPage:50, maxCols:1,
+  cols:{sale_time:1000000, "TRUNC(sale_time)":3650, employee_id:5000, product_id:2000},
+  brief:"From this tier on you can also rewrite the queries. Q1 is the daily sales report; Q2 is a live ticker that shows the last hour. One index with one column has to serve both.",
+  queries:[
+    {label:"Q1", who:"Daily report: yesterday's sales", variants:[
+      {tag:"As written", where:[eq("TRUNC(sale_time)","DATE '2026-11-19'")]},
+      {tag:"Explicit range", where:[range("sale_time","sale_time >= DATE '2026-11-19' AND sale_time < DATE '2026-11-20'",1/3650)]}]},
+    {label:"Q2", who:"Live ticker: the last hour", where:[range("sale_time","sale_time >= SYSDATE - INTERVAL '1' HOUR",1/(3650*24))]}
+  ],
+  hint:"An index on TRUNC(sale_time) can't help the ticker. Can Q1 be written so it compares sale_time itself?",
+  lesson:"TRUNC() hides sale_time from the index just as UPPER() hid last_name. Indexing TRUNC(sale_time) would fix the report but leave the ticker scanning the table. Writing the day as an explicit range, sale_time >= day AND sale_time < next day, lets one plain index on sale_time serve both."
+},{
+  tier:1, name:"Smart Logic", jp:"万能",
+  table:"employees", rows:100000, perPage:50, maxCols:2,
+  cols:{subsidiary_id:200, employee_id:500, last_name:5000, hire_year:40},
+  brief:"One search form, three optional fields. The developers wrote a single 'smart' query that ignores any field left empty. Q1 is a lookup with subsidiary and employee number filled in; Q2 lists a subsidiary's staff. One index, up to two columns. Rewrites allowed.",
+  queries:[
+    {label:"Q1", who:"Form: subsidiary + employee no.", variants:[
+      {tag:"One smart query", binds:":sub = 12, :emp = 345, :name = NULL",
+       where:[smart("subsidiary_id",":sub",true), smart("employee_id",":emp",true), smart("last_name",":name",false)]},
+      {tag:"Dynamic SQL", binds:":sub = 12, :emp = 345",
+       where:[eq("subsidiary_id",":sub"), eq("employee_id",":emp")]}]},
+    {label:"Q2", who:"Form: subsidiary only", variants:[
+      {tag:"One smart query", binds:":sub = 12, :emp = NULL, :name = NULL",
+       where:[smart("subsidiary_id",":sub",true), smart("employee_id",":emp",false), smart("last_name",":name",false)]},
+      {tag:"Dynamic SQL", binds:":sub = 12", where:[eq("subsidiary_id",":sub")]}]}
+  ],
+  hint:"An index can't be searched by a condition that might be switched off. Which fields are actually filled in for each query?",
+  lesson:"A single statement for every combination of filters needs one plan that works even when a field is empty, so no condition can be used to search an index. Build the WHERE clause from the fields actually filled in, still with bind parameters, and each statement gets its own plan. Then (subsidiary_id, employee_id) serves both, as in Mission 03."
+},{
+  tier:1, name:"Order Up", jp:"順番",
+  table:"orders", rows:1000000, perPage:50, maxCols:3, two:4,
+  cols:{store_id:500, status:4, order_date:3650, customer_id:50000},
+  brief:"The packing station shows the 10 oldest open orders of the store. Only 10 rows are needed, but the database decides how many it reads. One index, up to three columns.",
+  queries:[{label:"Q1", who:"Packing queue", where:[eq("store_id","17"), eq("status","'OPEN'")],
+    order:{col:"order_date"}, fetch:10}],
+  hint:"If the index already returns rows sorted by order_date, the database can stop after 10. Where must order_date sit in the index for that?",
+  lesson:"An index is a sorted list, so it can deliver rows already in ORDER BY order. Put the columns compared with = first and the ORDER BY column right after them: (store_id, status, order_date). The database then reads the first 10 entries and stops, a pipelined top-N query. Without that, it finds all 500 open orders and sorts them before returning any."
+},{
+  tier:1, name:"Page Two Hundred", jp:"頁",
+  table:"posts", rows:1000000, perPage:50, maxCols:2,
+  cols:{topic_id:200, post_id:1000000, author_id:20000},
+  brief:"A busy forum topic has 5,000 posts, 20 per page, newest first. Readers who scroll far back make the database work hard. One index, up to two columns. Rewrites allowed.",
+  queries:[{label:"Q1", who:"Topic 7, page 101", variants:[
+    {tag:"OFFSET", where:[eq("topic_id","7")], order:{col:"post_id", dir:"DESC"}, offset:2000, fetch:20},
+    {tag:"Seek (keyset)", binds:":last_seen = id of the last post on page 100",
+     where:[eq("topic_id","7"), range("post_id","post_id < :last_seen",0.6)], order:{col:"post_id", dir:"DESC"}, fetch:20}]}],
+  hint:"OFFSET still reads every row it skips. What if the query started right after the last post the reader saw?",
+  lesson:"OFFSET makes the database find, read and throw away every row before the page you want, so page 101 costs a hundred times page 1. The seek method remembers the last post_id the reader saw and asks for the 20 posts before it. With (topic_id, post_id) that is a pipelined top-N query, and every page costs the same 23 pages."
+},{
+  tier:2, name:"Every Index Has a Price", jp:"代価",
+  table:"orders", rows:1000000, perPage:50, maxCols:2, maxIdx:2, inserts:50000, two:1.2,
+  cols:{customer_id:50000, status:4, order_date:3650, store_id:500},
+  brief:"From this tier on, queries run many times a day and new rows keep arriving. Score = pages read per day + pages written to keep your indexes up to date. You may create up to two indexes.",
+  queries:[
+    {label:"Q1", who:"Customer's order history page", freq:7200, where:[eq("customer_id",":cust")]},
+    {label:"Q2", who:"Monthly returns report", freq:2, where:[eq("status","'RETURNED'"),
+      range("order_date","order_date >= DATE '2026-11-01'",20/3650)]}
+  ],
+  hint:"Compare what an index saves per day with what it costs per day to maintain.",
+  lesson:"Every index slows down every INSERT, UPDATE and DELETE, because each change has to be written into the sorted index too. The returns report runs twice a day: scanning the table costs 40,000 pages per day, while keeping a second index costs 150,000. Index the queries that run often and let rare reports scan."
+},{
+  tier:2, name:"Three Queries, Two Indexes", jp:"三つ巴",
+  table:"sales", rows:1000000, perPage:50, maxCols:2, maxIdx:2, inserts:5000, two:4,
+  cols:{shop_id:200, product_id:5000, sale_date:3650, channel:3},
+  brief:"Three queries share one table and two indexes. Every rule from the earlier missions applies at once. Score = pages read per day + index upkeep.",
+  queries:[
+    {label:"Q1", who:"Stock check", freq:1000, where:[eq("shop_id","7"), eq("product_id","1234")]},
+    {label:"Q2", who:"Product report", freq:200, where:[eq("product_id","1234")]},
+    {label:"Q3", who:"Weekly shop report", freq:100, where:[eq("shop_id","7"),
+      range("sale_date","sale_date BETWEEN DATE '2026-11-13' AND DATE '2026-11-19'",7/3650)]}
+  ],
+  hint:"One index can serve two queries if the column they share comes first. The other must put equality before range.",
+  lesson:"With two indexes for three queries, each index has to earn its place. (product_id, shop_id) answers the stock check and, through its first column, the product report. (shop_id, sale_date) answers the weekly report with the equality column first and the range last."
+}];
+function like(col, sql, sel){ return {col, sql, kind:"filter", sel, why:WILDCARD}; }
+
+/* ---------- Case 1: The Last Train ----------
+   Truth (never shown as such): Daisuke Ono (CFO, FIN-01) approved ¥4.8M a month to Kaito Trading, a dead
+   company; Kenji Sato (SALES-07) filed the requests for a ¥500,000 cut. Mika Sato gave Mori a copy of the
+   ledger at 23:41 and caught the 23:58 train. At 00:07 Mori texted Ono to meet in the garage; they argued,
+   Ono pushed him down the stairs, took his phone and wallet, then went after Mika. */
+const ON = (col, val, sel) => ({...eq(col, val), sel});
+const KAITO = ["Kaito Trading", "KAITO TRADING", "kaito trading", "Kaito trading"];
+
+const CASE1 = {
+  id:"case1", title:"The Last Train", jp:"終電",
+  intro:[
+    "A man is found dead at 06:10 on 20 November, in the level-3 stairwell of the Kanayama Station parking garage. Time of death: between 23:30 and 00:30.",
+    "On him: a Kinjo Logistics staff badge, number 1180. No wallet. No phone.",
+    "In his coat, a notebook. The last line reads: “Sato, 23:30. The numbers don't lie.”",
+  ],
+  witness:"Night guard Tetsuya Hara: “A dark sedan left around half past midnight. The plate ended in 12. That's all I got.”",
+  suspects:[
+    {id:"kenji", name:"Kenji Sato", role:"Sales manager · SALES-07"},
+    {id:"mika", name:"Mika Sato", role:"Sales accountant · SALES-12"},
+    {id:"ono", name:"Daisuke Ono", role:"Chief Financial Officer · FIN-01"},
+  ],
+  statements:[
+    {who:"Kenji Sato", text:"I parked at Kanayama for a dinner and left around 22:40."},
+    {who:"Mika Sato", text:"I went straight home after work."},
+    {who:"Daisuke Ono", text:"I was home all night. Chikusa Tower, unit 3302."},
+  ],
+  statementsAfter:"E4",
+  accusation:{culprit:"ono", MOTIVE:["E2","E3"], OPPORTUNITY:["E9"], LIE:["E10"]},
+  outro:[
+    "02:40. Officers reach Mika Sato's building in Ozone and stop Daisuke Ono at her door. Mori's phone and wallet are in his coat.",
+    "Ono says he only came to talk. Mori wanted him to confess before Monday's board meeting. They argued on the stairs, and Mori fell.",
+    "Kenji Sato is arrested the same morning. He filed the Kaito Trading payments for ¥500,000 a month.",
+  ],
+  outroMika:"Mika Sato: “I copied the ledger. I was the last one who saw him. And I didn't know which of them did it.”",
+  outroHook:"Ono insists Kaito Trading was never his alone. The money went on to “people above me”.",
+  outroInsider:"One more thing in the query log: SYS_MAINT read the same rows you did. Twice.",
+  insiderBonuses:["B5","B8"],
+  grades:{
+    S:"Nobody noticed your queries.",
+    A:"SYS_MAINT saw some traffic. Nothing it could use.",
+    B:"Someone has been watching what you look at.",
+    C:"The insider knows exactly what you looked at, and when.",
+  },
+  missions:[{
+    name:"Badge 1180", jp:"社員証",
+    table:"employees", rows:50000, perPage:50, maxCols:1,
+    cols:{employee_id:50000, last_name:25000, department:40, hire_year:35},
+    story:"All you have is a staff badge, number 1180. Find out who the dead man was.",
+    queries:[{label:"Q1", who:"Who was he?", where:[eq("employee_id","1180")]}],
+    hint:"Which column is printed on the badge?",
+    hint2:"The badge number is the employee_id. Index that column.",
+    lesson:"employee_id is unique, so the database walks the B-tree to exactly one leaf entry and reads one row: an INDEX UNIQUE SCAN. The cost is one page per level of the tree plus one table read, and the tree stays shallow even with millions of rows.",
+    results:[{columns:["employee_id","name","department","title","phone"],
+      rows:[[1180,"MORI Hideo","AUDIT","Internal auditor","090-5518-2204"]]}],
+    clue:{id:"E1", title:"The victim", text:"Hideo Mori, 54, internal auditor at Kinjo Logistics. Phone 090-5518-2204."},
+  },{
+    name:"Open Items", jp:"未決",
+    table:"tasks", rows:200000, perPage:50, maxCols:1,
+    cols:{task_id:200000, assignee_id:50000, status:4, project_id:500},
+    story:"Mori was an internal auditor. What was he working on when he died? The company task tracker lists every open item, assigned by employee id.",
+    queries:[{label:"Q1", who:"Mori's open work", where:[eq("assignee_id","1180"), eq("status","'OPEN'")]}],
+    hint:"Compare how many rows one value of each column matches.",
+    hint2:"status has only 4 values, so 'OPEN' matches a quarter of the table. assignee_id narrows it to 4 rows.",
+    lesson:"assignee_id matches 4 rows. status matches 50,000, which is more work than reading the whole table, so the optimizer ignores an index on it.",
+    results:[{columns:["task_id","project","title","status","note"],
+      rows:[[88213,"AUD-2611","Payments to Kaito Trading (req. SALES-07, appr. FIN-01)","OPEN","Board meeting Mon 23 Nov. Escalate."]]}],
+    clue:{id:"E2", title:"Mori's open audit", text:"AUD-2611: payments to Kaito Trading, requested by SALES-07 and approved by FIN-01. His note: “Board meeting Mon 23 Nov. Escalate.”"},
+  },{
+    name:"The Numbers", jp:"帳簿",
+    table:"payments", rows:1000000, perPage:50, maxCols:1,
+    cols:{payment_id:1000000, payee:71429, "UPPER(payee)":71429, approver:300},
+    story:"AUD-2611 is about payments to Kaito Trading. Clerks typed the payee name any way they liked, so the query compares it in upper case. Find every payment.",
+    queries:[{label:"Q1", who:"Every payment to Kaito Trading", where:[eq("UPPER(payee)","'KAITO TRADING'")]}],
+    hint:"The query never compares payee directly.",
+    hint2:"Index the expression UPPER(payee) itself.",
+    lesson:"A function hides a column from its index. An index on payee holds the text as typed, but the query compares UPPER(payee). Index the expression and the lookup is an ordinary index scan again.",
+    results:[{columns:["paid_on","payee","amount","requested_by","approved_by"],
+      rows:Array.from({length:14}, (_, i) => {
+        const d = new Date(Date.UTC(2025, 9 + i, 1));
+        return [d.toISOString().slice(0,10), KAITO[i % 4], "¥4,800,000", "SALES-07", "FIN-01"];
+      })}],
+    clue:{id:"E3", title:"¥67.2 million", text:"14 monthly payments of ¥4,800,000 to Kaito Trading, ¥67.2M in total. All requested by SALES-07 and approved by FIN-01."},
+    bonus:{title:"A dead company", text:"Company registry: Kaito Trading was dissolved in 2019. Nobody has delivered anything for these payments."},
+  },{
+    name:"Who Signs", jp:"署名",
+    table:"employees", rows:50000, perPage:50, maxCols:2,
+    cols:{department:40, last_name:625, employee_id:50000, hire_year:35},
+    story:"Two codes sign every payment: SALES-07 and FIN-01. Mori's notebook names a Sato. Q1 finds the Satos in Sales; Q2 lists the eight people in the executive office, where codes like FIN-01 sit. Both queries have to share one index.",
+    queries:[
+      {label:"Q1", who:"The Satos in Sales", where:[eq("department","'SALES'"), eq("last_name","'SATO'")]},
+      {label:"Q2", who:"The executive office", where:[ON("department","'EXEC'",8/50000)]}],
+    hint:"Both queries filter on department.",
+    hint2:"Put department first, then last_name.",
+    lesson:"A two-column index is sorted by its first column, then by the second within it. (department, last_name) can be searched by department alone or by both columns. (last_name, department) can't serve a search by department.",
+    results:[
+      {columns:["id","name","code","title","phone","car","transit card"], rows:[
+        [2207,"SATO Kenji","SALES-07","Sales manager","090-7731-0042","NGY 330 TA 51-12","T-4471"],
+        [3315,"SATO Mika","SALES-12","Accountant","090-6620-1187","—","T-9025"]]},
+      {columns:["id","name","code","title","phone","car","transit card"], rows:[
+        [11,"ISHIDA Ken","EXE-01","Chief Executive","090-1102-5531","NGY 300 SE 10-01","T-0011"],
+        [14,"ONO Daisuke","FIN-01","Chief Financial Officer","090-1150-3398","—","T-0014"],
+        [17,"KUBO Rie","OPS-01","Chief Operating Officer","090-1166-2045","NGY 300 SE 22-41","T-0017"],
+        [21,"ARAI Shun","IT-01","Chief Technology Officer","090-1171-8820","—","T-0021"],
+        [25,"MAEDA Yoko","LEG-01","General Counsel","090-1183-0476","—","T-0025"],
+        [31,"KONDO Taro","HR-01","HR Director","090-1194-6612","—","T-0031"],
+        [52,"IWATA Nao","EXE-11","Executive assistant","090-1205-7739","—","T-0052"],
+        [58,"SUGA Emi","EXE-12","Executive assistant","090-1213-4408","—","T-0058"]]}],
+    clue:{id:"E4", title:"Who's who", text:"Kenji Sato is SALES-07: sales manager, car NGY 330 TA 51-12, phone 090-7731-0042. Mika Sato is SALES-12: accountant, no car, phone 090-6620-1187, transit card T-9025. FIN-01 is Daisuke Ono, Chief Financial Officer."},
+  },{
+    name:"Last Words", jp:"最後の言葉",
+    table:"messages", rows:2000000, perPage:50, maxCols:3,
+    cols:{sender:500000, recipient:500000, sent_at:86400, body:2000000},
+    story:"The phone company only hands over metadata, so the query asks for two columns: who Mori texted that day, and when.",
+    queries:[{label:"Q1", who:"Mori's messages on 19 Nov", select:["recipient","sent_at"], where:[eq("sender","'090-5518-2204'")]}],
+    hint:"The query reads two columns from the table: recipient and sent_at.",
+    hint2:"(sender) alone gets you the rows. Add recipient and sent_at to the index and the table is never read.",
+    lesson:"When the index holds every column a query needs, the table is never read: an index-only scan. Here that turns 4 table reads into none.",
+    results:[{columns:["recipient","sent_at"], rows:[
+      ["090-7731-0042","21:02"],["090-6620-1187","23:20"],["090-6620-1187","23:59"],["090-2231-7781","00:07"]]}],
+    clue:{id:"E5", title:"Mori's last messages", text:"21:02 to Kenji Sato. 23:20 and 23:59 to Mika Sato. 00:07 to an unknown number, 090-2231-7781. Mika said she went straight home. Kenji never said who he had dinner with."},
+    bonus:{title:"Someone else is reading", text:"Query log: session SYS_MAINT read the same rows from messages two minutes after you."},
+  },{
+    name:"The Ticket Gates", jp:"改札",
+    table:"swipes", rows:1000000, perPage:50, maxCols:2,
+    cols:{station:100, swipe_time:86400, card_id:300000, gate:8},
+    story:"Mika said she went straight home. Kanayama's ticket gates log every card. Check every swipe there between 23:00 and 00:30.",
+    queries:[{label:"Q1", who:"Kanayama, 23:00 to 00:30", where:[eq("station","'KANAYAMA'"),
+      range("swipe_time","swipe_time BETWEEN '23:00' AND '00:30'",0.0006)]}],
+    hint:"One condition is an exact match, the other is a range.",
+    hint2:"Put station first and swipe_time second.",
+    lesson:"Put the exact match first and the range last. With (station, swipe_time), Kanayama's swipes sit together in time order, so the scan reads only the 90 minutes you asked for.",
+    results:[{columns:["swipe_time","card_id","direction"], rows:[
+      ["23:04","T-1032","IN"],["23:25","T-9025","OUT"],["23:31","T-5560","OUT"],
+      ["23:47","T-2218","IN"],["23:58","T-9025","IN"],["00:12","T-7741","OUT"]]}],
+    clue:{id:"E6", title:"Mika's card", text:"Mika's card T-9025 left Kanayama station at 23:25 and went back in at 23:58. It did not come out at Kanayama again that night."},
+  },{
+    name:"Ends in 12", jp:"末尾",
+    table:"garage_cam", rows:500000, perPage:50, maxCols:2,
+    cols:{camera:1250, plate:100000, cam_time:86400, lane:4},
+    story:"Hara remembers a plate ending in 12. The garage entrance camera logged every car that night.",
+    queries:[{label:"Q1", who:"Plates ending in 12 at the garage", where:[eq("camera","'KANAYAMA-ENT'"),
+      like("plate","plate LIKE '%-12'",0.01)]}],
+    hint:"LIKE '%-12' can't be searched in a sorted list. What else in the WHERE clause can?",
+    hint2:"Index (camera, plate): search by camera, check the plate in the leaf pages.",
+    lesson:"A leading wildcard has no starting point in a sorted list. But a column placed after the search column still filters in the leaf pages, so non-matching cars never cost a table read.",
+    results:[{columns:["cam_time","plate","direction"], rows:[
+      ["21:15","NGY 330 TA 51-12","IN"],["22:41","NGY 330 TA 51-12","OUT"],
+      ["00:14","NGY 300 SE 4?-12","IN"],["00:31","NGY 300 SE 4?-12","OUT"]]}],
+    clue:{id:"E7", title:"Two cars", text:"Kenji's car came in at 21:15 and left at 22:41. A second car, plate only partly read as NGY 300 SE 4?-12, came in at 00:14 and left at 00:31."},
+  },{
+    name:"Half a Plate", jp:"半分",
+    table:"vehicles", rows:2000000, perPage:50, maxCols:1,
+    cols:{plate:2000000, owner_type:5, model_year:30, color:12},
+    story:"The camera only half-read the second car: NGY 300 SE 4?-12. Search the vehicle registry for plates that start with the part you have and end in -12.",
+    queries:[{label:"Q1", who:"NGY 300 SE 4?-12", where:[
+      range("plate","plate LIKE 'NGY 300 SE 4%'",0.00015), like("plate","plate LIKE '%-12'",0.01)]}],
+    hint:"A LIKE pattern that starts with fixed text can be searched.",
+    hint2:"Index plate. 'NGY 300 SE 4%' becomes a range scan; the '%-12' part is checked while scanning.",
+    lesson:"LIKE 'NGY 300 SE 4%' has a fixed prefix, so the database searches it as a range, from 'NGY 300 SE 4' up to the next prefix. The '%-12' part can only be checked while scanning that range.",
+    results:[{columns:["plate","owner","vehicle"], rows:[
+      ["NGY 300 SE 41-12","Private, Toyota City","white minivan"],
+      ["NGY 300 SE 47-12","Kinjo Logistics (executive pool)","black sedan"],
+      ["NGY 300 SE 49-12","Private, Gifu","silver hatchback"]]}],
+    clue:{id:"E8", title:"The company car", text:"NGY 300 SE 47-12 is a black sedan in Kinjo Logistics' executive car pool."},
+    bonus:{title:"Someone got there first", text:"Query log: session SYS_MAINT looked up this plate four minutes before you did."},
+  },{
+    name:"Who Had the Keys", jp:"鍵",
+    table:"pool_bookings", rows:300000, perPage:50, maxCols:2,
+    cols:{plate:200, booked_at:300000, employee_id:50000, purpose:20},
+    story:"Car 47-12 belongs to the executive pool, and pool cars are booked. Q1 asks who had it that night, and Q2 lists its whole booking history, both through the same index.",
+    queries:[
+      {label:"Q1", who:"Bookings on the night of 19 Nov", where:[eq("plate","'NGY 300 SE 47-12'"),
+        range("booked_at","booked_at BETWEEN '2026-11-19 18:00' AND '2026-11-20 06:00'",1/1500)]},
+      {label:"Q2", who:"The car's booking history", where:[eq("plate","'NGY 300 SE 47-12'")]}],
+    hint:"Q2 filters on plate only.",
+    hint2:"Index (plate, booked_at): equality first, range last.",
+    lesson:"One index serves a lookup and a range when the equality column comes first. (plate, booked_at) finds one night of one car in a few pages and still lists the car's whole history.",
+    results:[
+      {columns:["booked_at","returned_at","employee","purpose","contact"], rows:[
+        ["19 Nov 23:35","20 Nov 01:10","ONO Daisuke (FIN-01)","Client dinner","090-2231-7781"]]},
+      {count:1500, note:"Every booking of this car since 2024."}],
+    clue:{id:"E9", title:"The driver", text:"Car 47-12 was booked by Daisuke Ono (FIN-01) from 23:35 to 01:10 for a “client dinner”. His contact number is 090-2231-7781, the number Mori texted at 00:07."},
+    bonus:{title:"A habit", text:"Ono booked this car for a late night six times in the last two months."},
+  },{
+    name:"Home All Night", jp:"在宅",
+    table:"door_log", rows:5000000, perPage:50, maxCols:3, two:2,
+    cols:{resident_id:20000, event_time:5000000, event:4, gate:10},
+    story:"Ono says he was home all night at Chikusa Tower, unit 3302: resident R-3302. The building logs every door event. You only need the event and its time.",
+    queries:[{label:"Q1", who:"R-3302, night of 19 Nov", select:["event","event_time"], where:[eq("resident_id","'R-3302'"),
+      range("event_time","event_time BETWEEN '2026-11-19 22:00' AND '2026-11-20 03:00'",0.012)]}],
+    hint:"The query uses three columns: resident_id, event_time and event.",
+    hint2:"(resident_id, event_time) gets you the rows. Add event as a third column and the table is never read.",
+    lesson:"Combine the rules: equality first, then the range, then the columns the query selects. The result is an index-only range scan that reads four pages.",
+    results:[{columns:["event","event_time"], rows:[["OUT","23:22"],["IN","01:31"],["OUT","01:58"]]}],
+    clue:{id:"E10", title:"Not home", text:"Chikusa Tower, unit 3302: Ono went out at 23:22, came back at 01:31, and went out again at 01:58. He said he was home all night."},
+    bonus:{title:"Mori's phone", text:"Mori's missing phone connected to a cell tower in Ozone, near Mika's flat, at 02:10."},
+  }],
+};
+
+const CASES = [
+  CASE1,
+  { id:"practice", title:"Practice", jp:"練習", practice:true, missions:PRACTICE.slice(6) },
+];
+</script>
+<script>
+// Vietnamese text for Index Dojo. Each key is the English string exactly as the game shows it;
+// {name} placeholders must match the key (the English plural {s} may be dropped).
+// SQL, column names, plan output and query result rows stay in English, as in a real database.
+const VI = {
+  /* ---------- interface ---------- */
+  "INDEX WIZARD": "TRÌNH TẠO INDEX",
+  "EXECUTE ▶": "THỰC THI ▶",
+  "CLEAR INDEXES": "XÓA INDEX",
+  "NOTEBOOK": "SỔ TAY",
+  "EXECUTION PLAN": "KẾ HOẠCH THỰC THI",
+  "PAGES READ": "SỐ TRANG ĐỌC",
+  "RESULTS": "KẾT QUẢ",
+  "REPORT": "BÁO CÁO",
+  "B-tree index and table pages read by the query": "Index B-tree và các trang của bảng mà truy vấn đã đọc",
+  "BASIC 初級": "CƠ BẢN 初級",
+  "INTERMEDIATE 中級": "TRUNG CẤP 中級",
+  "ADVANCED 上級": "NÂNG CAO 上級",
+  "PRACTICE {jp}": "LUYỆN TẬP {jp}",
+  "CASE {n} {jp}": "HỒ SƠ {n} {jp}",
+  "BRIEFING": "TÓM TẮT VỤ ÁN",
+  "START INVESTIGATION ▶": "BẮT ĐẦU ĐIỀU TRA ▶",
+  "MISSION {n}": "NHIỆM VỤ {n}",
+  "REWRITE": "VIẾT LẠI",
+  "runs {n}×/day": "chạy {n} lần/ngày",
+  "{table}: {rows} rows · {pages} table pages · {leaf} index entries per leaf page": "{table}: {rows} dòng · {pages} trang bảng · {leaf} mục index mỗi trang lá",
+  "{n} new rows/day.": "{n} dòng mới mỗi ngày.",
+  "Each index costs {p} page writes per new row = {total} pages/day.": "Mỗi index tốn {p} lần ghi trang cho mỗi dòng mới = {total} trang/ngày.",
+
+  "No index yet. Every query reads the whole table.": "Chưa có index. Truy vấn nào cũng phải đọc cả bảng.",
+  "{k}/{max} columns": "{k}/{max} cột",
+  "new columns go here": "cột mới sẽ vào đây",
+  "click to edit": "bấm để sửa",
+  "YOUR INDEX · {k}/{max} column{s}": "INDEX CỦA BẠN · {k}/{max} cột",
+  "Move {c} earlier": "Đưa {c} lên trước",
+  "Move {c} later": "Đưa {c} ra sau",
+  "Remove {c}": "Bỏ {c}",
+  "Empty. Add a column from the list below.": "Trống. Thêm một cột từ danh sách bên dưới.",
+  "Empty, and costs nothing. Click INDEX {n} to fill it.": "Trống, nên không tốn gì. Bấm INDEX {n} để thêm cột.",
+  "TABLE COLUMNS · click to add to INDEX {n}": "CÁC CỘT CỦA BẢNG · bấm để thêm vào INDEX {n}",
+  "TABLE COLUMNS · click to add": "CÁC CỘT CỦA BẢNG · bấm để thêm",
+  "{d} distinct · ~{r} rows per value": "{d} giá trị khác nhau · ~{r} dòng mỗi giá trị",
+
+  "Build an index, then press EXECUTE.": "Tạo index rồi bấm THỰC THI.",
+  "index path": "đường đi trong index",
+  "leaf: {L} pages, {per} per box": "lá: {L} trang, {per} trang mỗi ô",
+  "full scan": "quét toàn bảng",
+  "table lookup": "đọc bảng theo index",
+  "table: {T} pages, {per} per box": "bảng: {T} trang, {per} trang mỗi ô",
+
+  "No run yet. Each page the database reads costs you one point. Fewer is better.": "Chưa chạy lần nào. Mỗi trang database đọc tính một điểm. Càng ít càng tốt.",
+  "Running…": "Đang chạy…",
+  "{n} of 3 stars": "{n} trên 3 sao",
+  "Pages read per day": "Số trang đọc mỗi ngày",
+  "Pages read": "Số trang đọc",
+  "Index upkeep per day": "Bảo trì index mỗi ngày",
+  "Total per day": "Tổng mỗi ngày",
+  "Best possible": "Tốt nhất có thể",
+  "Without an index": "Không có index",
+  "{n} pages": "{n} trang",
+  "{n}/day": "{n}/ngày",
+  "LESSON 教訓": "BÀI HỌC 教訓",
+  "Reach ★★★ to unlock this mission's lesson.": "Đạt ★★★ để mở bài học của nhiệm vụ này.",
+  "TRY AGAIN": "THỬ LẠI",
+  "NEXT MISSION ▶": "NHIỆM VỤ TIẾP ▶",
+  "Good, but there's a cheaper solution.": "Tốt, nhưng vẫn còn cách rẻ hơn.",
+  "Still slower than no index at all.": "Vẫn chậm hơn cả khi không có index.",
+  "Hint:": "Gợi ý:",
+  "Clue recovered. A cheaper index exists.": "Đã lấy được manh mối. Vẫn có index rẻ hơn.",
+  "Query cancelled, so there are no rows and no clue.": "Truy vấn bị hủy, nên không có dữ liệu và không có manh mối.",
+  "FUJIMOTO (night sysadmin) >": "FUJIMOTO (quản trị hệ thống ca đêm) >",
+  "READ THE ENDING ▶": "ĐỌC KẾT CỤC ▶",
+  "ACCUSE 告発 ▶": "BUỘC TỘI 告発 ▶",
+  "Clear every mission at ★★ to open the accusation.": "Đạt ★★ ở mọi nhiệm vụ để mở phần buộc tội.",
+
+  "Rows appear here after EXECUTE.": "Dữ liệu sẽ hiện ở đây sau khi THỰC THI.",
+  "I/O guard: query cancelled after {n} pages. Reach ★★ to get the rows.": "Bộ giám sát I/O: truy vấn bị hủy sau {n} trang. Đạt ★★ để lấy dữ liệu.",
+  "{n} row{s}": "{n} dòng",
+  "{n} rows.": "{n} dòng.",
+  "EVIDENCE": "BẰNG CHỨNG",
+  "BONUS": "THƯỞNG",
+  "No evidence yet. Clear a mission at ★★ and its clue lands here.": "Chưa có bằng chứng. Đạt ★★ ở một nhiệm vụ thì manh mối của nó sẽ nằm ở đây.",
+  "STATEMENTS": "LỜI KHAI",
+
+  "Name the killer": "Chỉ ra hung thủ",
+  "Clear every mission at ★★ first": "Hãy đạt ★★ ở mọi nhiệm vụ trước",
+  "CASE CLOSED ✓": "ĐÃ PHÁ ÁN ✓",
+  "ACCUSE 告発": "BUỘC TỘI 告発",
+  "SUSPICION": "NGHI NGỜ",
+  "How much I/O the insider has seen: {n}% of what gets noticed": "Lượng I/O kẻ nội gián đã thấy: {n}% ngưỡng bị chú ý",
+  "ACCUSATION": "BUỘC TỘI",
+  "Name the killer, then back each charge with one piece of evidence from your notebook.": "Chỉ ra hung thủ, rồi chứng minh từng cáo buộc bằng một bằng chứng trong sổ tay.",
+  "SUSPECT": "NGHI PHẠM",
+  "MOTIVE": "ĐỘNG CƠ",
+  "why they did it": "vì sao người đó ra tay",
+  "OPPORTUNITY": "CƠ HỘI",
+  "proof they were there": "bằng chứng người đó có mặt",
+  "LIE": "LỜI NÓI DỐI",
+  "evidence that breaks their statement": "bằng chứng nói dối",
+  "Choose evidence": "Chọn bằng chứng",
+  "ACCUSE ▶": "BUỘC TỘI ▶",
+  "NOT YET": "CHƯA",
+  "The prosecutor isn't convinced. The evidence doesn't hold up.": "Công tố viên không bị thuyết phục. Bằng chứng không đứng vững.",
+  "CASE CLOSED · {title}": "ĐÃ PHÁ ÁN · {title}",
+  "RATING · suspicion {n}%": "XẾP HẠNG · mức nghi ngờ {n}%",
+  "CLOSE": "ĐÓNG",
+
+  /* ---------- plan explanations ---------- */
+  "No index. The database reads all {T} table pages.": "Không có index. Database đọc toàn bộ {T} trang của bảng.",
+  "None of your indexes can be searched by this query's conditions, so the database reads all {T} table pages.": "Không index nào của bạn tìm được theo điều kiện của truy vấn này, nên database đọc toàn bộ {T} trang của bảng.",
+  "The database falls back to reading all {T} table pages.": "Database đành đọc toàn bộ {T} trang của bảng.",
+  "The query compares {fn}, not {col}. The index holds the stored {col} values, not the results of that expression, so the database can't search it and reads all {T} table pages.": "Truy vấn so sánh {fn}, không phải {col}. Index lưu giá trị {col} như đã ghi, không lưu kết quả của biểu thức đó, nên database không tìm trong index được và đọc toàn bộ {T} trang của bảng.",
+  "The index starts with {col}, but this query doesn't filter on {col}. A B-tree can only be searched from its first column, so the database falls back to reading all {T} table pages.": "Index bắt đầu bằng {col}, nhưng truy vấn này không lọc theo {col}. B-tree chỉ tìm được từ cột đầu tiên, nên database đành đọc toàn bộ {T} trang của bảng.",
+  "The best index narrows the search to {m} rows, but each one is a separate table read. That would cost {cost} pages, more than scanning the whole table ({T} pages), so the optimizer chose the full scan.": "Index tốt nhất thu hẹp phạm vi tìm còn {m} dòng, nhưng mỗi dòng là một lần đọc bảng riêng. Như vậy tốn {cost} trang, nhiều hơn quét cả bảng ({T} trang), nên optimizer chọn full scan.",
+  "Uses {ix}.": "Dùng {ix}.",
+  "{up} root/branch page{s1}, {leaf} leaf page{s2},": "{up} trang gốc/nhánh, {leaf} trang lá,",
+  "and no table reads. Every column the query needs is in the index, so this is an index-only scan.": "và không đọc bảng lần nào. Mọi cột truy vấn cần đều có trong index, nên đây là index-only scan.",
+  "then {n} table read{s}.": "rồi {n} lần đọc bảng.",
+  "The index delivers rows in order, but OFFSET {o} still reads and throws away {o} rows before returning {n}.": "Index trả các dòng đúng thứ tự, nhưng OFFSET {o} vẫn đọc rồi bỏ đi {o} dòng trước khi trả về {n} dòng.",
+  "The index already returns rows in {col} order, so the database stops after {n} rows: a pipelined top-N query.": "Index đã trả các dòng theo thứ tự {col}, nên database dừng sau {n} dòng: một truy vấn top-N kiểu pipeline.",
+  "The index doesn't return rows in {col} order, so the database reads all {n} matching rows and sorts them before returning the first {k}.": "Index không trả các dòng theo thứ tự {col}, nên database đọc cả {n} dòng khớp và sắp xếp hết rồi mới trả về {k} dòng đầu.",
+  "The index doesn't return rows in {col} order, so the database reads all {n} matching rows and sorts them before returning any.": "Index không trả các dòng theo thứ tự {col}, nên database đọc cả {n} dòng khớp và sắp xếp hết rồi mới trả về kết quả.",
+  "{cols} can't narrow the search, but it is checked in the leaf pages, so non-matching rows never cost a table read.": "{cols} không thu hẹp được phạm vi tìm, nhưng được kiểm tra ngay trong trang lá, nên dòng không khớp không tốn lần đọc bảng nào.",
+  "{cols} is not in the index, so it is checked after each table read.": "{cols} không có trong index, nên phải kiểm tra sau mỗi lần đọc bảng.",
+  "starts with a wildcard, so there is no place in the sorted index to start searching.": "bắt đầu bằng ký tự đại diện, nên trong index đã sắp xếp không có điểm nào để bắt đầu tìm.",
+  "can be switched off by a NULL parameter, so the database can't use it to search the index.": "có thể bị tham số NULL vô hiệu hóa, nên database không dùng nó để tìm trong index được.",
+
+  /* ---------- Case 1: The Last Train ---------- */
+  "The Last Train": "Chuyến tàu cuối",
+  "A man is found dead at 06:10 on 20 November, in the level-3 stairwell of the Kanayama Station parking garage. Time of death: between 23:30 and 00:30.":
+    "06:10 ngày 20 tháng 11, một người đàn ông được phát hiện đã chết ở cầu thang tầng 3 của bãi đỗ xe ga Kanayama. Thời điểm tử vong: từ 23:30 đến 00:30.",
+  "On him: a Kinjo Logistics staff badge, number 1180. No wallet. No phone.":
+    "Trên người có thẻ nhân viên Kinjo Logistics, số 1180. Không ví. Không điện thoại.",
+  "In his coat, a notebook. The last line reads: “Sato, 23:30. The numbers don't lie.”":
+    "Trong túi áo khoác có một cuốn sổ. Dòng cuối ghi: “Sato, 23:30. Con số không biết nói dối.”",
+  "Night guard Tetsuya Hara: “A dark sedan left around half past midnight. The plate ended in 12. That's all I got.”":
+    "Bảo vệ ca đêm Tetsuya Hara: “Khoảng mười hai giờ rưỡi có một chiếc sedan màu tối chạy ra. Biển số đuôi 12. Tôi chỉ thấy được vậy.”",
+  "Sales manager · SALES-07": "Trưởng phòng kinh doanh · SALES-07",
+  "Sales accountant · SALES-12": "Kế toán phòng kinh doanh · SALES-12",
+  "Chief Financial Officer · FIN-01": "Giám đốc tài chính · FIN-01",
+  "I parked at Kanayama for a dinner and left around 22:40.": "Tôi đỗ xe ở Kanayama để đi ăn tối và về lúc khoảng 22:40.",
+  "I went straight home after work.": "Tan làm là tôi về thẳng nhà.",
+  "I was home all night. Chikusa Tower, unit 3302.": "Cả đêm tôi ở nhà. Chikusa Tower, căn 3302.",
+  "02:40. Officers reach Mika Sato's building in Ozone and stop Daisuke Ono at her door. Mori's phone and wallet are in his coat.":
+    "02:40. Cảnh sát tới tòa nhà của Mika Sato ở Ozone và chặn Daisuke Ono ngay trước cửa nhà cô. Điện thoại và ví của Mori nằm trong túi áo khoác của ông ta.",
+  "Ono says he only came to talk. Mori wanted him to confess before Monday's board meeting. They argued on the stairs, and Mori fell.":
+    "Ono khai ông ta chỉ đến để nói chuyện. Mori muốn ông ta tự thú trước cuộc họp hội đồng quản trị hôm thứ Hai. Hai người cãi nhau trên cầu thang, và Mori ngã.",
+  "Kenji Sato is arrested the same morning. He filed the Kaito Trading payments for ¥500,000 a month.":
+    "Sáng hôm đó Kenji Sato cũng bị bắt. Anh ta là người lập các khoản chi cho Kaito Trading, đổi lấy 500.000 yên mỗi tháng.",
+  "Mika Sato: “I copied the ledger. I was the last one who saw him. And I didn't know which of them did it.”":
+    "Mika Sato: “Tôi đã sao chép sổ cái. Tôi là người cuối cùng gặp ông ấy. Và tôi không biết ai trong hai người họ đã làm chuyện đó.”",
+  "Ono insists Kaito Trading was never his alone. The money went on to “people above me”.":
+    "Ono khăng khăng rằng Kaito Trading chưa bao giờ là chuyện của riêng ông ta. Tiền còn chảy tiếp tới “những người ở trên tôi”.",
+  "One more thing in the query log: SYS_MAINT read the same rows you did. Twice.":
+    "Còn một điều trong nhật ký truy vấn: SYS_MAINT đã đọc đúng những dòng bạn đọc. Hai lần.",
+  "Nobody noticed your queries.": "Không ai để ý tới các truy vấn của bạn.",
+  "SYS_MAINT saw some traffic. Nothing it could use.": "SYS_MAINT thấy chút lưu lượng. Không có gì dùng được.",
+  "Someone has been watching what you look at.": "Có người đang theo dõi những gì bạn tra cứu.",
+  "The insider knows exactly what you looked at, and when.": "Kẻ nội gián biết chính xác bạn đã tra cứu gì, và vào lúc nào.",
+
+  // M01
+  "Badge 1180": "Thẻ số 1180",
+  "All you have is a staff badge, number 1180. Find out who the dead man was.":
+    "Trong tay bạn chỉ có một thẻ nhân viên số 1180. Hãy tìm xem nạn nhân là ai.",
+  "Who was he?": "Ông ta là ai?",
+  "Which column is printed on the badge?": "Cột nào được in trên thẻ?",
+  "The badge number is the employee_id. Index that column.": "Số trên thẻ chính là employee_id. Hãy index cột đó.",
+  "employee_id is unique, so the database walks the B-tree to exactly one leaf entry and reads one row: an INDEX UNIQUE SCAN. The cost is one page per level of the tree plus one table read, and the tree stays shallow even with millions of rows.":
+    "employee_id là duy nhất, nên database đi xuống B-tree tới đúng một mục trong trang lá rồi đọc một dòng: INDEX UNIQUE SCAN. Chi phí là một trang cho mỗi tầng của cây cộng một lần đọc bảng, và cây vẫn nông dù bảng có hàng triệu dòng.",
+  "The victim": "Nạn nhân",
+  "Hideo Mori, 54, internal auditor at Kinjo Logistics. Phone 090-5518-2204.":
+    "Hideo Mori, 54 tuổi, kiểm toán viên nội bộ của Kinjo Logistics. Điện thoại 090-5518-2204.",
+
+  // M02
+  "Open Items": "Việc còn dở",
+  "Mori was an internal auditor. What was he working on when he died? The company task tracker lists every open item, assigned by employee id.":
+    "Mori là kiểm toán viên nội bộ. Lúc chết ông ấy đang làm gì? Hệ thống quản lý công việc của công ty liệt kê mọi việc đang mở, giao theo mã nhân viên.",
+  "Mori's open work": "Việc đang mở của Mori",
+  "Compare how many rows one value of each column matches.": "So sánh xem một giá trị của mỗi cột khớp với bao nhiêu dòng.",
+  "status has only 4 values, so 'OPEN' matches a quarter of the table. assignee_id narrows it to 4 rows.":
+    "status chỉ có 4 giá trị, nên 'OPEN' khớp với một phần tư bảng. assignee_id thu hẹp xuống còn 4 dòng.",
+  "assignee_id matches 4 rows. status matches 50,000, which is more work than reading the whole table, so the optimizer ignores an index on it.":
+    "assignee_id khớp 4 dòng. status khớp 50.000 dòng, tốn hơn cả đọc toàn bộ bảng, nên optimizer bỏ qua index trên cột đó.",
+  "Mori's open audit": "Cuộc kiểm toán dở dang của Mori",
+  "AUD-2611: payments to Kaito Trading, requested by SALES-07 and approved by FIN-01. His note: “Board meeting Mon 23 Nov. Escalate.”":
+    "AUD-2611: các khoản chi cho Kaito Trading, do SALES-07 đề nghị và FIN-01 phê duyệt. Ghi chú của ông ấy: “Họp HĐQT thứ Hai 23/11. Báo lên cấp trên.”",
+
+  // M03
+  "The Numbers": "Những con số",
+  "AUD-2611 is about payments to Kaito Trading. Clerks typed the payee name any way they liked, so the query compares it in upper case. Find every payment.":
+    "AUD-2611 xoay quanh các khoản chi cho Kaito Trading. Nhân viên nhập tên bên nhận tiền tùy ý, nên truy vấn so sánh ở dạng chữ hoa. Hãy tìm mọi khoản chi.",
+  "Every payment to Kaito Trading": "Mọi khoản chi cho Kaito Trading",
+  "The query never compares payee directly.": "Truy vấn không hề so sánh trực tiếp cột payee.",
+  "Index the expression UPPER(payee) itself.": "Hãy index chính biểu thức UPPER(payee).",
+  "A function hides a column from its index. An index on payee holds the text as typed, but the query compares UPPER(payee). Index the expression and the lookup is an ordinary index scan again.":
+    "Một hàm sẽ che cột khỏi index của nó. Index trên payee lưu chữ đúng như lúc nhập, còn truy vấn lại so sánh UPPER(payee). Index chính biểu thức đó thì việc tra cứu lại là một lần quét index bình thường.",
+  "¥67.2 million": "67,2 triệu yên",
+  "14 monthly payments of ¥4,800,000 to Kaito Trading, ¥67.2M in total. All requested by SALES-07 and approved by FIN-01.":
+    "14 khoản chi hằng tháng, mỗi khoản 4.800.000 yên, cho Kaito Trading, tổng cộng 67,2 triệu yên. Tất cả do SALES-07 đề nghị và FIN-01 phê duyệt.",
+  "A dead company": "Một công ty đã chết",
+  "Company registry: Kaito Trading was dissolved in 2019. Nobody has delivered anything for these payments.":
+    "Sổ đăng ký doanh nghiệp: Kaito Trading đã giải thể từ năm 2019. Chẳng ai giao hàng hay làm gì cho những khoản chi này.",
+
+  // M04
+  "Who Signs": "Ai ký duyệt",
+  "Two codes sign every payment: SALES-07 and FIN-01. Mori's notebook names a Sato. Q1 finds the Satos in Sales; Q2 lists the eight people in the executive office, where codes like FIN-01 sit. Both queries have to share one index.":
+    "Mọi khoản chi đều mang hai mã: SALES-07 và FIN-01. Sổ của Mori nhắc tới một người họ Sato. Q1 tìm những người họ Sato ở phòng kinh doanh; Q2 liệt kê tám người ở văn phòng điều hành, nơi có những mã như FIN-01. Cả hai truy vấn phải dùng chung một index.",
+  "The Satos in Sales": "Những người họ Sato ở phòng kinh doanh",
+  "The executive office": "Văn phòng điều hành",
+  "Both queries filter on department.": "Cả hai truy vấn đều lọc theo department.",
+  "Put department first, then last_name.": "Đặt department trước, rồi đến last_name.",
+  "A two-column index is sorted by its first column, then by the second within it. (department, last_name) can be searched by department alone or by both columns. (last_name, department) can't serve a search by department.":
+    "Index hai cột được sắp theo cột đầu, rồi theo cột thứ hai bên trong từng giá trị của cột đầu. (department, last_name) tìm được theo riêng department hoặc theo cả hai cột. (last_name, department) không phục vụ được việc tìm theo department.",
+  "Who's who": "Ai là ai",
+  "Kenji Sato is SALES-07: sales manager, car NGY 330 TA 51-12, phone 090-7731-0042. Mika Sato is SALES-12: accountant, no car, phone 090-6620-1187, transit card T-9025. FIN-01 is Daisuke Ono, Chief Financial Officer.":
+    "Kenji Sato là SALES-07: trưởng phòng kinh doanh, xe NGY 330 TA 51-12, điện thoại 090-7731-0042. Mika Sato là SALES-12: kế toán, không có xe, điện thoại 090-6620-1187, thẻ đi tàu T-9025. FIN-01 là Daisuke Ono, giám đốc tài chính.",
+
+  // M05
+  "Last Words": "Lời cuối",
+  "The phone company only hands over metadata, so the query asks for two columns: who Mori texted that day, and when.":
+    "Nhà mạng chỉ cung cấp siêu dữ liệu, nên truy vấn chỉ lấy hai cột: hôm đó Mori nhắn tin cho ai, và lúc nào.",
+  "Mori's messages on 19 Nov": "Tin nhắn của Mori ngày 19/11",
+  "The query reads two columns from the table: recipient and sent_at.": "Truy vấn đọc hai cột từ bảng: recipient và sent_at.",
+  "(sender) alone gets you the rows. Add recipient and sent_at to the index and the table is never read.":
+    "Chỉ cần (sender) là ra các dòng. Thêm recipient và sent_at vào index thì bảng không bao giờ phải đọc.",
+  "When the index holds every column a query needs, the table is never read: an index-only scan. Here that turns 4 table reads into none.":
+    "Khi index chứa mọi cột truy vấn cần, bảng không bao giờ phải đọc: đó là index-only scan. Ở đây nó biến 4 lần đọc bảng thành 0.",
+  "Mori's last messages": "Những tin nhắn cuối của Mori",
+  "21:02 to Kenji Sato. 23:20 and 23:59 to Mika Sato. 00:07 to an unknown number, 090-2231-7781. Mika said she went straight home. Kenji never said who he had dinner with.":
+    "21:02 gửi Kenji Sato. 23:20 và 23:59 gửi Mika Sato. 00:07 gửi một số lạ, 090-2231-7781. Mika nói cô về thẳng nhà. Kenji chưa từng nói anh ta ăn tối với ai.",
+  "Someone else is reading": "Có người khác cũng đang đọc",
+  "Query log: session SYS_MAINT read the same rows from messages two minutes after you.":
+    "Nhật ký truy vấn: phiên SYS_MAINT đọc đúng những dòng đó trong bảng messages, hai phút sau bạn.",
+
+  // M06
+  "The Ticket Gates": "Cổng soát vé",
+  "Mika said she went straight home. Kanayama's ticket gates log every card. Check every swipe there between 23:00 and 00:30.":
+    "Mika nói cô về thẳng nhà. Cổng soát vé ga Kanayama ghi lại mọi lần quẹt thẻ. Hãy kiểm tra mọi lần quẹt ở đó từ 23:00 đến 00:30.",
+  "Kanayama, 23:00 to 00:30": "Kanayama, 23:00 đến 00:30",
+  "One condition is an exact match, the other is a range.": "Một điều kiện là so khớp chính xác, điều kiện kia là một khoảng.",
+  "Put station first and swipe_time second.": "Đặt station trước, swipe_time sau.",
+  "Put the exact match first and the range last. With (station, swipe_time), Kanayama's swipes sit together in time order, so the scan reads only the 90 minutes you asked for.":
+    "Đặt cột so khớp chính xác trước, cột khoảng sau cùng. Với (station, swipe_time), các lần quẹt ở Kanayama nằm cạnh nhau theo thứ tự thời gian, nên lần quét chỉ đọc đúng 90 phút bạn cần.",
+  "Mika's card": "Thẻ của Mika",
+  "Mika's card T-9025 left Kanayama station at 23:25 and went back in at 23:58. It did not come out at Kanayama again that night.":
+    "Thẻ T-9025 của Mika ra khỏi ga Kanayama lúc 23:25 và vào lại lúc 23:58. Đêm đó thẻ không ra ở Kanayama thêm lần nào.",
+
+  // M07
+  "Ends in 12": "Đuôi 12",
+  "Hara remembers a plate ending in 12. The garage entrance camera logged every car that night.":
+    "Hara nhớ biển số có đuôi 12. Camera ở lối vào bãi xe đã ghi lại mọi chiếc xe đêm đó.",
+  "Plates ending in 12 at the garage": "Biển số đuôi 12 ở bãi xe",
+  "LIKE '%-12' can't be searched in a sorted list. What else in the WHERE clause can?":
+    "LIKE '%-12' không tìm được trong một danh sách đã sắp xếp. Trong WHERE còn điều kiện nào tìm được?",
+  "Index (camera, plate): search by camera, check the plate in the leaf pages.":
+    "Index (camera, plate): tìm theo camera, kiểm tra biển số ngay trong trang lá.",
+  "A leading wildcard has no starting point in a sorted list. But a column placed after the search column still filters in the leaf pages, so non-matching cars never cost a table read.":
+    "Ký tự đại diện ở đầu không có điểm bắt đầu trong một danh sách đã sắp xếp. Nhưng cột đặt sau cột dùng để tìm vẫn lọc được ngay trong trang lá, nên xe không khớp không tốn lần đọc bảng nào.",
+  "Two cars": "Hai chiếc xe",
+  "Kenji's car came in at 21:15 and left at 22:41. A second car, plate only partly read as NGY 300 SE 4?-12, came in at 00:14 and left at 00:31.":
+    "Xe của Kenji vào lúc 21:15 và ra lúc 22:41. Một chiếc thứ hai, biển số chỉ đọc được một phần là NGY 300 SE 4?-12, vào lúc 00:14 và ra lúc 00:31.",
+
+  // M08
+  "Half a Plate": "Nửa biển số",
+  "The camera only half-read the second car: NGY 300 SE 4?-12. Search the vehicle registry for plates that start with the part you have and end in -12.":
+    "Camera chỉ đọc được một nửa biển số chiếc xe thứ hai: NGY 300 SE 4?-12. Hãy tìm trong sổ đăng ký xe những biển số bắt đầu bằng phần bạn có và kết thúc bằng -12.",
+  "A LIKE pattern that starts with fixed text can be searched.": "Mẫu LIKE bắt đầu bằng phần chữ cố định thì tìm được.",
+  "Index plate. 'NGY 300 SE 4%' becomes a range scan; the '%-12' part is checked while scanning.":
+    "Hãy index plate. 'NGY 300 SE 4%' trở thành một lần quét theo khoảng; phần '%-12' được kiểm tra trong lúc quét.",
+  "LIKE 'NGY 300 SE 4%' has a fixed prefix, so the database searches it as a range, from 'NGY 300 SE 4' up to the next prefix. The '%-12' part can only be checked while scanning that range.":
+    "LIKE 'NGY 300 SE 4%' có tiền tố cố định, nên database tìm nó như một khoảng, từ 'NGY 300 SE 4' tới tiền tố kế tiếp. Phần '%-12' chỉ kiểm tra được trong lúc quét khoảng đó.",
+  "The company car": "Xe công ty",
+  "NGY 300 SE 47-12 is a black sedan in Kinjo Logistics' executive car pool.":
+    "NGY 300 SE 47-12 là một chiếc sedan đen trong đội xe dành cho ban điều hành của Kinjo Logistics.",
+  "Someone got there first": "Có người đến trước",
+  "Query log: session SYS_MAINT looked up this plate four minutes before you did.":
+    "Nhật ký truy vấn: phiên SYS_MAINT đã tra biển số này bốn phút trước bạn.",
+
+  // M09
+  "Who Had the Keys": "Ai giữ chìa khóa",
+  "Car 47-12 belongs to the executive pool, and pool cars are booked. Q1 asks who had it that night, and Q2 lists its whole booking history, both through the same index.":
+    "Xe 47-12 thuộc đội xe ban điều hành, và xe trong đội phải đặt trước. Q1 hỏi đêm đó ai giữ xe, Q2 liệt kê toàn bộ lịch sử đặt xe, cả hai qua cùng một index.",
+  "Bookings on the night of 19 Nov": "Lượt đặt xe đêm 19/11",
+  "The car's booking history": "Lịch sử đặt xe",
+  "Q2 filters on plate only.": "Q2 chỉ lọc theo plate.",
+  "Index (plate, booked_at): equality first, range last.": "Index (plate, booked_at): điều kiện bằng trước, điều kiện khoảng sau.",
+  "One index serves a lookup and a range when the equality column comes first. (plate, booked_at) finds one night of one car in a few pages and still lists the car's whole history.":
+    "Một index phục vụ được cả tra cứu lẫn khoảng khi cột so sánh bằng đứng đầu. (plate, booked_at) tìm một đêm của một chiếc xe chỉ trong vài trang, mà vẫn liệt kê được toàn bộ lịch sử của xe.",
+  "Every booking of this car since 2024.": "Mọi lượt đặt chiếc xe này từ năm 2024.",
+  "The driver": "Người lái",
+  "Car 47-12 was booked by Daisuke Ono (FIN-01) from 23:35 to 01:10 for a “client dinner”. His contact number is 090-2231-7781, the number Mori texted at 00:07.":
+    "Xe 47-12 do Daisuke Ono (FIN-01) đặt từ 23:35 đến 01:10 với lý do “ăn tối với khách hàng”. Số liên lạc của ông ta là 090-2231-7781, đúng số Mori nhắn lúc 00:07.",
+  "A habit": "Một thói quen",
+  "Ono booked this car for a late night six times in the last two months.":
+    "Trong hai tháng qua, Ono đã sáu lần đặt chiếc xe này vào đêm khuya.",
+
+  // M10
+  "Home All Night": "Ở nhà cả đêm",
+  "Ono says he was home all night at Chikusa Tower, unit 3302: resident R-3302. The building logs every door event. You only need the event and its time.":
+    "Ono nói cả đêm ông ta ở nhà, Chikusa Tower, căn 3302: cư dân R-3302. Tòa nhà ghi lại mọi lần ra vào cửa. Bạn chỉ cần loại sự kiện và thời gian của nó.",
+  "R-3302, night of 19 Nov": "R-3302, đêm 19/11",
+  "The query uses three columns: resident_id, event_time and event.": "Truy vấn dùng ba cột: resident_id, event_time và event.",
+  "(resident_id, event_time) gets you the rows. Add event as a third column and the table is never read.":
+    "(resident_id, event_time) là ra các dòng. Thêm event làm cột thứ ba thì bảng không bao giờ phải đọc.",
+  "Combine the rules: equality first, then the range, then the columns the query selects. The result is an index-only range scan that reads four pages.":
+    "Kết hợp các quy tắc: điều kiện bằng trước, rồi đến khoảng, rồi đến các cột truy vấn SELECT. Kết quả là một lần quét khoảng chỉ trên index, đọc bốn trang.",
+  "Not home": "Không ở nhà",
+  "Chikusa Tower, unit 3302: Ono went out at 23:22, came back at 01:31, and went out again at 01:58. He said he was home all night.":
+    "Chikusa Tower, căn 3302: Ono ra ngoài lúc 23:22, về lúc 01:31, rồi lại ra ngoài lúc 01:58. Ông ta đã nói cả đêm ở nhà.",
+  "Mori's phone": "Điện thoại của Mori",
+  "Mori's missing phone connected to a cell tower in Ozone, near Mika's flat, at 02:10.":
+    "Lúc 02:10, chiếc điện thoại mất tích của Mori kết nối với một trạm phát sóng ở Ozone, gần căn hộ của Mika.",
+
+  /* ---------- Practice ---------- */
+  "Practice": "Luyện tập",
+  "Midnight": "Nửa đêm",
+  "From this tier on you can also rewrite the queries. Q1 is the daily sales report; Q2 is a live ticker that shows the last hour. One index with one column has to serve both.":
+    "Từ cấp này bạn còn được viết lại truy vấn. Q1 là báo cáo doanh số hằng ngày; Q2 là bảng tin trực tiếp hiển thị một giờ vừa qua. Một index một cột phải phục vụ cả hai.",
+  "Daily report: yesterday's sales": "Báo cáo ngày: doanh số hôm qua",
+  "As written": "Như đang viết",
+  "Explicit range": "Khoảng tường minh",
+  "Live ticker: the last hour": "Bảng tin trực tiếp: một giờ qua",
+  "An index on TRUNC(sale_time) can't help the ticker. Can Q1 be written so it compares sale_time itself?":
+    "Index trên TRUNC(sale_time) không giúp được bảng tin. Có thể viết Q1 sao cho nó so sánh chính sale_time không?",
+  "TRUNC() hides sale_time from the index just as UPPER() hid last_name. Indexing TRUNC(sale_time) would fix the report but leave the ticker scanning the table. Writing the day as an explicit range, sale_time >= day AND sale_time < next day, lets one plain index on sale_time serve both.":
+    "TRUNC() che sale_time khỏi index, giống như UPPER() che last_name. Index TRUNC(sale_time) chữa được báo cáo nhưng bảng tin vẫn phải quét cả bảng. Viết ngày thành một khoảng tường minh, sale_time >= ngày AND sale_time < ngày hôm sau, thì một index thường trên sale_time phục vụ được cả hai.",
+
+  "Smart Logic": "Logic “thông minh”",
+  "One search form, three optional fields. The developers wrote a single 'smart' query that ignores any field left empty. Q1 is a lookup with subsidiary and employee number filled in; Q2 lists a subsidiary's staff. One index, up to two columns. Rewrites allowed.":
+    "Một form tìm kiếm, ba ô không bắt buộc. Lập trình viên viết một truy vấn 'thông minh' duy nhất, bỏ qua mọi ô để trống. Q1 tra cứu khi đã điền công ty con và mã nhân viên; Q2 liệt kê nhân viên của một công ty con. Một index, tối đa hai cột. Được viết lại truy vấn.",
+  "Form: subsidiary + employee no.": "Form: công ty con + mã nhân viên",
+  "Form: subsidiary only": "Form: chỉ công ty con",
+  "One smart query": "Một truy vấn thông minh",
+  "Dynamic SQL": "SQL động",
+  "An index can't be searched by a condition that might be switched off. Which fields are actually filled in for each query?":
+    "Không thể tìm trong index bằng một điều kiện có thể bị tắt. Với mỗi truy vấn, những ô nào thực sự được điền?",
+  "A single statement for every combination of filters needs one plan that works even when a field is empty, so no condition can be used to search an index. Build the WHERE clause from the fields actually filled in, still with bind parameters, and each statement gets its own plan. Then (subsidiary_id, employee_id) serves both, as in Mission 03.":
+    "Một câu lệnh cho mọi tổ hợp bộ lọc cần một kế hoạch chạy được cả khi có ô trống, nên không điều kiện nào dùng được để tìm trong index. Hãy dựng mệnh đề WHERE từ những ô thực sự được điền, vẫn dùng bind parameter, và mỗi câu lệnh sẽ có kế hoạch riêng. Khi đó (subsidiary_id, employee_id) phục vụ được cả hai, như ở Nhiệm vụ 03.",
+
+  "Order Up": "Theo thứ tự",
+  "The packing station shows the 10 oldest open orders of the store. Only 10 rows are needed, but the database decides how many it reads. One index, up to three columns.":
+    "Quầy đóng gói hiển thị 10 đơn đang mở cũ nhất của cửa hàng. Chỉ cần 10 dòng, nhưng database mới là bên quyết định đọc bao nhiêu. Một index, tối đa ba cột.",
+  "Packing queue": "Hàng chờ đóng gói",
+  "If the index already returns rows sorted by order_date, the database can stop after 10. Where must order_date sit in the index for that?":
+    "Nếu index đã trả các dòng theo thứ tự order_date, database có thể dừng sau 10 dòng. Muốn vậy, order_date phải nằm ở đâu trong index?",
+  "An index is a sorted list, so it can deliver rows already in ORDER BY order. Put the columns compared with = first and the ORDER BY column right after them: (store_id, status, order_date). The database then reads the first 10 entries and stops, a pipelined top-N query. Without that, it finds all 500 open orders and sorts them before returning any.":
+    "Index là một danh sách đã sắp xếp, nên nó có thể trả các dòng theo sẵn thứ tự ORDER BY. Đặt các cột so sánh bằng = lên trước và cột ORDER BY ngay sau: (store_id, status, order_date). Khi đó database đọc 10 mục đầu rồi dừng, một truy vấn top-N kiểu pipeline. Nếu không, nó phải tìm cả 500 đơn đang mở và sắp xếp hết rồi mới trả về kết quả.",
+
+  "Page Two Hundred": "Trang hai trăm",
+  "A busy forum topic has 5,000 posts, 20 per page, newest first. Readers who scroll far back make the database work hard. One index, up to two columns. Rewrites allowed.":
+    "Một chủ đề diễn đàn sôi nổi có 5.000 bài, 20 bài mỗi trang, mới nhất lên đầu. Người đọc lướt ngược thật xa khiến database phải làm việc vất vả. Một index, tối đa hai cột. Được viết lại truy vấn.",
+  "Topic 7, page 101": "Chủ đề 7, trang 101",
+  "Seek (keyset)": "Seek (keyset)",
+  "OFFSET still reads every row it skips. What if the query started right after the last post the reader saw?":
+    "OFFSET vẫn đọc mọi dòng nó bỏ qua. Sẽ thế nào nếu truy vấn bắt đầu ngay sau bài cuối cùng người đọc đã thấy?",
+  "OFFSET makes the database find, read and throw away every row before the page you want, so page 101 costs a hundred times page 1. The seek method remembers the last post_id the reader saw and asks for the 20 posts before it. With (topic_id, post_id) that is a pipelined top-N query, and every page costs the same 23 pages.":
+    "OFFSET bắt database tìm, đọc rồi vứt bỏ mọi dòng đứng trước trang bạn cần, nên trang 101 tốn gấp trăm lần trang 1. Phương pháp seek nhớ post_id cuối cùng người đọc đã thấy và lấy 20 bài đứng trước nó. Với (topic_id, post_id), đó là một truy vấn top-N kiểu pipeline, và trang nào cũng tốn đúng 23 trang.",
+
+  "Every Index Has a Price": "Index nào cũng có giá",
+  "From this tier on, queries run many times a day and new rows keep arriving. Score = pages read per day + pages written to keep your indexes up to date. You may create up to two indexes.":
+    "Từ cấp này, truy vấn chạy nhiều lần mỗi ngày và dòng mới liên tục đổ về. Điểm = số trang đọc mỗi ngày + số trang ghi để giữ index luôn cập nhật. Bạn được tạo tối đa hai index.",
+  "Customer's order history page": "Trang lịch sử đơn hàng của khách",
+  "Monthly returns report": "Báo cáo hàng trả lại hằng tháng",
+  "Compare what an index saves per day with what it costs per day to maintain.":
+    "So sánh phần một index tiết kiệm được mỗi ngày với chi phí bảo trì nó mỗi ngày.",
+  "Every index slows down every INSERT, UPDATE and DELETE, because each change has to be written into the sorted index too. The returns report runs twice a day: scanning the table costs 40,000 pages per day, while keeping a second index costs 150,000. Index the queries that run often and let rare reports scan.":
+    "Index nào cũng làm chậm mọi INSERT, UPDATE và DELETE, vì mỗi thay đổi cũng phải ghi vào index đã sắp xếp. Báo cáo hàng trả lại chạy hai lần mỗi ngày: quét bảng tốn 40.000 trang mỗi ngày, còn duy trì index thứ hai tốn 150.000. Hãy index những truy vấn chạy thường xuyên, còn báo cáo hiếm khi chạy thì cứ để nó quét bảng.",
+
+  "Three Queries, Two Indexes": "Ba truy vấn, hai index",
+  "Three queries share one table and two indexes. Every rule from the earlier missions applies at once. Score = pages read per day + index upkeep.":
+    "Ba truy vấn dùng chung một bảng và hai index. Mọi quy tắc từ các nhiệm vụ trước đều áp dụng cùng lúc. Điểm = số trang đọc mỗi ngày + chi phí bảo trì index.",
+  "Stock check": "Kiểm tra tồn kho",
+  "Product report": "Báo cáo sản phẩm",
+  "Weekly shop report": "Báo cáo tuần của cửa hàng",
+  "One index can serve two queries if the column they share comes first. The other must put equality before range.":
+    "Một index phục vụ được hai truy vấn nếu cột chung của chúng đứng đầu. Index còn lại phải đặt điều kiện bằng trước điều kiện khoảng.",
+  "With two indexes for three queries, each index has to earn its place. (product_id, shop_id) answers the stock check and, through its first column, the product report. (shop_id, sale_date) answers the weekly report with the equality column first and the range last.":
+    "Hai index cho ba truy vấn thì mỗi index phải xứng đáng với chỗ của nó. (product_id, shop_id) trả lời truy vấn kiểm tra tồn kho, và nhờ cột đầu, cả báo cáo sản phẩm. (shop_id, sale_date) trả lời báo cáo tuần với cột so sánh bằng đứng trước và cột khoảng đứng sau.",
+};
+</script>
+<script>
+const FANOUT = 100, LEAF_ROWS = 100;   // index entries per branch page / per leaf page
+const INSERT_PAGES = 3;                 // pages one INSERT writes into each index (find leaf + write)
+const LEAF_BOXES = 40, CELLS = 240;     // how many boxes the diagram draws
+const tier = i => [t("BASIC 初級"), t("INTERMEDIATE 中級"), t("ADVANCED 上級")][i];
+
+CASES.forEach(c => c.missions.forEach(lv => lv.queries.forEach(q => {
+  q.variants ??= [{where:q.where, select:q.select, order:q.order, fetch:q.fetch, offset:q.offset}];
+})));
+const missionsOf = caseIx => CASES[caseIx].missions;
+
+
+// Language: English strings are the keys into each dictionary (vi.js, ...). {name} in a key is filled from vars;
+// {s} is the English plural. A new language = a new file, an entry here and an <option> in the header.
+const DICTS = {vi: VI};
+let LANG = "en";
+function t(s, vars){
+  const r = DICTS[LANG]?.[s] || s;
+  return vars ? r.replace(/\{(\w+)\}/g, (m, k) => k in vars ? vars[k] : m) : r;
+}
+const pl = n => n === 1 ? "" : "s";
+
+const $ = id => document.getElementById(id);
+const fmt = n => n.toLocaleString(LANG === "vi" ? "vi-VN" : "en-US");
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const state = {caseIx:0, lv:0, ixs:[[]], active:0, pick:[], save:{stars:{}}, result:null, tab:0,
+  acc:{suspect:null, MOTIVE:"", OPPORTUNITY:"", LIE:""}};
+const variantOf = (lv, i, picks = state.pick) => lv.queries[i].variants[picks[i] ?? 0];
+const cur = () => CASES[state.caseIx].missions[state.lv];
+const starsAt = (stars, caseIx, i) => stars[caseIx]?.[i] ?? 0;
+
+// Story missions open at 2★ on the previous mission (that is when its clue is earned); practice at 1★.
+function unlocked(stars, caseIx, i){
+  return i === 0 || starsAt(stars, caseIx, i - 1) >= (CASES[caseIx].practice ? 1 : 2);
+}
+
+/* ---------- save and evidence ---------- */
+const SAVE_KEY = "index-dojo-v2";
+const CANCEL_LINE = "ORA-01013: user requested cancel of current operation";
+const emptySave = () => ({stars:{}, clues:{}, io:{}, fails:{}, solved:{}});
+function loadSave(raw){
+  try { const s = JSON.parse(raw); if (s && typeof s === "object" && !Array.isArray(s)) return {...emptySave(), ...s}; } catch {}
+  return emptySave();
+}
+// Clue at ≥2★, bonus ("B" + mission number) at 3★. Never removes anything.
+function earn(save, caseIx, i, stars){
+  const m = CASES[caseIx].missions[i], got = save.clues[caseIx] ??= [];
+  const add = id => { if (!got.includes(id)) got.push(id); };
+  if (m.clue && stars >= 2) add(m.clue.id);
+  if (m.bonus && stars >= 3) add("B" + (i + 1));
+  return save;
+}
+/* ---------- pressure: hints and suspicion ---------- */
+// fails = runs below 2★ on this mission. First miss: general hint; third: the specific one.
+function hintFor(m, fails){ return fails <= 0 ? null : fails < 3 ? m.hint : m.hint2; }
+// Every story EXECUTE adds its pages to the case's I/O; a run below 2★ also counts as a fail.
+function logRun(save, caseIx, i, pages, stars){
+  if (CASES[caseIx].practice) return save;
+  save.io[caseIx] = (save.io[caseIx] ?? 0) + pages;
+  if (stars < 2){ const f = save.fails[caseIx] ??= []; f[i] = (f[i] ?? 0) + 1; }
+  return save;
+}
+// What the insider shrugs off: the cost of one full table scan per mission.
+function budget(c){ return c.missions.reduce((s, m) => s + bestOf(m).none, 0); }
+function suspicion(save, caseIx){ return (save.io[caseIx] ?? 0) / budget(CASES[caseIx]); }
+function rating(pct){ return pct < 0.25 ? "S" : pct < 0.5 ? "A" : pct < 0.75 ? "B" : "C"; }
+
+/* ---------- accusation ---------- */
+const SLOTS = ["MOTIVE", "OPPORTUNITY", "LIE"];
+function accuse(c, suspect, slots){
+  if (!suspect || SLOTS.some(k => !slots[k])) return "incomplete";
+  const a = c.accusation;
+  return suspect === a.culprit && SLOTS.every(k => a[k].includes(slots[k])) ? "right" : "wrong";
+}
+function fileAccusation(save, caseIx, suspect, slots){
+  const c = CASES[caseIx], verdict = accuse(c, suspect, slots);
+  if (verdict === "wrong") save.io[caseIx] = (save.io[caseIx] ?? 0) + 0.25 * budget(c);
+  if (verdict === "right") save.solved[caseIx] = true;
+  return verdict;
+}
+
+// Every piece of evidence in a case, in mission order.
+const evidenceOf = c => c.missions.flatMap((m, i) => [
+  ...(m.clue ? [{...m.clue, mission:i}] : []),
+  ...(m.bonus ? [{...m.bonus, id:"B" + (i + 1), mission:i, bonus:true}] : [])]);
+const emptySlots = lv => Array.from({length: lv.maxIdx ?? 1}, () => []);
+
+/* ---------- cost model ---------- */
+const selOf = (lv, p) => p.sel ?? 1 / lv.cols[p.col];
+const rowsFor = (lv, preds) => Math.max(1, Math.round(lv.rows * preds.reduce((s,p) => s * selOf(lv, p), 1)));
+const tablePages = lv => Math.ceil(lv.rows / lv.perPage);
+
+// Cost of answering v through one index, or {bad} if the index can't be searched.
+function planIndex(lv, idx, v){
+  const W = v.where, out = rowsFor(lv, W), T = tablePages(lv);
+  const access = []; let eqCount = 0;
+  for (const c of idx){
+    const p = W.find(w => w.col === c);
+    if (!p || p.kind === "filter") break;
+    access.push(p);
+    if (p.kind === "range") break;   // a range ends the searchable part of the index
+    eqCount++;
+  }
+  if (!access.length) return {bad:true, lead:idx[0]};
+  const ixFilter = W.filter(p => idx.includes(p.col) && !access.includes(p));
+  const tFilter = W.filter(p => !idx.includes(p.col));
+  const L = Math.ceil(lv.rows / LEAF_ROWS);
+  const upper = Math.max(1, Math.ceil(Math.log(L) / Math.log(FANOUT)));   // root + branch levels
+  const m = rowsFor(lv, access);                                          // index entries in the range
+  const ixRows = rowsFor(lv, [...access, ...ixFilter]);                   // entries left after leaf filter
+  const needCols = [...(v.select ?? []), ...(v.order ? [v.order.col] : [])];
+  const covering = !!v.select && needCols.every(c => idx.includes(c)) && !tFilter.length;
+  const pipelined = !v.order || idx[eqCount] === v.order.col;            // index already yields ORDER BY order
+  const stop = !!v.fetch && pipelined;
+  const frac = stop ? Math.min(1, ((v.offset ?? 0) + v.fetch) / out) : 1;  // share of the range actually walked
+  const part = n => Math.max(1, Math.ceil(n * frac - 1e-9));             // epsilon: 5000 * (2020/5000) must stay 2020
+  const scanned = part(m), lookRows = part(ixRows);
+  const lookups = covering ? 0 : lookRows;
+  const leaf = Math.ceil(scanned / LEAF_ROWS);
+  const cost = upper + leaf + lookups;
+  return {kind:"index", cost, T, out, W, upper, leaf, lookups, lookRows, m, ixRows, access, ixFilter, tFilter,
+    covering, pipelined, sort: !!v.order && !pipelined, stop, rowsOut: part(out), L, idx};
+}
+
+// The optimizer: cheapest of the full scan and every usable index.
+function plan(lv, ixs, v){
+  const T = tablePages(lv), out = rowsFor(lv, v.where);
+  const full = {kind:"full", cost:T, T, out, W:v.where, sort:!!v.order};
+  const real = ixs.filter(ix => ix.length);
+  if (!real.length) return {...full, why:"none"};
+  const tries = real.map(ix => planIndex(lv, ix, v));
+  const usable = tries.filter(t => !t.bad).sort((a,b) => a.cost - b.cost);
+  if (!usable.length) return {...full, why:"lead", lead:tries[0].lead, many: real.length > 1};
+  if (usable[0].cost >= T) return {...full, why:"ignored", ix:usable[0]};
+  return usable[0];
+}
+
+function score(lv, ixs, picks){
+  const plans = lv.queries.map((q,i) => plan(lv, ixs, variantOf(lv, i, picks)));
+  const reads = plans.reduce((s,p,i) => s + p.cost * (lv.queries[i].freq ?? 1), 0);
+  const writes = (lv.inserts ?? 0) * INSERT_PAGES * ixs.filter(ix => ix.length).length;
+  return {plans, reads, writes, total: reads + writes};
+}
+
+function allIndexes(lv){
+  const cols = Object.keys(lv.cols), res = [];
+  const go = cur => { if (cur.length) res.push(cur); if (cur.length === lv.maxCols) return;
+    for (const c of cols) if (!cur.includes(c)) go([...cur, c]); };
+  go([]); return res;
+}
+function allIndexSets(lv){
+  const one = allIndexes(lv), k = lv.maxIdx ?? 1, res = [];
+  const go = (start, cur) => { res.push(cur); if (cur.length === k) return;
+    for (let i = start; i < one.length; i++) go(i + 1, [...cur, one[i]]); };
+  go(0, []); return res;
+}
+const allPicks = lv => lv.queries.reduce((acc, q) => acc.flatMap(a => q.variants.map((_, k) => [...a, k])), [[]]);
+function bestOf(lv){
+  if (lv._best == null){
+    const picks = allPicks(lv);
+    lv._best = Math.min(...allIndexSets(lv).flatMap(s => picks.map(p => score(lv, s, p).total)));
+    lv._none = score(lv, [], []).total;
+  }
+  return {best: lv._best, none: lv._none};
+}
+function starsFor(lv, t){
+  const {best, none} = bestOf(lv);
+  return {best, none, stars: t <= best ? 3 : t <= best * (lv.two ?? 2.5) ? 2 : t < none ? 1 : 0};
+}
+
+/* ---------- text ---------- */
+function hl(s){
+  return esc(s).replace(/(--[^\n]*)|('[^']*')|\b(SELECT|FROM|WHERE|AND|OR|IS|NULL|CREATE|INDEX|ON|UPPER|TRUNC|LIKE|BETWEEN|DATE|SYSDATE|INTERVAL|HOUR|ORDER|BY|DESC|OFFSET|FETCH|FIRST|NEXT|ROWS|ONLY)\b|\b(\d+)\b/g,
+    (m, cm, str, kw, num) => cm ? `<span class="c">${cm}</span>` : str ? `<span class="s">${str}</span>` : kw ? `<span class="k">${kw}</span>` : `<span class="n">${num}</span>`);
+}
+function sqlOf(lv, v){
+  let s = (v.binds ? `-- ${v.binds}\n` : "") +
+    `SELECT ${v.select ? v.select.join(", ") : "*"}\n  FROM ${lv.table}\n WHERE ` + v.where.map(p => p.sql).join("\n   AND ");
+  if (v.order) s += `\n ORDER BY ${v.order.col}${v.order.dir === "DESC" ? " DESC" : ""}`;
+  if (v.offset) s += `\nOFFSET ${v.offset} ROWS`;
+  if (v.fetch) s += `\n FETCH ${v.offset ? "NEXT" : "FIRST"} ${v.fetch} ROWS ONLY`;
+  return s;
+}
+const ixName = idx => "ix_" + idx.map(c => c.toLowerCase().replace(/\W+/g, "_").replace(/^_|_$/g, "")).join("_");
+
+// The index operation as the plan prints it.
+function indexOp(lv, p, v){
+  if (p.idx.length === 1 && lv.cols[p.idx[0]] === lv.rows && p.access[0].kind === "eq") return "INDEX UNIQUE SCAN";
+  return "INDEX RANGE SCAN" + (v.order?.dir === "DESC" && p.pipelined ? " DESCENDING" : "");
+}
+// The one-line label the report shows for a query.
+const scanLabel = (lv, p, v) => p.kind === "full" ? "TABLE ACCESS FULL" : p.covering ? "INDEX-ONLY SCAN" : indexOp(lv, p, v);
+
+function planText(lv, p, v){
+  const TB = lv.table.toUpperCase();
+  const pr = (ps, cls) => ps.map(w => `<span class="${cls}">${esc(w.sql.toUpperCase())}</span>`).join(" AND ");
+  const ret = v.fetch ? Math.min(p.out, v.fetch) : p.out;
+  const ops = [{op:"SELECT STATEMENT", rows:ret, cost:p.cost}];
+  if (p.sort) ops.push({op: v.fetch ? "SORT ORDER BY STOPKEY" : "SORT ORDER BY", rows:ret, cost:p.cost});
+  else if (v.fetch) ops.push({op:"COUNT STOPKEY", rows:ret, cost:p.cost});
+  if (p.kind === "full") ops.push({op:"TABLE ACCESS FULL", name:TB, rows:p.out, cost:p.T, filter:p.W});
+  else {
+    if (!p.covering) ops.push({op:"TABLE ACCESS BY INDEX ROWID", name:TB, rows:p.rowsOut, cost:p.cost, filter:p.tFilter});
+    ops.push({op:indexOp(lv, p, v), name:ixName(p.idx).toUpperCase(),
+      rows:p.lookRows, cost:p.upper + p.leaf, access:p.access, filter:p.ixFilter});
+  }
+  const preds = [];
+  const rows = [["Id","Operation","Name","Rows","Cost"], ...ops.map((o,i) => {
+    const a = o.access?.length, f = o.filter?.length;
+    if (a) preds.push(`   ${i} - access(${pr(o.access,"acc")})`);
+    if (f) preds.push((a ? "       " : `   ${i} - `) + `filter(${pr(o.filter,"flt")})`);
+    return [(a || f ? "*" : " ") + i, " ".repeat(i) + o.op, o.name ?? "", o.rows, o.cost];
+  })];
+  const w = [0,1,2].map(i => Math.max(...rows.map(r => String(r[i]).length)))
+    .concat([3,4].map(i => Math.max(...rows.map(r => typeof r[i] === "number" ? fmt(r[i]).length : r[i].length))));
+  const line = r => r.map((v,i) => i >= 3 ? (typeof v === "number" ? fmt(v) : v).padStart(w[i] + 2) : String(v).padEnd(w[i])).join(" | ");
+  const head = line(rows[0]);
+  return `<span class="c">${esc(head)}\n${"-".repeat(head.length)}</span>\n` +
+    rows.slice(1).map(r => esc(line(r))).join("\n") +
+    `\n\n<span class="c">Predicate Information:</span>\n` + preds.join("\n");
+}
+
+function explain(lv, p, v){
+  const T = fmt(p.T);
+  if (p.why === "none") return t("No index. The database reads all {T} table pages.", {T});
+  if (p.why === "lead"){
+    if (p.many) return t("None of your indexes can be searched by this query's conditions, so the database reads all {T} table pages.", {T});
+    const wild = p.W.find(w => w.col === p.lead);
+    if (wild) return `${wild.sql} ${t(wild.why)} ` + t("The database falls back to reading all {T} table pages.", {T});
+    const fn = p.W.find(w => w.col.includes(`(${p.lead})`));
+    if (fn) return t("The query compares {fn}, not {col}. The index holds the stored {col} values, not the results of that expression, so the database can't search it and reads all {T} table pages.", {fn:fn.col, col:p.lead, T});
+    return t("The index starts with {col}, but this query doesn't filter on {col}. A B-tree can only be searched from its first column, so the database falls back to reading all {T} table pages.", {col:p.lead, T});
+  }
+  if (p.why === "ignored") return t("The best index narrows the search to {m} rows, but each one is a separate table read. That would cost {cost} pages, more than scanning the whole table ({T} pages), so the optimizer chose the full scan.", {m:fmt(p.ix.m), cost:fmt(p.ix.cost), T});
+  const cols = ps => ps.map(w => w.col).join(", ");
+  const s = [];
+  if ((lv.maxIdx ?? 1) > 1) s.push(t("Uses {ix}.", {ix:ixName(p.idx)}));
+  s.push(t("{up} root/branch page{s1}, {leaf} leaf page{s2},", {up:p.upper, s1:pl(p.upper), leaf:fmt(p.leaf), s2:pl(p.leaf)}));
+  s.push(p.covering ? t("and no table reads. Every column the query needs is in the index, so this is an index-only scan.")
+                    : t("then {n} table read{s}.", {n:fmt(p.lookups), s:pl(p.lookups)}));
+  if (p.stop && v.order) s.push(v.offset
+    ? t("The index delivers rows in order, but OFFSET {o} still reads and throws away {o} rows before returning {n}.", {o:fmt(v.offset), n:v.fetch})
+    : t("The index already returns rows in {col} order, so the database stops after {n} rows: a pipelined top-N query.", {col:v.order.col, n:v.fetch}));
+  if (p.sort) s.push(v.fetch
+    ? t("The index doesn't return rows in {col} order, so the database reads all {n} matching rows and sorts them before returning the first {k}.", {col:v.order.col, n:fmt(p.out), k:v.fetch})
+    : t("The index doesn't return rows in {col} order, so the database reads all {n} matching rows and sorts them before returning any.", {col:v.order.col, n:fmt(p.out)}));
+  if (p.ixFilter.length) s.push(t("{cols} can't narrow the search, but it is checked in the leaf pages, so non-matching rows never cost a table read.", {cols:cols(p.ixFilter)}));
+  if (p.tFilter.length) s.push(t("{cols} is not in the index, so it is checked after each table read.", {cols:cols(p.tFilter)}));
+  return s.join(" ");
+}
+
+/* ---------- B-tree drawing ---------- */
+const NS = "http://www.w3.org/2000/svg";
+const leafX = i => 20 + i * 15, branchCx = i => 20 + i * 75 + 36.5;
+function drawTree(){
+  let s = "";
+  for (let b = 0; b < 8; b++){
+    s += `<line class="ln" x1="320" y1="36" x2="${branchCx(b)}" y2="66"/>`;
+    for (let k = 0; k < 5; k++) s += `<line class="ln" x1="${branchCx(b)}" y1="86" x2="${leafX(b*5+k)+6.5}" y2="118"/>`;
+  }
+  s += `<rect class="nd" id="root" x="290" y="14" width="60" height="22"/>`;
+  for (let b = 0; b < 8; b++) s += `<rect class="nd" id="br${b}" x="${branchCx(b)-22}" y="66" width="44" height="20"/>`;
+  for (let i = 0; i < LEAF_BOXES; i++) s += `<rect class="leafbox" id="lf${i}" x="${leafX(i)}" y="118" width="13" height="20"/>`;
+  s += `<text class="lbl" x="20" y="160">TABLE HEAP</text><g id="links"></g>`;
+  for (let i = 0; i < CELLS; i++) s += `<rect class="tb" id="tb${i}" x="${20 + (i%40)*15}" y="${168 + Math.floor(i/40)*15}" width="13" height="13"/>`;
+  $("tree").innerHTML = s;
+}
+function legend(lv){
+  const L = Math.ceil(lv.rows / LEAF_ROWS), T = tablePages(lv);
+  $("legend").innerHTML =
+    `<span style="--sw:var(--yellow)">${t("index path")}</span>` +
+    `<span style="--sw:var(--cell)">${t("leaf: {L} pages, {per} per box", {L:fmt(L), per:fmt(L/LEAF_BOXES)})}</span>` +
+    `<span style="--sw:var(--cyan)">${t("full scan")}</span>` +
+    `<span style="--sw:var(--magenta)">${t("table lookup")}</span>` +
+    `<span>${t("table: {T} pages, {per} per box", {T:fmt(T), per:fmt(Math.round(T/CELLS))})}</span>`;
+}
+
+function rng(seedStr){
+  let a = [...seedStr].reduce((h,ch) => Math.imul(h ^ ch.charCodeAt(0), 2654435761), 7) >>> 0;
+  return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+
+let animTok = 0;
+function animate(lv, p, q, instant){
+  return new Promise(done => {
+    const tok = ++animTok;
+    document.querySelectorAll("#tree .hit,#tree .scan,#tree .look").forEach(e => e.classList.remove("hit","scan","look"));
+    $("links").innerHTML = "";
+    const D = instant || reduceMotion ? 0 : Math.round(300 + 2700 * Math.log10(p.cost + 1) / Math.log10(p.T + 1));
+    const at = (ms, fn) => D ? setTimeout(() => { if (tok === animTok) fn(); }, ms) : fn();
+    $("lamp").classList.remove("on");
+    const rand = rng(lv.name + q.label);
+
+    if (p.kind === "full"){
+      for (let i = 0; i < CELLS; i++) at(D * i / CELLS, () => $("tb"+i).classList.add("scan"));
+    } else {
+      const pos = 0.15 + 0.7 * rand();
+      const b = Math.min(7, Math.floor(pos * 8));
+      const l0 = Math.min(LEAF_BOXES - 1, b * 5 + Math.floor(rand() * 5));
+      const nl = Math.min(LEAF_BOXES - l0, Math.max(1, Math.ceil(p.leaf / (p.L / LEAF_BOXES))));
+      at(0, () => $("root").classList.add("hit"));
+      at(D * .06, () => $("br"+b).classList.add("hit"));
+      for (let k = 0; k < nl; k++) at(D * (.12 + .1 * k / nl), () => $("lf"+(l0+k)).classList.add("hit"));
+      const n = Math.min(CELLS, p.lookups), pool = [...Array(CELLS).keys()];
+      for (let i = pool.length - 1; i > 0; i--){ const j = Math.floor(rand() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+      pool.slice(0, n).forEach((c, k) => at(D * (.25 + .75 * k / n), () => {
+        $("tb"+c).classList.add("look");
+        if (k < 12){
+          const l = document.createElementNS(NS, "line");
+          l.setAttribute("class","link");
+          l.setAttribute("x1", leafX(l0 + (k % nl)) + 6.5); l.setAttribute("y1", 138);
+          l.setAttribute("x2", 20 + (c%40)*15 + 6.5); l.setAttribute("y2", 168 + Math.floor(c/40)*15);
+          $("links").appendChild(l);
+        }
+      }));
+    }
+
+    const setMeter = f => {
+      $("pages").textContent = String(Math.round(p.cost * f)).padStart(6, "0");
+      $("prog").style.width = (f * 100) + "%";
+    };
+    if (!D){ setMeter(1); done(); return; }
+    $("lamp").classList.add("on");
+    const t0 = performance.now();
+    const tick = now => {
+      if (tok !== animTok){ done(); return; }
+      const f = Math.min(1, (now - t0) / D); setMeter(f);
+      if (f < 1) requestAnimationFrame(tick);
+      else { $("lamp").classList.remove("on"); done(); }
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+/* ---------- render ---------- */
+function accuseButton(c){
+  const ready = c.missions.every((_, i) => starsAt(state.save.stars, state.caseIx, i) >= 2);
+  return `<button id="accuse" ${ready ? "" : "disabled"} title="${ready ? t("Name the killer") : t("Clear every mission at ★★ first")}">` +
+    `${state.save.solved[state.caseIx] ? t("CASE CLOSED ✓") : t("ACCUSE 告発")}</button>`;
+}
+
+const slotText = k => ({MOTIVE:[t("MOTIVE"), t("why they did it")], OPPORTUNITY:[t("OPPORTUNITY"), t("proof they were there")],
+  LIE:[t("LIE"), t("evidence that breaks their statement")]})[k];
+function openAccusation(msg = ""){
+  const c = CASES[state.caseIx], a = state.acc, got = state.save.clues[state.caseIx] ?? [];
+  const ev = evidenceOf(c).filter(e => got.includes(e.id));
+  openDialog(t("ACCUSATION"), "告発",
+    `<p>${t("Name the killer, then back each charge with one piece of evidence from your notebook.")}</p>` +
+    `<fieldset class="sus-cards"><legend class="eyebrow">${t("SUSPECT")}</legend>` +
+      c.suspects.map(s => `<label><input type="radio" name="suspect" value="${s.id}" ${a.suspect === s.id ? "checked" : ""}><b>${esc(s.name)}</b><small>${esc(t(s.role))}</small></label>`).join("") +
+    `</fieldset>` +
+    SLOTS.map(k => `<label class="slot-sel"><span><b>${slotText(k)[0]}</b> · ${slotText(k)[1]}</span><select data-slotsel="${k}">` +
+      `<option value="">${t("Choose evidence")}</option>` +
+      ev.map(e => `<option value="${e.id}" ${a[k] === e.id ? "selected" : ""}>${e.bonus ? "★" : e.id} · ${esc(t(e.title))}</option>`).join("") +
+      `</select></label>`).join("") +
+    (msg ? `<p class="cancel">${esc(msg)}</p>` : "") +
+    `<div class="row"><button class="go" id="accuse-go">${t("ACCUSE ▶")}</button><button data-close="1">${t("NOT YET")}</button></div>`);
+  syncAccusation();
+}
+// Keep the form honest: no evidence in two slots, no ACCUSE until it's complete.
+function syncAccusation(){
+  const a = state.acc;
+  document.querySelectorAll("[data-slotsel]").forEach(sel => {
+    const others = SLOTS.filter(k => k !== sel.dataset.slotsel).map(k => a[k]);
+    [...sel.options].forEach(o => { o.disabled = !!o.value && others.includes(o.value); });
+  });
+  $("accuse-go").disabled = accuse(CASES[state.caseIx], a.suspect, a) === "incomplete";
+}
+function openEnding(){
+  const c = CASES[state.caseIx], got = state.save.clues[state.caseIx] ?? [], pct = suspicion(state.save, state.caseIx), g = rating(pct);
+  openDialog(t("CASE CLOSED · {title}", {title:t(c.title).toUpperCase()}), c.jp,
+    c.outro.map(p => `<p>${esc(t(p))}</p>`).join("") +
+    `<p class="hint">${esc(t(c.outroMika))}</p><p>${esc(t(c.outroHook))}</p>` +
+    (c.insiderBonuses.every(id => got.includes(id)) ? `<p class="cancel">${esc(t(c.outroInsider))}</p>` : "") +
+    `<div class="grade"><b>${g}</b><span>${t("RATING · suspicion {n}%", {n:Math.round(pct * 100)})}<br>${esc(t(c.grades[g]))}</span></div>` +
+    `<div class="row"><button class="go" data-close="1">${t("CLOSE")}</button></div>`);
+}
+
+function suspicionChip(){
+  const pct = suspicion(state.save, state.caseIx), on = Math.min(10, Math.round(pct * 10));
+  return `<span class="sus ${pct >= 0.75 ? "hot" : ""}" title="${t("How much I/O the insider has seen: {n}% of what gets noticed", {n:Math.round(pct * 100)})}">` +
+    `${t("SUSPICION")} <span aria-hidden="true">${"▮".repeat(on)}${"▯".repeat(10 - on)}</span></span>`;
+}
+const caseLabel = (c, i) => c.practice ? t("PRACTICE {jp}", {jp:c.jp}) : t("CASE {n} {jp}", {n:String(i+1).padStart(2,"0"), jp:c.jp});
+function renderBar(){
+  const c = CASES[state.caseIx];
+  $("casebar").innerHTML = CASES.map((x,i) =>
+    `<button data-case="${i}" ${i===state.caseIx?'aria-current="true"':''} title="${esc(t(x.title))}">${caseLabel(x, i)}</button>`).join("") +
+    (c.intro ? `<button id="brief">${t("BRIEFING")}</button>` + accuseButton(c) + suspicionChip() : "");
+  $("lvbar").innerHTML = c.missions.map((l,i) => {
+    const s = starsAt(state.save.stars, state.caseIx, i), open = i === state.lv || unlocked(state.save.stars, state.caseIx, i);
+    return `<button data-lv="${i}" ${i===state.lv?'aria-current="true"':''} ${open?"":"disabled"} title="${esc(t(l.name))}">M${String(i+1).padStart(2,"0")} ${"★".repeat(s)}${"☆".repeat(3-s)}</button>`;
+  }).join("");
+}
+
+function openDialog(title, jp, html){
+  $("dlg-title").textContent = title; $("dlg-jp").textContent = jp; $("dlg-body").innerHTML = html;
+  if (!$("dlg").open) $("dlg").showModal();
+}
+function openBriefing(){
+  const c = CASES[state.caseIx];
+  openDialog(`${caseLabel(c, state.caseIx).replace(c.jp, "").trim()} · ${t(c.title).toUpperCase()}`, c.jp,
+    c.intro.map(p => `<p>${esc(t(p))}</p>`).join("") + `<p class="hint">${esc(t(c.witness))}</p>` +
+    `<div class="row"><button class="go" data-close="1">${t("START INVESTIGATION ▶")}</button></div>`);
+}
+
+function renderMission(){
+  const lv = cur(), c = CASES[state.caseIx];
+  $("m-title").textContent = t("MISSION {n}", {n:String(state.lv+1).padStart(2,"0")});
+  $("mission").innerHTML =
+    `<div class="eyebrow"><b>${c.practice ? tier(lv.tier) : `${t(c.title).toUpperCase()} ${c.jp}`}</b> · ${esc(lv.jp)}</div><h3>${esc(t(lv.name))}</h3><p>${esc(t(lv.story ?? lv.brief))}</p>` +
+    lv.queries.map((q,i) => {
+      const v = variantOf(lv, i);
+      const seg = q.variants.length > 1
+        ? `<div class="seg"><span>${t("REWRITE")}</span>` + q.variants.map((x,k) =>
+            `<button data-pick="${i}" data-v="${k}" aria-pressed="${(state.pick[i] ?? 0) === k}">${esc(t(x.tag))}</button>`).join("") + `</div>` : "";
+      return `<div class="qlabel"><b>${q.label}</b> · ${esc(t(q.who))}${q.freq ? ` · <em>${t("runs {n}×/day", {n:fmt(q.freq)})}</em>` : ""}</div>${seg}<pre>${hl(sqlOf(lv, v))}</pre>`;
+    }).join("") +
+    `<div class="stats">${t("{table}: {rows} rows · {pages} table pages · {leaf} index entries per leaf page", {table:lv.table, rows:fmt(lv.rows), pages:fmt(tablePages(lv)), leaf:LEAF_ROWS})}</div>` +
+    (lv.inserts ? `<div class="stats"><b>${t("{n} new rows/day.", {n:fmt(lv.inserts)})}</b> ${t("Each index costs {p} page writes per new row = {total} pages/day.", {p:INSERT_PAGES, total:fmt(lv.inserts * INSERT_PAGES)})}</div>` : "");
+}
+
+function renderWizard(){
+  const lv = cur(), multi = state.ixs.length > 1, slot = state.ixs[state.active];
+  const made = state.ixs.filter(ix => ix.length);
+  $("ddl").innerHTML = made.length
+    ? hl(made.map(ix => `CREATE INDEX ${ixName(ix)}\n    ON ${lv.table} (${ix.join(", ")})`).join(";\n\n"))
+    : hl("-- " + t("No index yet. Every query reads the whole table."));
+  $("slots").innerHTML = state.ixs.map((ix, s) => {
+    const head = multi
+      ? `<div class="seg"><button data-slot="${s}" aria-pressed="${s === state.active}">${s === state.active ? "▶ " : ""}INDEX ${s+1}</button><span>${t("{k}/{max} columns", {k:ix.length, max:lv.maxCols})} · ${s === state.active ? t("new columns go here") : t("click to edit")}</span></div>`
+      : `<div class="eyebrow">${t("YOUR INDEX · {k}/{max} column{s}", {k:ix.length, max:lv.maxCols, s:pl(lv.maxCols)})}</div>`;
+    const chips = ix.length ? ix.map((c,i) =>
+      `<li><i>${i+1}</i><span>${esc(c)}</span>` +
+      (lv.maxCols > 1 ? `<button data-s="${s}" data-mv="${i}" data-d="-1" ${i===0?"disabled":""} aria-label="${t("Move {c} earlier", {c:esc(c)})}">▲</button>` +
+        `<button data-s="${s}" data-mv="${i}" data-d="1" ${i===ix.length-1?"disabled":""} aria-label="${t("Move {c} later", {c:esc(c)})}">▼</button>` : "") +
+      `<button data-s="${s}" data-rm="${i}" aria-label="${t("Remove {c}", {c:esc(c)})}">✕</button></li>`).join("")
+      : `<li class="empty">${!multi || s === state.active ? t("Empty. Add a column from the list below.") : t("Empty, and costs nothing. Click INDEX {n} to fill it.", {n:s+1})}</li>`;
+    return `<div class="slot ${multi && s === state.active ? "on" : ""}">${head}<ul class="chips">${chips}</ul></div>`;
+  }).join("");
+  $("colhint").textContent = multi ? t("TABLE COLUMNS · click to add to INDEX {n}", {n:state.active + 1}) : t("TABLE COLUMNS · click to add");
+  const full = slot.length >= lv.maxCols;
+  $("cols").innerHTML = Object.entries(lv.cols).map(([c,d]) =>
+    `<button data-add="${esc(c)}" ${slot.includes(c) || full ? "disabled" : ""}>${esc(c)}` +
+    `<small>${t("{d} distinct · ~{r} rows per value", {d:fmt(d), r:fmt(Math.max(1, Math.round(lv.rows/d)))})}</small></button>`).join("");
+}
+
+function renderTabs(){
+  const lv = cur();
+  $("tabs").innerHTML = lv.queries.map((q,i) =>
+    `<button role="tab" data-tab="${i}" aria-selected="${i===state.tab}" ${state.result ? "" : "disabled"}>${q.label}</button>`).join("");
+}
+
+function resetPlan(){
+  animTok++;
+  drawTree(); legend(cur());
+  $("plan").innerHTML = `<span class="c">-- ${t("Build an index, then press EXECUTE.")}</span>`;
+  $("pages").textContent = "000000"; $("prog").style.width = "0"; $("lamp").classList.remove("on");
+}
+
+function showQuery(i, instant){
+  const lv = cur(), q = lv.queries[i], p = state.result.plans[i], v = variantOf(lv, i);
+  state.tab = i; renderTabs();
+  $("plan").innerHTML = `<span class="c">-- ${q.label}: ${esc(t(q.who))}</span>\n` + planText(lv, p, v);
+  return animate(lv, p, q, instant);
+}
+
+function hintBlock(lv, stars){
+  if (CASES[state.caseIx].practice)
+    return `<p class="hint">${stars ? t("Good, but there's a cheaper solution.") : t("Still slower than no index at all.")} ${t("Hint:")} ${esc(t(lv.hint))}</p>`;
+  const fails = state.save.fails[state.caseIx]?.[state.lv] ?? 0;
+  const h = stars >= 2 ? lv.hint : hintFor(lv, fails);
+  return `<p class="hint">${stars >= 2 ? t("Clue recovered. A cheaper index exists.") : t("Query cancelled, so there are no rows and no clue.")}</p>` +
+    `<div class="msg"><b>${esc(t("FUJIMOTO (night sysadmin) >"))}</b> ${esc(t(h))}</div>`;
+}
+
+// After the last mission of a case: point the player at the accusation once every clue is in.
+function lastMissionAction(){
+  const c = CASES[state.caseIx];
+  if (c.practice) return "";
+  const ready = c.missions.every((_, i) => starsAt(state.save.stars, state.caseIx, i) >= 2);
+  if (state.save.solved[state.caseIx]) return `<button class="go" data-act="accuse">${t("READ THE ENDING ▶")}</button>`;
+  return ready ? `<button class="go" data-act="accuse">${t("ACCUSE 告発 ▶")}</button>`
+               : `<p class="empty">${t("Clear every mission at ★★ to open the accusation.")}</p>`;
+}
+
+function renderReport(){
+  const lv = cur(), r = state.result;
+  if (!r){ $("report").innerHTML = `<p class="empty">${t("No run yet. Each page the database reads costs you one point. Fewer is better.")}</p>`; return; }
+  const last = state.lv === missionsOf(state.caseIx).length - 1, perDay = lv.queries.some(q => q.freq);
+  $("report").innerHTML =
+    `<div class="stars" aria-label="${t("{n} of 3 stars", {n:r.stars})}">${"★".repeat(r.stars)}<span class="off">${"★".repeat(3-r.stars)}</span></div>` +
+    `<dl class="score">` +
+      (lv.inserts ? `<dt>${perDay ? t("Pages read per day") : t("Pages read")}</dt><dd>${fmt(r.reads)}</dd><dt>${t("Index upkeep per day")}</dt><dd>${fmt(r.writes)}</dd>` : "") +
+      `<dt>${lv.inserts ? t("Total per day") : t("Pages read")}</dt><dd>${fmt(r.total)}</dd>` +
+      `<dt>${t("Best possible")}</dt><dd>${r.stars===3 ? fmt(r.best) : "?"}</dd><dt>${t("Without an index")}</dt><dd>${fmt(r.none)}</dd></dl>` +
+    r.plans.map((p,i) => {
+      const q = lv.queries[i];
+      return `<div class="qres ${p.kind==="index"?"good":"bad"}"><div><b>${q.label}</b> <span class="tag">${scanLabel(lv, p, variantOf(lv, i))}</span> ${t("{n} pages", {n:fmt(p.cost)})}${q.freq ? ` × ${t("{n}/day", {n:fmt(q.freq)})}` : ""}</div><p>${esc(explain(lv, p, variantOf(lv, i)))}</p></div>`;
+    }).join("") +
+    (r.stars < 3 ? hintBlock(lv, r.stars) : "") +
+    (r.stars === 3 ? `<div class="lesson"><b>${t("LESSON 教訓")}</b><p>${esc(t(lv.lesson))}</p></div>`
+      : r.stars ? `<p class="empty">${t("Reach ★★★ to unlock this mission's lesson.")}</p>` : "") +
+    `<div class="row"><button id="retry">${t("TRY AGAIN")}</button>` +
+    (last ? lastMissionAction()
+          : `<button class="go" id="next" ${unlocked(state.save.stars, state.caseIx, state.lv + 1) ? "" : "disabled"}>${t("NEXT MISSION ▶")}</button>`) + `</div>`;
+}
+
+function renderResults(){
+  const c = CASES[state.caseIx], lv = cur(), r = state.result, el = $("results");
+  $("reswin").hidden = !!c.practice;
+  if (c.practice) return;
+  if (!r || !r.done){ el.innerHTML = `<p class="empty">${r ? t("Running…") : t("Rows appear here after EXECUTE.")}</p>`; return; }
+  if (r.stars < 2){
+    el.innerHTML = `<p class="cancel">${CANCEL_LINE}</p><p class="empty">${t("I/O guard: query cancelled after {n} pages. Reach ★★ to get the rows.", {n:fmt(r.total)})}</p>`;
+    return;
+  }
+  const res = lv.results[state.tab];
+  const rows = res.rows
+    ? `<div class="rt-wrap"><table class="rt"><thead><tr>${res.columns.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead>` +
+      `<tbody>${res.rows.map(row => `<tr>${row.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` +
+      `<p class="stats">${t("{n} row{s}", {n:res.rows.length, s:pl(res.rows.length)})}</p>`
+    : `<p>${t("{n} rows.", {n:fmt(res.count)})} ${esc(t(res.note))}</p>`;
+  el.innerHTML = rows +
+    `<div class="clue"><b>${t("EVIDENCE")} ${lv.clue.id} · ${esc(t(lv.clue.title))}</b><p>${esc(t(lv.clue.text))}</p></div>` +
+    (r.stars === 3 && lv.bonus ? `<div class="clue bonus"><b>★ ${t("BONUS")} · ${esc(t(lv.bonus.title))}</b><p>${esc(t(lv.bonus.text))}</p></div>` : "");
+}
+
+function renderNotebook(){
+  const c = CASES[state.caseIx];
+  $("nbwin").hidden = !!c.practice;
+  if (c.practice) return;
+  const got = state.save.clues[state.caseIx] ?? [];
+  const items = evidenceOf(c).filter(e => got.includes(e.id));
+  $("notebook").innerHTML = (items.length
+    ? `<div class="nb">` + items.map(e => `<details class="${e.bonus ? "bonus" : ""}"><summary><b>${e.bonus ? "★" : e.id}</b>${esc(t(e.title))}</summary><p>${esc(t(e.text))}</p></details>`).join("") + `</div>`
+    : `<p class="empty">${t("No evidence yet. Clear a mission at ★★ and its clue lands here.")}</p>`) +
+    (got.includes(c.statementsAfter) ? `<h4>${t("STATEMENTS")}</h4><div class="nb">` +
+      c.statements.map(s => `<details><summary><b>${esc(s.who)}</b></summary><p>“${esc(t(s.text))}”</p></details>`).join("") + `</div>` : "");
+}
+
+function storeSave(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(state.save)); } catch {} }
+function readSave(){ try { return localStorage.getItem(SAVE_KEY); } catch { return null; } }
+
+const THEME_KEY = "index-dojo-theme", THEMES = ["pc98", "sumi", "washi", "fuji"];
+function setTheme(name){
+  const th = THEMES.includes(name) ? name : "pc98";
+  if (th === "pc98") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = th;
+  $("theme").value = th;
+  try { localStorage.setItem(THEME_KEY, th); } catch {}
+}
+function readTheme(){ try { return localStorage.getItem(THEME_KEY); } catch { return null; } }
+
+const LANG_KEY = "index-dojo-lang";
+function readLang(){
+  try { const l = localStorage.getItem(LANG_KEY); if (l) return l; } catch {}
+  return navigator.language?.slice(0, 2).toLowerCase();
+}
+// Switch language for the static labels; the caller re-renders the rest.
+function setLang(l){
+  LANG = l in DICTS ? l : "en";
+  try { localStorage.setItem(LANG_KEY, LANG); } catch {}
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-t]").forEach(e => { e.dataset.t ||= e.textContent; e.textContent = t(e.dataset.t); });
+  $("lang").value = LANG;
+  $("tree").setAttribute("aria-label", t("B-tree index and table pages read by the query"));
+}
+
+function render(){ renderBar(); renderMission(); renderWizard(); renderTabs(); renderReport(); renderResults(); renderNotebook(); }
+
+/* ---------- actions ---------- */
+function changed(){ state.result = null; resetPlan(); render(); }
+
+function goLevel(i){
+  state.lv = i; state.ixs = emptySlots(missionsOf(state.caseIx)[i]); state.active = 0; state.pick = []; state.tab = 0;
+  changed(); window.scrollTo({top:0, behavior: reduceMotion ? "auto" : "smooth"});
+}
+function goCase(ci){
+  state.caseIx = ci;
+  const ms = missionsOf(ci);
+  let i = 0; while (i + 1 < ms.length && unlocked(state.save.stars, ci, i + 1)) i++;   // furthest open mission
+  goLevel(i);
+  if (CASES[ci].intro) openBriefing();   // the case file opens first, every time
+}
+
+async function execute(){
+  const lv = cur();
+  const sc = score(lv, state.ixs, state.pick);
+  const {best, none, stars} = starsFor(lv, sc.total);
+  state.result = {...sc, best, none, stars, done:false};
+  const run = animTok + 1;
+  $("run").disabled = true;
+  $("report").innerHTML = `<p class="empty">${t("Running…")}</p>`;
+  renderResults();
+  for (let i = 0; i < sc.plans.length; i++){
+    await showQuery(i, false);
+    if (animTok !== run + i) break;   // user switched tabs mid-run
+  }
+  $("run").disabled = false;
+  const row = state.save.stars[state.caseIx] ??= [];
+  row[state.lv] = Math.max(row[state.lv] ?? 0, stars);
+  if (!CASES[state.caseIx].practice) earn(state.save, state.caseIx, state.lv, stars);
+  logRun(state.save, state.caseIx, state.lv, sc.total, stars);
+  storeSave();
+  state.result.done = true;
+  renderBar(); renderReport(); renderResults(); renderNotebook();
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b || b.disabled) return;
+  const lv = cur(), d = b.dataset, ix = state.ixs[+d.s];
+  if (d.add){
+    const slot = state.ixs[state.active];
+    if (slot.length < lv.maxCols){
+      slot.push(d.add);
+      if (slot.length === lv.maxCols){   // full: move on to the next index that still has room
+        const next = state.ixs.findIndex(ix => ix.length < lv.maxCols);
+        if (next !== -1) state.active = next;
+      }
+      changed();
+    }
+  }
+  else if (d.rm){ ix.splice(+d.rm, 1); changed(); }
+  else if (d.mv){ const i = +d.mv, j = i + +d.d; [ix[i], ix[j]] = [ix[j], ix[i]]; changed(); }
+  else if (d.slot){ state.active = +d.slot; renderWizard(); }
+  else if (d.pick){ state.pick[+d.pick] = +d.v; changed(); }
+  else if (d.tab){ showQuery(+d.tab, true); $("run").disabled = false; renderReport(); renderResults(); }
+  else if (b.id === "run") execute();
+  else if (b.id === "clear"){ state.ixs = emptySlots(lv); state.active = 0; changed(); }
+  else if (b.id === "retry"){ state.result = null; resetPlan(); render(); }
+  else if (b.id === "next") goLevel(state.lv + 1);
+  else if (d.lv) goLevel(+d.lv);
+  else if (d.case) goCase(+d.case);
+  else if (b.id === "brief") openBriefing();
+  else if (b.id === "accuse" || d.act === "accuse") state.save.solved[state.caseIx] ? openEnding() : openAccusation();
+  else if (b.id === "accuse-go"){
+    const verdict = fileAccusation(state.save, state.caseIx, state.acc.suspect, state.acc);
+    storeSave(); renderBar();
+    verdict === "right" ? openEnding() : openAccusation(t("The prosecutor isn't convinced. The evidence doesn't hold up."));
+  }
+  else if (d.close) $("dlg").close();
+});
+
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (el.id === "theme"){ setTheme(el.value); return; }
+  if (el.id === "lang"){ setLang(el.value); legend(cur()); if (!state.result) resetPlan(); render(); return; }
+  if (el.name === "suspect") state.acc.suspect = el.value;
+  else if (el.dataset.slotsel) state.acc[el.dataset.slotsel] = el.value;
+  else return;
+  syncAccusation();
+});
+
+function boot(d){
+  setTheme(readTheme());
+  setLang(readLang());
+  state.save = d.save ?? loadSave(readSave());
+  state.caseIx = Math.min(Math.max(0, d.caseIx ?? 0), CASES.length - 1);
+  if (d.lv == null){ goCase(state.caseIx); return; }
+  state.lv = Math.min(Math.max(0, d.lv), missionsOf(state.caseIx).length - 1);
+  const lv = cur();
+  state.ixs = Array.isArray(d.ixs) && d.ixs.length === (lv.maxIdx ?? 1) ? d.ixs : emptySlots(lv);
+  state.pick = Array.isArray(d.pick) ? d.pick : [];
+  resetPlan(); render();
+}
+window.claude?.hot?.snapshot?.(() => ({caseIx:state.caseIx, lv:state.lv, ixs:state.ixs, pick:state.pick, save:state.save}));
+window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+</script>
