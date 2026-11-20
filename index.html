@@ -309,6 +309,9 @@ function eq(col, val){ return {col, sql:`${col} = ${val}`, kind:"eq"}; }
 function range(col, sql, sel){ return {col, sql, kind:"range", sel}; }
 const WILDCARD = "starts with a wildcard, so there is no place in the sorted index to start searching.";
 const SMART = "can be switched off by a NULL parameter, so the database can't use it to search the index.";
+// An index holds no entry for a row where every indexed column is NULL, so IS NULL needs a NOT NULL column (lv.notNull) in the index.
+const NULLS = "can't be searched in an index whose columns can all be NULL, because rows where every indexed column is NULL are not stored in it.";
+function isnull(col, sel){ return {col, sql:`${col} IS NULL`, kind:"null", sel, why:NULLS}; }
 function smart(col, bind, given){ return {col, sql:`(${bind} IS NULL OR ${col} = ${bind})`, kind:"filter", sel: given ? undefined : 1, why:SMART}; }
 
 const PRACTICE = [{
@@ -484,7 +487,7 @@ const CASE1 = {
     "Ono says he only came to talk. After Kenji's call he drove to Mori's house and found it dark; Mori's text brought him to the garage. Mori wanted him to confess before Monday's board meeting. They argued on the stairs, and Mori fell.",
     "Kenji Sato is arrested the same morning. He filed the Kaito Trading payments for ¥500,000 a month, and at 22:50 he called Ono to warn him that Mori wouldn't back down.",
   ],
-  outroMika:"Mika Sato: “I copied that receipt. I was the last one who saw him. And I didn't know which of them did it.”",
+  outroQuote:"Mika Sato: “I copied that receipt. I was the last one who saw him. And I didn't know which of them did it.”",
   outroHook:"Ono insists Kaito Trading was never his alone. The money went on to “people above me”.",
   outroInsider:"One more thing in the query log: SYS_MAINT read the same rows you did. Twice.",
   insiderBonuses:["B5","B8"],
@@ -648,10 +651,219 @@ const CASE1 = {
   }],
 };
 
+/* ---------- Case 2: Paper Ghosts ----------
+   The truth behind the case lives in the story bible (docs/superpowers/specs), never here:
+   this file ships inside the public build. */
+const BETWEEN_DAY = "BETWEEN includes both ends, so this also returns rows from exactly midnight at the start of the next day.";
+const PENDING = "WHERE status = 'PENDING'";
+
+const CASE2 = {
+  id:"case2", title:"Paper Ghosts",
+  intro:[
+    "02:50, 28 November. Fire in warehouse 7 of Kinjo Logistics at Nagoya port. The records archive on the first floor burned out.",
+    "Night guard Shin Aoki was carried out of the smoke. He is in a coma and can't say what he saw.",
+    "Kinjo's board had ordered an audit of that archive for Monday morning. A week ago its CFO was arrested for embezzlement. In October a dismissed forklift driver told HR the place deserved to burn.",
+  ],
+  witness:"Fire Lieutenant Ryo Kawai: “Someone poured petrol over the archive shelves. The door wasn't forced. It was opened with a badge.”",
+  suspects:[
+    {id:"kubo", name:"Rie Kubo", role:"Chief Operating Officer · OPS-01"},
+    {id:"endo", name:"Tadashi Endo", role:"Warehouse 7 manager · W7-01"},
+    {id:"mizuno", name:"Shota Mizuno", role:"Forklift driver, dismissed in October"},
+    {id:"hirata", name:"Ken Hirata", role:"Night guard"},
+  ],
+  statements:[
+    {who:"Rie Kubo", text:"I haven't set foot in warehouse 7 for months. The duty manager called me about the fire at 06:00."},
+    {who:"Tadashi Endo", text:"My spare badge never leaves the office key cabinet. And I've never touched the receiving records. Ms Kubo's office handles those."},
+    {who:"Shota Mizuno", text:"I haven't been near the port since they let me go."},
+    {who:"Ken Hirata", text:"I swapped with Shin because it was my daughter's birthday."},
+  ],
+  statementsAfter:"E2",
+  accusation:{culprit:"kubo", MOTIVE:["E6","E8"], OPPORTUNITY:["E9","E10"], LIE:["E10","E9"]},
+  outro:[
+    "Monday, 30 November, 08:00. Rie Kubo is arrested at Kinjo's head office, an hour before the audit she tried to burn.",
+    "She says she only meant to burn paper. She didn't know anyone was in the building.",
+    "Tadashi Endo is charged over the 212 shipments he entered. Shota Mizuno returns the wrenches. On Tuesday, Shin Aoki wakes up.",
+  ],
+  outroQuote:"Ken Hirata: “It was my shift. Shin took it so I could watch my daughter blow out her candles.”",
+  outroHook:"Kubo never met the people the ghost shipments paid. She had one phone number, and it was cut off on Saturday morning.",
+  outroInsider:"SYS_MAINT read everything you read. Now it has started changing it.",
+  insiderBonuses:["B4","B9"],
+  grades:{
+    S:"Nobody noticed your queries.",
+    A:"SYS_MAINT saw some traffic. Nothing it could use.",
+    B:"SYS_MAINT knew which records you would ask for next.",
+    C:"SYS_MAINT reached the records before you did.",
+  },
+  missions:[{
+    name:"The Night Shift",
+    table:"guard_shifts", rows:200000, perPage:50, maxCols:1,
+    cols:{shift_id:200000, guard_id:300, site:40, shift_start:200000, "TRUNC(shift_start)":1825, post:12},
+    story:"Kinjo's security firm logs every guard shift. Find out who was on duty at warehouse 7 on the night of 27 November.",
+    queries:[{label:"Q1", who:"Shifts at warehouse 7 on 27 Nov", where:[eq("site","'W7'"), eq("TRUNC(shift_start)","DATE '2026-11-27'")]}],
+    hint:"The query never compares shift_start itself.",
+    hint2:"Index the expression TRUNC(shift_start).",
+    lesson:"TRUNC(shift_start) hides shift_start from a plain index. An index on the expression itself holds exactly the values the query compares. It only helps queries written with TRUNC, though. The next mission shows the other fix.",
+    results:[{columns:["shift","guard","post","note"], rows:[
+      ["06:00-14:00","OTA Jun","Gate 1","—"],
+      ["14:00-22:00","ISOBE Kai","Gate 1","—"],
+      ["22:00-06:00","AOKI Shin","W7 rounds","swap with HIRATA Ken, requested 18:05"]]}],
+    clue:{id:"E1", title:"The night shift", text:"Shin Aoki took the 22:00 to 06:00 shift at warehouse 7. It was Ken Hirata's shift until Hirata asked to swap at 18:05 that evening."},
+  },{
+    name:"The Archive Door",
+    table:"door_events", rows:5000000, perPage:50, maxCols:2,
+    cols:{event_id:5000000, door:400, event_time:5000000, "TRUNC(event_time)":1825, badge_no:3000, result:3},
+    story:"Lieutenant Kawai says the archive door was opened with a badge. Q1 lists every event at that door on 28 November; Q2 looks at the hour of the fire. One index has to serve both.",
+    queries:[
+      {label:"Q1", who:"Archive door, 28 Nov", variants:[
+        {where:[eq("door","'W7-ARCHIVE'"), eq("TRUNC(event_time)","DATE '2026-11-28'")]},
+        {where:[eq("door","'W7-ARCHIVE'"), range("event_time","event_time BETWEEN DATE '2026-11-28' AND DATE '2026-11-29'",1/1825)], wrong:BETWEEN_DAY},
+        {where:[eq("door","'W7-ARCHIVE'"), {col:"TO_CHAR(event_time)", sql:"TO_CHAR(event_time, 'YYYY-MM-DD') = '2026-11-28'", kind:"eq", sel:1/1825}]},
+        {where:[eq("door","'W7-ARCHIVE'"), range("event_time","event_time >= DATE '2026-11-28' AND event_time < DATE '2026-11-29'",1/1825)]}]},
+      {label:"Q2", who:"Archive door, 02:00 to 03:00", where:[eq("door","'W7-ARCHIVE'"),
+        range("event_time","event_time BETWEEN TIMESTAMP '2026-11-28 02:00:00' AND TIMESTAMP '2026-11-28 03:00:00'",0.00016)]}],
+    hint:"Q2 compares event_time itself. Can Q1 be written so it does too?",
+    hint2:"Rewrite Q1 as a range on event_time and index (door, event_time).",
+    lesson:"Write a day as a range on the column itself: event_time >= the day AND event_time < the next day. Then one plain index on (door, event_time) serves both the whole day and the hour of the fire. An index on TRUNC(event_time) would serve only the first.",
+    results:[
+      {columns:["event_time","badge_no","event"], rows:[
+        ["02:31","0702","OPEN"],["02:44","0417","OPEN"],["03:05","9001","OPEN (fire service)"],["09:12","9101","OPEN (police)"],
+        ["09:40","0701","DENIED (sealed)"],["10:15","9101","CLOSE (police)"],["11:02","0003","DENIED (sealed)"]]},
+      {columns:["event_time","badge_no","event"], rows:[["02:31","0702","OPEN"],["02:44","0417","OPEN"]]}],
+    clue:{id:"E2", title:"The archive door", text:"Badge 0702 opened the archive door at 02:31. Badge 0417 opened it at 02:44. The fire alarm went off at 02:50."},
+    bonus:{title:"The sealed door", text:"On Saturday morning two badges tried the sealed archive door: 0701 at 09:40 and 0003 at 11:02."},
+  },{
+    name:"Badge 0702",
+    table:"badges", rows:30000, perPage:50, maxCols:1,
+    cols:{badge_no:30000, holder_id:25000, badge_type:4, site:40, issued_on:3000, status:3},
+    story:"Badge numbers are stored as text, always four digits. The badge office's query compares them with a number.",
+    queries:[{label:"Q1", who:"Who holds badge 0702?", variants:[
+      {where:[{col:"TO_NUMBER(badge_no)", sql:"badge_no = 702", kind:"eq", sel:1/30000}]},
+      {where:[{col:"TO_NUMBER(badge_no)", sql:"TO_NUMBER(badge_no) = 702", kind:"eq", sel:1/30000}]},
+      {where:[eq("badge_no","'0702'")]},
+      {where:[{col:"badge_no", sql:"badge_no = '702'", kind:"eq"}],
+       wrong:"Text is compared character by character. '702' is not '0702', so this finds no badge at all."}]}],
+    hint:"badge_no holds text. What does the database do when you compare text with a number?",
+    hint2:"It converts every badge_no with TO_NUMBER. Compare text with text: badge_no = '0702'.",
+    lesson:"Compare a text column with a number and the database converts the column, TO_NUMBER(badge_no), for every row. That hides it from the index. Write the value as text, leading zero included, and the index works again.",
+    results:[{columns:["badge_no","holder","type","kept in"], rows:[["0702","ENDO Tadashi (W7-01)","SPARE","W7 office key cabinet"]]}],
+    clue:{id:"E3", title:"Badge 0702", text:"Badge 0702 is Tadashi Endo's spare badge. It is kept in the key cabinet of the warehouse 7 office."},
+  },{
+    name:"Endo's Night",
+    table:"cell_events", rows:4000000, perPage:50, maxCols:2,
+    cols:{phone:2000, imei:2000, cell_id:3000, event_time:4000000, "TRUNC(event_time)":365, event_type:4},
+    story:"Endo says he was at home in Kasugai all night. The phone company's search screen runs one 'smart' query for every search and ignores the fields left empty. You searched by phone number and time.",
+    queries:[{label:"Q1", who:"Endo's phone, 21:00 to 07:00", variants:[
+      {binds:":phone = '090-4471-2210', :cell = NULL", where:[smart("phone",":phone",true), smart("cell_id",":cell",false),
+        range("event_time","event_time BETWEEN TIMESTAMP '2026-11-27 21:00:00' AND TIMESTAMP '2026-11-28 07:00:00'",0.002)]},
+      {binds:":cell = NULL", where:[smart("cell_id",":cell",false),
+        range("event_time","event_time BETWEEN TIMESTAMP '2026-11-27 21:00:00' AND TIMESTAMP '2026-11-28 07:00:00'",0.002)],
+       wrong:"Without the phone condition this returns every phone in Nagoya that night."},
+      {binds:":phone = '090-4471-2210'", where:[eq("phone",":phone"),
+        range("event_time","event_time BETWEEN TIMESTAMP '2026-11-27 21:00:00' AND TIMESTAMP '2026-11-28 07:00:00'",0.002)]},
+      {binds:":phone = '090-4471-2210'", where:[smart("phone",":phone",true),
+        range("event_time","event_time BETWEEN TIMESTAMP '2026-11-27 21:00:00' AND TIMESTAMP '2026-11-28 07:00:00'",0.002)]}]}],
+    hint:"Which conditions can a NULL parameter switch off?",
+    hint2:"Send only the conditions that were filled in: phone = :phone and the time range. Index (phone, event_time).",
+    lesson:"A condition a NULL parameter can switch off can't be used to search an index. Send only the conditions the user filled in, still with bind parameters, and phone = :phone becomes searchable. With (phone, event_time) the database reads one phone's night and nothing else.",
+    results:[{columns:["event_time","cell_id","event"], rows:[
+      ["21:40","KASUGAI-0412","attach"],["23:58","KASUGAI-0412","data"],["03:15","KASUGAI-0412","data"],["07:10","KASUGAI-0412","handover"]]}],
+    clue:{id:"E4", title:"Endo's night", text:"Endo's phone stayed on the Kasugai cell next to his home from 21:40 until 07:10. Kasugai is forty minutes from the port."},
+    bonus:{title:"Someone else is reading", text:"Query log: session SYS_MAINT read Endo's phone records three minutes after you."},
+  },{
+    name:"Gate 3",
+    table:"gate_visitors", rows:600000, perPage:50, maxCols:2,
+    cols:{visit_id:600000, last_name:20000, first_name:3000, gate:6, visit_time:600000, company:500},
+    story:"The port logs everyone who walks in through a gate. The guards' search screen glues first and last name together before comparing.",
+    queries:[{label:"Q1", who:"Shota Mizuno at the port gates", variants:[
+      {where:[{col:"first_name || ' ' || last_name", sql:"first_name || ' ' || last_name = 'SHOTA MIZUNO'", kind:"eq", sel:2/600000}]},
+      {where:[eq("last_name","'MIZUNO'")],
+       wrong:"Three people named Mizuno came through the gates this year, so this returns all of their visits."},
+      {where:[eq("last_name","'MIZUNO'"), eq("first_name","'SHOTA'")]}]}],
+    hint:"The index holds first_name and last_name, not the text they make together.",
+    hint2:"Compare each column on its own: last_name = 'MIZUNO' AND first_name = 'SHOTA'. Index (last_name, first_name).",
+    lesson:"Gluing columns together with || builds a value no index holds. Compare each column on its own and a two-column index finds the person directly. Put the more selective column first.",
+    results:[{columns:["visit_time","gate","direction","note"], rows:[["01:40","3","IN","on foot"],["02:05","3","OUT","carrying a bag"]]}],
+    clue:{id:"E5", title:"Mizuno at the port", text:"Shota Mizuno walked in through gate 3 at 01:40 and out at 02:05, carrying a bag."},
+    bonus:{title:"A missing toolkit", text:"On Saturday morning the tool store next to warehouse 4 reported a set of wrenches missing."},
+  },{
+    name:"Ghost Shipments",
+    table:"shipments", rows:3000000, perPage:50, maxCols:2, notNull:["shipment_id","warehouse","received_at","entered_by"],
+    cols:{shipment_id:3000000, warehouse:40, customs_cleared:2000, supplier_id:5000, received_at:3000000, entered_by:800},
+    story:"Warehouse 7 handles imports, and an import can't leave the port before customs clears it. Find the warehouse 7 shipments that have no customs clearance date.",
+    queries:[{label:"Q1", who:"W7 shipments never cleared", where:[eq("warehouse","'W7'"), isnull("customs_cleared",212*40/3000000)]}],
+    hint:"Can an index on customs_cleared alone hold the rows where it is NULL?",
+    hint2:"Pair customs_cleared with warehouse, which is never NULL: (warehouse, customs_cleared).",
+    lesson:"An index has no entry for a row whose indexed columns are all NULL, so an index on customs_cleared alone can't find IS NULL. Add a column that is never NULL, here warehouse, and every row is in the index again. The NULLs sort together, so IS NULL becomes an ordinary search.",
+    results:[{count:212, note:"Since March 2024. Each received and shipped out on the same day. Entered by W7-01, approved by OPS-01."}],
+    clue:{id:"E6", title:"212 ghost shipments", text:"Since March 2024, 212 shipments passed through warehouse 7 without ever clearing customs. Each was received and shipped out on the same day. All were entered by W7-01, Tadashi Endo, and approved by OPS-01, Rie Kubo, Chief Operating Officer."},
+  },{
+    name:"The Key Cabinet",
+    table:"cabinet_log", rows:400000, perPage:50, maxCols:3,
+    cols:{cabinet:300, opened_at:400000, "TRUNC(opened_at)":1500, badge_no:3000, item:50, duration_s:600},
+    story:"Endo's spare badge lives in the key cabinet of the warehouse 7 office, and the cabinet logs every opening. You only need who opened it and when.",
+    queries:[{label:"Q1", who:"W7 office cabinet, 17:00 to 06:00", select:["badge_no","opened_at"], where:[eq("cabinet","'W7-OFFICE'"),
+      range("opened_at","opened_at BETWEEN TIMESTAMP '2026-11-27 17:00:00' AND TIMESTAMP '2026-11-28 06:00:00'",0.00075)]}],
+    hint:"The query reads two columns from the table: badge_no and opened_at.",
+    hint2:"(cabinet, opened_at) finds the rows. Add badge_no and the table is never read.",
+    lesson:"Equality first, then the range, then the columns the query selects. The database answers from the index alone: an index-only range scan.",
+    results:[{columns:["badge_no","opened_at"], rows:[["0701","17:52"]]}],
+    clue:{id:"E7", title:"The key cabinet", text:"The warehouse 7 office key cabinet was opened once that evening, at 17:52, with Endo's own badge 0701 as he went home. Nobody opened it during the night, so spare badge 0702 never left it."},
+  },{
+    name:"Monday's Audit",
+    table:"audit_items", rows:2000000, perPage:50, maxCols:2, inserts:20000, two:8,
+    cols:{audit_id:2000000, warehouse:400, status:4, item_type:200, scheduled_for:1500, [PENDING]:1},
+    partial:{key:PENDING, sql:"status = 'PENDING'", sel:0.0005},
+    story:"Kinjo's audit system writes 20,000 checklist items a day and closes almost all of them at once. Only 0.05% stay PENDING. The audit dashboard asks for warehouse 7's pending items 2,000 times a day. Score = pages read per day + index upkeep per day.",
+    queries:[{label:"Q1", who:"Dashboard: pending audits at W7", freq:2000, where:[eq("warehouse","'W7'"), ON("status","'PENDING'",0.0005)]}],
+    hint:"Almost every row the index would hold is a closed item the dashboard never asks for.",
+    hint2:"Add the condition WHERE status = 'PENDING' to an index on warehouse. It holds only pending items, so the items closed each day never touch it.",
+    lesson:"A partial index stores only the rows that match its condition, here 0.05% of the table. It stays tiny, and the 20,000 items closed each day are never written into it. It serves only queries that state the same condition.",
+    results:[{columns:["item","scheduled_for","created","last_opened_by"], rows:[
+      ["Paper archive: bills of lading 2024-2026","Mon 30 Nov 08:00","Fri 27 Nov 17:10","OPS-01, Fri 17:42"],
+      ["Fire extinguishers, yearly check","Tue 1 Dec 10:00","Mon 2 Nov 09:00","—"],
+      ["Forklift battery log","Thu 3 Dec 14:00","Tue 10 Nov 11:30","—"]]}],
+    clue:{id:"E8", title:"Monday's audit", text:"The board's audit of the warehouse 7 paper archive was set for Monday at 08:00 and created on Friday at 17:10. At 17:42 that day OPS-01, Rie Kubo, opened it."},
+  },{
+    name:"The Gate Camera",
+    table:"anpr", rows:3000000, perPage:50, maxCols:1,
+    cols:{read_id:3000000, plate:200000, cam_time:3000000, gate:6, lane:4, direction:2},
+    story:"The port's plate cameras store time in UTC, nine hours behind Nagoya. The camera vendor's query adds nine hours to every row before comparing.",
+    queries:[{label:"Q1", who:"Cars at the port gates, 02:00 to 03:00", variants:[
+      {where:[{col:"(cam_time) + INTERVAL '9' HOUR", sql:"cam_time + INTERVAL '9' HOUR BETWEEN TIMESTAMP '2026-11-28 02:00:00' AND TIMESTAMP '2026-11-28 03:00:00'", kind:"range", sel:4/3000000}]},
+      {where:[range("cam_time","cam_time BETWEEN TIMESTAMP '2026-11-28 11:00:00' AND TIMESTAMP '2026-11-28 12:00:00'",4/3000000)],
+       wrong:"Nagoya is nine hours ahead of UTC, so 02:00 in Nagoya is 17:00 UTC the day before. This asks for the wrong hour."},
+      {where:[range("cam_time","cam_time BETWEEN TIMESTAMP '2026-11-27 17:00:00' AND TIMESTAMP '2026-11-27 18:00:00'",4/3000000)]}]}],
+    hint:"The query does arithmetic on cam_time before comparing. Could the arithmetic go on the other side?",
+    hint2:"Convert the hour to UTC instead: cam_time between 17:00 and 18:00 on 27 November. Index cam_time.",
+    lesson:"Arithmetic on a column hides it from the index, just like a function. Do the calculation on the other side: turn 02:00 Nagoya time into 17:00 UTC once, then compare cam_time as stored.",
+    results:[{columns:["nagoya_time","cam_time (UTC)","plate","gate","direction"], rows:[
+      ["02:12","17:12","NGY 100 KA 80-03","2","OUT"],
+      ["02:18","17:18","NGY 300 SE 22-41","2","IN"],
+      ["02:49","17:49","NGY 300 SE 22-41","2","OUT"],
+      ["02:58","17:58","NGY 800 HA 1-19","1","IN"]]}],
+    clue:{id:"E9", title:"Kubo's car", text:"NGY 300 SE 22-41, Rie Kubo's company car, came in through gate 2 at 02:18 and left at 02:49, a minute before the alarm."},
+    bonus:{title:"Someone got there first", text:"Query log: session SYS_MAINT looked up this plate eleven minutes before you did."},
+  },{
+    name:"The Edit",
+    table:"door_events_history", rows:500000, perPage:50, maxCols:2,
+    cols:{change_id:500000, changed_by:500, changed_at:500000, "TRUNC(changed_at)":1500, table_name:30, row_id:400000},
+    story:"The door log has a history table that keeps every change made to it. Find what SYS_MAINT changed on 28 November.",
+    queries:[{label:"Q1", who:"Changes by SYS_MAINT on 28 Nov", variants:[
+      {where:[eq("changed_by","'SYS_MAINT'"), eq("TRUNC(changed_at)","DATE '2026-11-28'")]},
+      {where:[eq("changed_by","'SYS_MAINT'"), range("changed_at","changed_at BETWEEN DATE '2026-11-28' AND DATE '2026-11-29'",1/1500)], wrong:BETWEEN_DAY},
+      {where:[eq("changed_by","'SYS_MAINT'"), range("changed_at","changed_at >= DATE '2026-11-28' AND changed_at < DATE '2026-11-29'",1/1500)]}]}],
+    hint:"SYS_MAINT is one value of changed_by. Now the date.",
+    hint2:"Index (changed_by, changed_at) and write the day as a range, or index (changed_by, TRUNC(changed_at)).",
+    lesson:"Both fixes from the start of this case work here: index the expression the query uses, or rewrite the day as a range on the column itself. Only the range also serves other time windows.",
+    results:[{columns:["changed_at","table_name","row_id","column","old","new"], rows:[["03:12:40","DOOR_EVENTS","88412","badge_no","0003","0702"]]}],
+    clue:{id:"E10", title:"The edit", text:"At 03:12, twenty minutes after the fire started, SYS_MAINT changed the 02:31 archive door record: badge 0003 became 0702. Badge 0003 is Rie Kubo's master badge."},
+  }],
+};
+
 // The practice set is off for now: the story comes first. To bring it back, add PRACTICE_CASE to CASES.
 // (The tests still play it.)
 const PRACTICE_CASE = { id:"practice", title:"Practice", practice:true, missions:PRACTICE.slice(6) };
-const CASES = [CASE1];
+const CASES = [CASE1, CASE2];
 </script>
 <script>
 // Vietnamese text for Index Dojo. Each key is the English string exactly as the game shows it;
@@ -739,14 +951,14 @@ const VI = {
   "No evidence yet. Clear a mission at ★★ and its clue lands here.": "Chưa có bằng chứng. Đạt ★★ ở một nhiệm vụ thì manh mối của nó sẽ nằm ở đây.",
   "STATEMENTS": "LỜI KHAI",
 
-  "Name the killer": "Chỉ ra hung thủ",
+  "Name the culprit": "Chỉ ra hung thủ",
   "Clear every mission at ★★ first": "Hãy đạt ★★ ở mọi nhiệm vụ trước",
   "CASE CLOSED ✓": "ĐÃ PHÁ ÁN ✓",
   "ACCUSE": "BUỘC TỘI",
   "SUSPICION": "NGHI NGỜ",
   "How much I/O the insider has seen: {n}% of what gets noticed": "Lượng I/O kẻ nội gián đã thấy: {n}% ngưỡng bị chú ý",
   "ACCUSATION": "BUỘC TỘI",
-  "Name the killer, then back each charge with one piece of evidence from your notebook.": "Chỉ ra hung thủ, rồi chứng minh từng cáo buộc bằng một bằng chứng trong sổ tay.",
+  "Name the culprit, then back each charge with one piece of evidence from your notebook.": "Chỉ ra hung thủ, rồi chứng minh từng cáo buộc bằng một bằng chứng trong sổ tay.",
   "SUSPECT": "NGHI PHẠM",
   "MOTIVE": "ĐỘNG CƠ",
   "why they did it": "vì sao người đó ra tay",
@@ -770,7 +982,7 @@ const VI = {
   "RESTART ▶": "CHƠI LẠI ▶",
 
   /* ---------- start menu ---------- */
-  "Find the killer by reading as few pages as possible.": "Tìm ra hung thủ bằng cách đọc càng ít trang càng tốt.",
+  "Find the culprit by reading as few pages as possible.": "Tìm ra hung thủ bằng cách đọc càng ít trang càng tốt.",
   "LANGUAGE": "NGÔN NGỮ",
   "THEME": "GIAO DIỆN",
   "MUSIC": "NHẠC",
@@ -800,7 +1012,7 @@ const VI = {
     "Manh mối được lưu trong sổ tay. Mở ra để đọc lại bất cứ lúc nào.",
   "SYS_MAINT watches the query log. Every page beyond the best plan raises SUSPICION.":
     "SYS_MAINT đang theo dõi nhật ký truy vấn. Mỗi trang đọc thừa so với cách tối ưu đều làm NGHI NGỜ tăng.",
-  "Once every mission has ★★, accuse the killer and back each charge with evidence.":
+  "Once every mission has ★★, accuse the culprit and back each charge with evidence.":
     "Khi mọi nhiệm vụ đều đạt ★★, hãy buộc tội hung thủ và chứng minh từng cáo buộc bằng bằng chứng.",
 
   /* ---------- plan explanations ---------- */
@@ -1057,6 +1269,12 @@ const VI = {
   "Faster, but it returns different rows. A rewrite has to keep the result exactly the same.":
     "Nhanh hơn, nhưng trả về các dòng khác. Viết lại query thì kết quả phải giữ nguyên y hệt.",
   "WRONG ROWS": "SAI DÒNG",
+  "Solve case {n} first": "Hãy phá hồ sơ {n} trước",
+  "The index holds only the rows where {cond}, so it stays small and most new rows never touch it.":
+    "Index chỉ chứa các dòng thỏa {cond}, nên nó nhỏ gọn và phần lớn dòng mới không đụng tới nó.",
+  "index only these rows: {n} of {rows}": "chỉ index các dòng này: {n} trên {rows}",
+  "can't be searched in an index whose columns can all be NULL, because rows where every indexed column is NULL are not stored in it.":
+    "không tìm được trong index mà mọi cột đều có thể NULL, vì những dòng có tất cả các cột được index đều NULL không được lưu trong index đó.",
   "OFFSET still reads every row it skips. What if the query started right after the last post the reader saw?":
     "OFFSET vẫn đọc mọi dòng nó bỏ qua. Sẽ thế nào nếu truy vấn bắt đầu ngay sau bài cuối cùng người đọc đã thấy?",
   "OFFSET makes the database find, read and throw away every row before the page you want, so page 101 costs a hundred times page 1. The seek method remembers the last post_id the reader saw and asks for the 20 posts before it. With (topic_id, post_id) that is a pipelined top-N query, and every page costs the same 23 pages.":
@@ -1082,6 +1300,233 @@ const VI = {
     "Một index phục vụ được hai truy vấn nếu cột chung của chúng đứng đầu. Index còn lại phải đặt điều kiện bằng trước điều kiện khoảng.",
   "With two indexes for three queries, each index has to earn its place. (product_id, shop_id) answers the stock check and, through its first column, the product report. (shop_id, sale_date) answers the weekly report with the equality column first and the range last.":
     "Hai index cho ba truy vấn thì mỗi index phải xứng đáng với chỗ của nó. (product_id, shop_id) trả lời truy vấn kiểm tra tồn kho, và nhờ cột đầu, cả báo cáo sản phẩm. (shop_id, sale_date) trả lời báo cáo tuần với cột so sánh bằng đứng trước và cột khoảng đứng sau.",
+  // Case 2: Paper Ghosts
+  "Paper Ghosts":
+    "Những bóng ma trên giấy",
+  "Fire Lieutenant Ryo Kawai: “Someone poured petrol over the archive shelves. The door wasn't forced. It was opened with a badge.”":
+    "Trung úy cứu hỏa Ryo Kawai: “Có người tưới xăng lên các kệ hồ sơ. Cửa không bị phá. Nó được mở bằng thẻ.”",
+  "Ken Hirata: “It was my shift. Shin took it so I could watch my daughter blow out her candles.”":
+    "Ken Hirata: “Đó là ca của tôi. Shin trực thay để tôi được nhìn con gái thổi nến.”",
+  "Kubo never met the people the ghost shipments paid. She had one phone number, and it was cut off on Saturday morning.":
+    "Kubo chưa từng gặp những người nhận tiền từ các lô hàng ma. Bà chỉ có một số điện thoại, và số đó bị cắt sáng thứ Bảy.",
+  "SYS_MAINT read everything you read. Now it has started changing it.":
+    "SYS_MAINT đọc mọi thứ bạn đọc. Giờ nó bắt đầu sửa cả những thứ đó.",
+  "02:50, 28 November. Fire in warehouse 7 of Kinjo Logistics at Nagoya port. The records archive on the first floor burned out.":
+    "02:50 ngày 28 tháng 11. Kho số 7 của Kinjo Logistics ở cảng Nagoya bốc cháy. Phòng lưu trữ hồ sơ ở tầng một cháy rụi.",
+  "Night guard Shin Aoki was carried out of the smoke. He is in a coma and can't say what he saw.":
+    "Bảo vệ ca đêm Shin Aoki được đưa ra khỏi đám khói. Anh đang hôn mê và không thể kể mình đã thấy gì.",
+  "Kinjo's board had ordered an audit of that archive for Monday morning. A week ago its CFO was arrested for embezzlement. In October a dismissed forklift driver told HR the place deserved to burn.":
+    "Hội đồng quản trị Kinjo đã yêu cầu kiểm toán phòng lưu trữ đó vào sáng thứ Hai. Một tuần trước, giám đốc tài chính của công ty bị bắt vì biển thủ. Hồi tháng 10, một tài xế xe nâng bị đuổi việc đã nói với phòng nhân sự rằng chỗ này đáng bị đốt.",
+  "Monday, 30 November, 08:00. Rie Kubo is arrested at Kinjo's head office, an hour before the audit she tried to burn.":
+    "Thứ Hai, 30 tháng 11, 08:00. Rie Kubo bị bắt tại trụ sở Kinjo, một giờ trước buổi kiểm toán mà bà đã định đốt sạch.",
+  "She says she only meant to burn paper. She didn't know anyone was in the building.":
+    "Bà khai chỉ định đốt giấy tờ. Bà không biết có người trong tòa nhà.",
+  "Tadashi Endo is charged over the 212 shipments he entered. Shota Mizuno returns the wrenches. On Tuesday, Shin Aoki wakes up.":
+    "Tadashi Endo bị truy tố vì 212 lô hàng ông đã nhập. Shota Mizuno trả lại bộ cờ lê. Thứ Ba, Shin Aoki tỉnh lại.",
+  "SYS_MAINT knew which records you would ask for next.":
+    "SYS_MAINT biết bạn sẽ tra hồ sơ nào tiếp theo.",
+  "SYS_MAINT reached the records before you did.":
+    "SYS_MAINT tới chỗ các hồ sơ trước cả bạn.",
+  "Chief Operating Officer · OPS-01":
+    "Giám đốc vận hành · OPS-01",
+  "Warehouse 7 manager · W7-01":
+    "Quản lý kho 7 · W7-01",
+  "Forklift driver, dismissed in October":
+    "Tài xế xe nâng, bị đuổi việc tháng 10",
+  "Night guard":
+    "Bảo vệ ca đêm",
+  "I haven't set foot in warehouse 7 for months. The duty manager called me about the fire at 06:00.":
+    "Mấy tháng nay tôi không đặt chân vào kho 7. Trực ban gọi báo cho tôi về vụ cháy lúc 06:00.",
+  "My spare badge never leaves the office key cabinet. And I've never touched the receiving records. Ms Kubo's office handles those.":
+    "Thẻ dự phòng của tôi không bao giờ rời tủ khóa văn phòng. Và tôi chưa bao giờ đụng vào sổ nhập hàng. Văn phòng của bà Kubo lo việc đó.",
+  "I haven't been near the port since they let me go.":
+    "Từ hôm bị đuổi, tôi chưa hề tới gần cảng.",
+  "I swapped with Shin because it was my daughter's birthday.":
+    "Tôi đổi ca với Shin vì hôm đó là sinh nhật con gái tôi.",
+  "The Night Shift":
+    "Ca đêm",
+  "Kinjo's security firm logs every guard shift. Find out who was on duty at warehouse 7 on the night of 27 November.":
+    "Công ty bảo vệ của Kinjo ghi lại mọi ca trực. Hãy tìm xem ai trực ở kho 7 đêm 27 tháng 11.",
+  "The query never compares shift_start itself.":
+    "Truy vấn không hề so sánh trực tiếp shift_start.",
+  "Index the expression TRUNC(shift_start).":
+    "Hãy index biểu thức TRUNC(shift_start).",
+  "TRUNC(shift_start) hides shift_start from a plain index. An index on the expression itself holds exactly the values the query compares. It only helps queries written with TRUNC, though. The next mission shows the other fix.":
+    "TRUNC(shift_start) che shift_start khỏi một index thông thường. Index trên chính biểu thức đó chứa đúng những giá trị truy vấn so sánh. Nhưng nó chỉ giúp được các truy vấn viết bằng TRUNC. Nhiệm vụ sau sẽ cho thấy cách sửa còn lại.",
+  "The night shift":
+    "Ca đêm hôm ấy",
+  "Shin Aoki took the 22:00 to 06:00 shift at warehouse 7. It was Ken Hirata's shift until Hirata asked to swap at 18:05 that evening.":
+    "Shin Aoki trực ca 22:00 đến 06:00 ở kho 7. Đó vốn là ca của Ken Hirata, cho tới khi Hirata xin đổi ca lúc 18:05 tối hôm đó.",
+  "Shifts at warehouse 7 on 27 Nov":
+    "Các ca trực ở kho 7 ngày 27/11",
+  "The Archive Door":
+    "Cửa phòng lưu trữ",
+  "Lieutenant Kawai says the archive door was opened with a badge. Q1 lists every event at that door on 28 November; Q2 looks at the hour of the fire. One index has to serve both.":
+    "Trung úy Kawai nói cửa phòng lưu trữ được mở bằng thẻ. Q1 liệt kê mọi sự kiện ở cửa đó trong ngày 28 tháng 11; Q2 xem đúng giờ xảy ra vụ cháy. Một index phải phục vụ cả hai.",
+  "Q2 compares event_time itself. Can Q1 be written so it does too?":
+    "Q2 so sánh trực tiếp event_time. Có thể viết Q1 để nó cũng làm vậy không?",
+  "Rewrite Q1 as a range on event_time and index (door, event_time).":
+    "Viết lại Q1 thành một khoảng trên event_time và index (door, event_time).",
+  "Write a day as a range on the column itself: event_time >= the day AND event_time < the next day. Then one plain index on (door, event_time) serves both the whole day and the hour of the fire. An index on TRUNC(event_time) would serve only the first.":
+    "Hãy viết một ngày thành khoảng trên chính cột đó: event_time >= ngày đó AND event_time < ngày hôm sau. Khi đó một index thường trên (door, event_time) phục vụ được cả nguyên ngày lẫn giờ xảy ra vụ cháy. Index trên TRUNC(event_time) chỉ phục vụ được truy vấn đầu.",
+  "The archive door":
+    "Cửa phòng lưu trữ",
+  "Badge 0702 opened the archive door at 02:31. Badge 0417 opened it at 02:44. The fire alarm went off at 02:50.":
+    "Thẻ 0702 mở cửa phòng lưu trữ lúc 02:31. Thẻ 0417 mở cửa lúc 02:44. Chuông báo cháy kêu lúc 02:50.",
+  "The sealed door":
+    "Cánh cửa niêm phong",
+  "On Saturday morning two badges tried the sealed archive door: 0701 at 09:40 and 0003 at 11:02.":
+    "Sáng thứ Bảy, hai thẻ đã thử mở cánh cửa phòng lưu trữ đã niêm phong: 0701 lúc 09:40 và 0003 lúc 11:02.",
+  "Archive door, 28 Nov":
+    "Cửa phòng lưu trữ, ngày 28/11",
+  "BETWEEN includes both ends, so this also returns rows from exactly midnight at the start of the next day.":
+    "BETWEEN lấy cả hai đầu mút, nên câu này trả thêm cả các dòng đúng 0:00 của ngày hôm sau.",
+  "Archive door, 02:00 to 03:00":
+    "Cửa phòng lưu trữ, 02:00 đến 03:00",
+  "Badge 0702":
+    "Thẻ 0702",
+  "Badge numbers are stored as text, always four digits. The badge office's query compares them with a number.":
+    "Số thẻ được lưu dưới dạng chữ, luôn đủ bốn chữ số. Truy vấn của phòng quản lý thẻ lại so sánh chúng với một con số.",
+  "badge_no holds text. What does the database do when you compare text with a number?":
+    "badge_no chứa chữ. Database làm gì khi bạn so sánh chữ với số?",
+  "It converts every badge_no with TO_NUMBER. Compare text with text: badge_no = '0702'.":
+    "Nó chuyển từng badge_no bằng TO_NUMBER. Hãy so chữ với chữ: badge_no = '0702'.",
+  "Compare a text column with a number and the database converts the column, TO_NUMBER(badge_no), for every row. That hides it from the index. Write the value as text, leading zero included, and the index works again.":
+    "So một cột chữ với một con số thì database phải chuyển cột đó, TO_NUMBER(badge_no), ở mọi dòng. Việc này che cột khỏi index. Viết giá trị dưới dạng chữ, giữ cả số 0 đứng đầu, là index dùng được trở lại.",
+  "Badge 0702 is Tadashi Endo's spare badge. It is kept in the key cabinet of the warehouse 7 office.":
+    "Thẻ 0702 là thẻ dự phòng của Tadashi Endo. Thẻ được cất trong tủ khóa của văn phòng kho 7.",
+  "Who holds badge 0702?":
+    "Ai giữ thẻ 0702?",
+  "Text is compared character by character. '702' is not '0702', so this finds no badge at all.":
+    "Chữ được so từng ký tự một. '702' không phải '0702', nên câu này không tìm thấy thẻ nào.",
+  "Endo's Night":
+    "Đêm của Endo",
+  "Endo says he was at home in Kasugai all night. The phone company's search screen runs one 'smart' query for every search and ignores the fields left empty. You searched by phone number and time.":
+    "Endo nói ông ở nhà tại Kasugai cả đêm. Màn hình tra cứu của nhà mạng chạy một truy vấn 'thông minh' cho mọi lượt tìm và bỏ qua các ô để trống. Bạn đã tìm theo số điện thoại và thời gian.",
+  "Which conditions can a NULL parameter switch off?":
+    "Điều kiện nào có thể bị một tham số NULL tắt đi?",
+  "Send only the conditions that were filled in: phone = :phone and the time range. Index (phone, event_time).":
+    "Chỉ gửi các điều kiện đã được điền: phone = :phone và khoảng thời gian. Index (phone, event_time).",
+  "A condition a NULL parameter can switch off can't be used to search an index. Send only the conditions the user filled in, still with bind parameters, and phone = :phone becomes searchable. With (phone, event_time) the database reads one phone's night and nothing else.":
+    "Điều kiện mà một tham số NULL có thể tắt đi thì không dùng để tìm trên index được. Chỉ gửi các điều kiện người dùng đã điền, vẫn bằng bind parameter, và phone = :phone trở nên tìm được. Với (phone, event_time), database chỉ đọc đêm của một chiếc điện thoại, không gì khác.",
+  "Endo's night":
+    "Đêm của Endo",
+  "Endo's phone stayed on the Kasugai cell next to his home from 21:40 until 07:10. Kasugai is forty minutes from the port.":
+    "Điện thoại của Endo nằm ở trạm phát sóng Kasugai cạnh nhà ông từ 21:40 tới 07:10. Từ Kasugai tới cảng mất bốn mươi phút.",
+  "Query log: session SYS_MAINT read Endo's phone records three minutes after you.":
+    "Nhật ký truy vấn: phiên SYS_MAINT đọc dữ liệu điện thoại của Endo ba phút sau bạn.",
+  "Endo's phone, 21:00 to 07:00":
+    "Điện thoại của Endo, 21:00 đến 07:00",
+  "Without the phone condition this returns every phone in Nagoya that night.":
+    "Không có điều kiện số điện thoại thì câu này trả về mọi điện thoại ở Nagoya đêm đó.",
+  "Gate 3":
+    "Cổng 3",
+  "The port logs everyone who walks in through a gate. The guards' search screen glues first and last name together before comparing.":
+    "Cảng ghi lại mọi người đi bộ vào qua cổng. Màn hình tra cứu của bảo vệ ghép tên và họ lại với nhau rồi mới so sánh.",
+  "The index holds first_name and last_name, not the text they make together.":
+    "Index chứa first_name và last_name, không chứa chuỗi chữ ghép từ hai cột đó.",
+  "Compare each column on its own: last_name = 'MIZUNO' AND first_name = 'SHOTA'. Index (last_name, first_name).":
+    "So từng cột riêng: last_name = 'MIZUNO' AND first_name = 'SHOTA'. Index (last_name, first_name).",
+  "Gluing columns together with || builds a value no index holds. Compare each column on its own and a two-column index finds the person directly. Put the more selective column first.":
+    "Ghép các cột bằng || tạo ra một giá trị mà không index nào chứa. So từng cột riêng thì một index hai cột tìm thẳng ra người cần tìm. Đặt cột chọn lọc hơn lên trước.",
+  "Mizuno at the port":
+    "Mizuno ở cảng",
+  "Shota Mizuno walked in through gate 3 at 01:40 and out at 02:05, carrying a bag.":
+    "Shota Mizuno đi bộ vào qua cổng 3 lúc 01:40 và ra lúc 02:05, mang theo một cái túi.",
+  "A missing toolkit":
+    "Bộ đồ nghề bị mất",
+  "On Saturday morning the tool store next to warehouse 4 reported a set of wrenches missing.":
+    "Sáng thứ Bảy, kho dụng cụ cạnh kho 4 báo mất một bộ cờ lê.",
+  "Shota Mizuno at the port gates":
+    "Shota Mizuno ở các cổng cảng",
+  "Three people named Mizuno came through the gates this year, so this returns all of their visits.":
+    "Năm nay có ba người họ Mizuno đi qua cổng, nên câu này trả về lượt vào ra của cả ba.",
+  "Ghost Shipments":
+    "Những lô hàng ma",
+  "Warehouse 7 handles imports, and an import can't leave the port before customs clears it. Find the warehouse 7 shipments that have no customs clearance date.":
+    "Kho 7 nhận hàng nhập khẩu, và hàng nhập khẩu không được rời cảng trước khi thông quan. Hãy tìm các lô hàng của kho 7 không có ngày thông quan.",
+  "Can an index on customs_cleared alone hold the rows where it is NULL?":
+    "Một index chỉ trên customs_cleared có chứa được các dòng mà cột đó là NULL không?",
+  "Pair customs_cleared with warehouse, which is never NULL: (warehouse, customs_cleared).":
+    "Ghép customs_cleared với warehouse, cột không bao giờ NULL: (warehouse, customs_cleared).",
+  "An index has no entry for a row whose indexed columns are all NULL, so an index on customs_cleared alone can't find IS NULL. Add a column that is never NULL, here warehouse, and every row is in the index again. The NULLs sort together, so IS NULL becomes an ordinary search.":
+    "Index không có mục nào cho dòng mà mọi cột được index đều NULL, nên index chỉ trên customs_cleared không tìm được IS NULL. Thêm một cột không bao giờ NULL, ở đây là warehouse, thì mọi dòng lại có mặt trong index. Các giá trị NULL nằm cạnh nhau, nên IS NULL thành một phép tìm bình thường.",
+  "212 ghost shipments":
+    "212 lô hàng ma",
+  "Since March 2024, 212 shipments passed through warehouse 7 without ever clearing customs. Each was received and shipped out on the same day. All were entered by W7-01, Tadashi Endo, and approved by OPS-01, Rie Kubo, Chief Operating Officer.":
+    "Từ tháng 3/2024, 212 lô hàng đã đi qua kho 7 mà chưa từng thông quan. Lô nào cũng được nhận vào và xuất đi ngay trong ngày. Tất cả do W7-01, Tadashi Endo, nhập liệu và OPS-01, Rie Kubo, Giám đốc vận hành, phê duyệt.",
+  "W7 shipments never cleared":
+    "Lô hàng kho 7 chưa từng thông quan",
+  "Since March 2024. Each received and shipped out on the same day. Entered by W7-01, approved by OPS-01.":
+    "Từ tháng 3/2024. Lô nào cũng nhận vào và xuất đi trong cùng ngày. Nhập liệu W7-01, phê duyệt OPS-01.",
+  "The Key Cabinet":
+    "Tủ khóa",
+  "Endo's spare badge lives in the key cabinet of the warehouse 7 office, and the cabinet logs every opening. You only need who opened it and when.":
+    "Thẻ dự phòng của Endo nằm trong tủ khóa của văn phòng kho 7, và tủ ghi lại mỗi lần được mở. Bạn chỉ cần biết ai mở và lúc nào.",
+  "The query reads two columns from the table: badge_no and opened_at.":
+    "Truy vấn đọc hai cột từ bảng: badge_no và opened_at.",
+  "(cabinet, opened_at) finds the rows. Add badge_no and the table is never read.":
+    "(cabinet, opened_at) tìm ra các dòng. Thêm badge_no thì không cần đọc bảng nữa.",
+  "Equality first, then the range, then the columns the query selects. The database answers from the index alone: an index-only range scan.":
+    "Điều kiện bằng trước, rồi tới khoảng, rồi tới các cột truy vấn cần lấy. Database trả lời chỉ từ index: quét khoảng chỉ trên index.",
+  "The key cabinet":
+    "Tủ khóa",
+  "The warehouse 7 office key cabinet was opened once that evening, at 17:52, with Endo's own badge 0701 as he went home. Nobody opened it during the night, so spare badge 0702 never left it.":
+    "Tối hôm đó tủ khóa văn phòng kho 7 chỉ được mở một lần, lúc 17:52, bằng chính thẻ 0701 của Endo khi ông ra về. Cả đêm không ai mở tủ, nên thẻ dự phòng 0702 chưa từng rời khỏi đó.",
+  "W7 office cabinet, 17:00 to 06:00":
+    "Tủ khóa văn phòng kho 7, 17:00 đến 06:00",
+  "Monday's Audit":
+    "Buổi kiểm toán thứ Hai",
+  "Kinjo's audit system writes 20,000 checklist items a day and closes almost all of them at once. Only 0.05% stay PENDING. The audit dashboard asks for warehouse 7's pending items 2,000 times a day. Score = pages read per day + index upkeep per day.":
+    "Hệ thống kiểm toán của Kinjo ghi 20.000 hạng mục kiểm tra mỗi ngày và đóng gần như tất cả ngay lập tức. Chỉ 0,05% còn ở trạng thái PENDING. Bảng điều khiển kiểm toán hỏi các hạng mục đang chờ của kho 7 2.000 lần mỗi ngày. Điểm = số trang đọc mỗi ngày + công cập nhật index mỗi ngày.",
+  "Almost every row the index would hold is a closed item the dashboard never asks for.":
+    "Gần như mọi dòng index sẽ chứa đều là hạng mục đã đóng, thứ bảng điều khiển không bao giờ hỏi tới.",
+  "Add the condition WHERE status = 'PENDING' to an index on warehouse. It holds only pending items, so the items closed each day never touch it.":
+    "Thêm điều kiện WHERE status = 'PENDING' vào một index trên warehouse. Nó chỉ chứa các hạng mục đang chờ, nên những hạng mục được đóng mỗi ngày không bao giờ đụng tới nó.",
+  "A partial index stores only the rows that match its condition, here 0.05% of the table. It stays tiny, and the 20,000 items closed each day are never written into it. It serves only queries that state the same condition.":
+    "Partial index chỉ lưu các dòng thỏa điều kiện của nó, ở đây là 0,05% bảng. Nó rất nhỏ, và 20.000 hạng mục đóng mỗi ngày không bao giờ được ghi vào nó. Nó chỉ phục vụ những truy vấn nêu đúng điều kiện đó.",
+  "Monday's audit":
+    "Buổi kiểm toán thứ Hai",
+  "The board's audit of the warehouse 7 paper archive was set for Monday at 08:00 and created on Friday at 17:10. At 17:42 that day OPS-01, Rie Kubo, opened it.":
+    "Buổi kiểm toán phòng lưu trữ giấy tờ kho 7 của hội đồng quản trị được xếp lịch lúc 08:00 thứ Hai, tạo lúc 17:10 thứ Sáu. Lúc 17:42 hôm đó, OPS-01, Rie Kubo, đã mở xem.",
+  "Dashboard: pending audits at W7":
+    "Bảng điều khiển: kiểm toán đang chờ ở kho 7",
+  "The Gate Camera":
+    "Camera cổng",
+  "The port's plate cameras store time in UTC, nine hours behind Nagoya. The camera vendor's query adds nine hours to every row before comparing.":
+    "Camera đọc biển số của cảng lưu giờ UTC, chậm hơn giờ Nagoya chín tiếng. Truy vấn của hãng camera cộng chín tiếng vào mọi dòng rồi mới so sánh.",
+  "The query does arithmetic on cam_time before comparing. Could the arithmetic go on the other side?":
+    "Truy vấn làm phép tính trên cam_time trước khi so sánh. Có thể chuyển phép tính sang vế bên kia không?",
+  "Convert the hour to UTC instead: cam_time between 17:00 and 18:00 on 27 November. Index cam_time.":
+    "Hãy đổi giờ sang UTC: cam_time từ 17:00 tới 18:00 ngày 27 tháng 11. Index cam_time.",
+  "Arithmetic on a column hides it from the index, just like a function. Do the calculation on the other side: turn 02:00 Nagoya time into 17:00 UTC once, then compare cam_time as stored.":
+    "Phép tính trên một cột cũng che nó khỏi index, y như một hàm. Hãy tính ở vế bên kia: đổi 02:00 giờ Nagoya thành 17:00 UTC một lần, rồi so cam_time như đang lưu.",
+  "Kubo's car":
+    "Xe của Kubo",
+  "NGY 300 SE 22-41, Rie Kubo's company car, came in through gate 2 at 02:18 and left at 02:49, a minute before the alarm.":
+    "NGY 300 SE 22-41, xe công ty của Rie Kubo, vào qua cổng 2 lúc 02:18 và ra lúc 02:49, một phút trước khi chuông báo cháy kêu.",
+  "Query log: session SYS_MAINT looked up this plate eleven minutes before you did.":
+    "Nhật ký truy vấn: phiên SYS_MAINT tra biển số này mười một phút trước bạn.",
+  "Cars at the port gates, 02:00 to 03:00":
+    "Xe qua các cổng cảng, 02:00 đến 03:00",
+  "Nagoya is nine hours ahead of UTC, so 02:00 in Nagoya is 17:00 UTC the day before. This asks for the wrong hour.":
+    "Nagoya đi trước UTC chín tiếng, nên 02:00 ở Nagoya là 17:00 UTC của ngày hôm trước. Câu này hỏi nhầm giờ.",
+  "The Edit":
+    "Bản sửa",
+  "The door log has a history table that keeps every change made to it. Find what SYS_MAINT changed on 28 November.":
+    "Nhật ký cửa có một bảng lịch sử giữ lại mọi thay đổi. Hãy tìm xem SYS_MAINT đã sửa gì trong ngày 28 tháng 11.",
+  "SYS_MAINT is one value of changed_by. Now the date.":
+    "SYS_MAINT là một giá trị của changed_by. Giờ tới ngày.",
+  "Index (changed_by, changed_at) and write the day as a range, or index (changed_by, TRUNC(changed_at)).":
+    "Index (changed_by, changed_at) và viết ngày thành một khoảng, hoặc index (changed_by, TRUNC(changed_at)).",
+  "Both fixes from the start of this case work here: index the expression the query uses, or rewrite the day as a range on the column itself. Only the range also serves other time windows.":
+    "Cả hai cách sửa từ đầu hồ sơ này đều dùng được ở đây: index đúng biểu thức truy vấn dùng, hoặc viết lại ngày thành khoảng trên chính cột đó. Chỉ có khoảng phục vụ được thêm các khung giờ khác.",
+  "The edit":
+    "Bản sửa",
+  "At 03:12, twenty minutes after the fire started, SYS_MAINT changed the 02:31 archive door record: badge 0003 became 0702. Badge 0003 is Rie Kubo's master badge.":
+    "Lúc 03:12, hai mươi phút sau khi vụ cháy bắt đầu, SYS_MAINT sửa bản ghi cửa phòng lưu trữ lúc 02:31: thẻ 0003 thành 0702. Thẻ 0003 là thẻ chủ của Rie Kubo.",
+  "Changes by SYS_MAINT on 28 Nov":
+    "Các thay đổi của SYS_MAINT ngày 28/11",
 };
 </script>
 <script>
@@ -1121,6 +1566,9 @@ const starsAt = (stars, caseIx, i) => stars[caseIx]?.[i] ?? 0;
 function unlocked(stars, caseIx, i){
   return i === 0 || starsAt(stars, caseIx, i - 1) >= (CASES[caseIx].practice ? 1 : 2);
 }
+
+// Cases open in order: the next one once the previous is solved.
+function caseOpen(save, i){ return i === 0 || !!save.solved?.[i - 1]; }
 
 /* ---------- save and evidence ---------- */
 const SAVE_KEY = "index-dojo-v2";
@@ -1190,11 +1638,18 @@ const rowsFor = (lv, preds) => Math.max(1, Math.round(lv.rows * preds.reduce((s,
 const tablePages = lv => Math.ceil(lv.rows / lv.perPage);
 
 // Cost of answering v through one index, or {bad} if the index can't be searched.
-function planIndex(lv, idx, v){
-  const W = v.where, out = rowsFor(lv, W), T = tablePages(lv);
-  const access = []; let eqCount = 0;
+function planIndex(lv, cols, v){
+  // A partial index (lv.partial, picked like a column) holds only the rows matching its condition:
+  // usable only when the query states that condition, which then works like an extra search key.
+  const pk = lv.partial?.key, isPartial = !!pk && cols.includes(pk), idx = cols.filter(c => c !== pk);
+  const pp = isPartial ? v.where.find(w => w.sql === lv.partial.sql) : null;
+  if (isPartial && !pp) return {bad:true, lead:pk};
+  const hasAll = idx.some(c => lv.notNull?.includes(c));   // a NOT NULL column puts every row in the index
+  const W = v.where.map(p => p.kind !== "null" ? p : {...p, kind: hasAll ? "eq" : "filter"});
+  const out = rowsFor(lv, W), T = tablePages(lv);
+  const access = pp ? [pp] : []; let eqCount = 0;
   for (const c of idx){
-    const p = W.find(w => w.col === c);
+    const p = W.find(w => w.col === c && !access.includes(w));   // the partial condition already counts
     if (!p || p.kind === "filter") break;
     access.push(p);
     if (p.kind === "range") break;   // a range ends the searchable part of the index
@@ -1202,8 +1657,8 @@ function planIndex(lv, idx, v){
   }
   if (!access.length) return {bad:true, lead:idx[0]};
   const ixFilter = W.filter(p => idx.includes(p.col) && !access.includes(p));
-  const tFilter = W.filter(p => !idx.includes(p.col));
-  const L = Math.ceil(lv.rows / LEAF_ROWS);
+  const tFilter = W.filter(p => !idx.includes(p.col) && p !== pp);
+  const L = Math.ceil(lv.rows * (isPartial ? lv.partial.sel : 1) / LEAF_ROWS);
   const upper = Math.max(1, Math.ceil(Math.log(L) / Math.log(FANOUT)));   // root + branch levels
   const m = rowsFor(lv, access);                                          // index entries in the range
   const ixRows = rowsFor(lv, [...access, ...ixFilter]);                   // entries left after leaf filter
@@ -1218,7 +1673,7 @@ function planIndex(lv, idx, v){
   const leaf = Math.ceil(scanned / LEAF_ROWS);
   const cost = upper + leaf + lookups;
   return {kind:"index", cost, T, out, W, upper, leaf, lookups, lookRows, m, ixRows, access, ixFilter, tFilter,
-    covering, pipelined, sort: !!v.order && !pipelined, stop, rowsOut: part(out), L, idx};
+    covering, pipelined, sort: !!v.order && !pipelined, stop, rowsOut: part(out), L, idx, partial: isPartial};
 }
 
 // The optimizer: cheapest of the full scan and every usable index.
@@ -1237,7 +1692,8 @@ function plan(lv, ixs, v){
 function score(lv, ixs, picks){
   const plans = lv.queries.map((q,i) => plan(lv, ixs, variantOf(lv, i, picks)));
   const reads = plans.reduce((s,p,i) => s + p.cost * (lv.queries[i].freq ?? 1), 0);
-  const writes = (lv.inserts ?? 0) * INSERT_PAGES * ixs.filter(ix => ix.length).length;
+  const share = ix => lv.partial && ix.includes(lv.partial.key) ? lv.partial.sel : 1;   // a partial index skips most INSERTs
+  const writes = (lv.inserts ?? 0) * INSERT_PAGES * ixs.filter(ix => ix.length).reduce((s, ix) => s + share(ix), 0);
   const wrong = lv.queries.map((q, i) => variantOf(lv, i, picks).wrong ? i : -1).filter(i => i >= 0);
   return {plans, reads, writes, total: reads + writes, wrong};
 }
@@ -1287,7 +1743,7 @@ function sqlOf(lv, v){
   if (v.fetch) s += `\n FETCH ${v.offset ? "NEXT" : "FIRST"} ${v.fetch} ROWS ONLY`;
   return s;
 }
-const ixName = idx => "ix_" + idx.map(c => c.toLowerCase().replace(/\W+/g, "_").replace(/^_|_$/g, "")).join("_");
+const ixName = idx => "ix_" + idx.filter(c => !c.startsWith("WHERE ")).map(c => c.toLowerCase().replace(/\W+/g, "_").replace(/^_|_$/g, "")).join("_");
 
 // The index operation as the plan prints it.
 function indexOp(lv, p, v){
@@ -1350,6 +1806,7 @@ function explain(lv, p, v){
   if (p.sort) s.push(v.fetch
     ? t("The index doesn't return rows in {col} order, so the database reads all {n} matching rows and sorts them before returning the first {k}.", {col:v.order.col, n:fmt(p.out), k:v.fetch})
     : t("The index doesn't return rows in {col} order, so the database reads all {n} matching rows and sorts them before returning any.", {col:v.order.col, n:fmt(p.out)}));
+  if (p.partial) s.push(t("The index holds only the rows where {cond}, so it stays small and most new rows never touch it.", {cond:lv.partial.sql}));
   if (p.ixFilter.length) s.push(t("{cols} can't narrow the search, but it is checked in the leaf pages, so non-matching rows never cost a table read.", {cols:cols(p.ixFilter)}));
   if (p.tFilter.length) s.push(t("{cols} is not in the index, so it is checked after each table read.", {cols:cols(p.tFilter)}));
   return s.join(" ");
@@ -1442,7 +1899,7 @@ function animate(lv, p, q, instant){
 /* ---------- render ---------- */
 function accuseButton(c){
   const ready = c.missions.every((_, i) => starsAt(state.save.stars, state.caseIx, i) >= 2);
-  return `<button id="accuse" ${ready ? "" : "disabled"} title="${ready ? t("Name the killer") : t("Clear every mission at ★★ first")}">` +
+  return `<button id="accuse" ${ready ? "" : "disabled"} title="${ready ? t("Name the culprit") : t("Clear every mission at ★★ first")}">` +
     `${state.save.solved[state.caseIx] ? t("CASE CLOSED ✓") : t("ACCUSE")}</button>`;
 }
 
@@ -1452,7 +1909,7 @@ function openAccusation(msg = ""){
   const c = CASES[state.caseIx], a = state.acc, got = state.save.clues[state.caseIx] ?? [];
   const ev = evidenceOf(c).filter(e => got.includes(e.id));
   openDialog(t("ACCUSATION"),
-    `<p>${t("Name the killer, then back each charge with one piece of evidence from your notebook.")}</p>` +
+    `<p>${t("Name the culprit, then back each charge with one piece of evidence from your notebook.")}</p>` +
     `<fieldset class="sus-cards"><legend class="eyebrow">${t("SUSPECT")}</legend>` +
       c.suspects.map(s => `<label><input type="radio" name="suspect" value="${s.id}" ${a.suspect === s.id ? "checked" : ""}><b>${esc(s.name)}</b><small>${esc(t(s.role))}</small></label>`).join("") +
     `</fieldset>` +
@@ -1477,7 +1934,7 @@ function openEnding(){
   const c = CASES[state.caseIx], got = state.save.clues[state.caseIx] ?? [], pct = suspicion(state.save, state.caseIx), g = rating(pct);
   openDialog(t("CASE CLOSED · {title}", {title:t(c.title).toUpperCase()}),
     c.outro.map(p => `<p>${esc(t(p))}</p>`).join("") +
-    `<p class="hint">${esc(t(c.outroMika))}</p><p>${esc(t(c.outroHook))}</p>` +
+    `<p class="hint">${esc(t(c.outroQuote))}</p><p>${esc(t(c.outroHook))}</p>` +
     (c.insiderBonuses.every(id => got.includes(id)) ? `<p class="cancel">${esc(t(c.outroInsider))}</p>` : "") +
     `<div class="grade"><b>${g}</b><span>${t("RATING · suspicion {n}%", {n:Math.round(pct * 100)})}<br>${esc(t(c.grades[g]))}</span></div>` +
     `<div class="row"><button class="go" data-close="1">${t("CLOSE")}</button><button data-act="restart">${t("PLAY THIS CASE AGAIN")}</button></div>`);
@@ -1489,7 +1946,7 @@ function guideSeen(){ try { return localStorage.getItem(GUIDE_KEY) === "seen"; }
 function openStartMenu(midGame = false){
   const opt = (label, control) => `<div class="opt"><span class="eyebrow">${label}</span>${control}</div>`;
   openDialog("DBOS-98 ◆ INDEX DOJO",
-    `<p>${t("Find the killer by reading as few pages as possible.")}</p>` +
+    `<p>${t("Find the culprit by reading as few pages as possible.")}</p>` +
     `<div class="menu">` +
       opt(t("LANGUAGE"), `<div class="row">` + [["en", "English"], ["vi", "Tiếng Việt"]].map(([l, name]) =>
         `<button data-menulang="${l}" aria-pressed="${LANG === l}">${name}</button>`).join("") + `</div>`) +
@@ -1516,7 +1973,7 @@ const tourSteps = () => [
   {sel:"#report", text:t("Fewer pages, more stars. ★★ returns the rows and a clue; below that the query is cancelled. ★★★ unlocks the lesson.")},
   {sel:"#nbwin", text:t("Clues collect in your notebook. Open one to read it again.")},
   {sel:".sus", text:t("SYS_MAINT watches the query log. Every page beyond the best plan raises SUSPICION.")},
-  {sel:"#accuse", text:t("Once every mission has ★★, accuse the killer and back each charge with evidence.")},
+  {sel:"#accuse", text:t("Once every mission has ★★, accuse the culprit and back each charge with evidence.")},
 ];
 const HAND = ["....XX........","...XooX.......","...XooX.......","...XooX.......","...XooXXX.....","...XooXooXX...",
   "...XooXooXoXX.","XX.XooXooXoXoX","XoXXoooooooXoX","XooXoooooooooX",".XoXoooooooooX",".XooooooooooX.",
@@ -1610,7 +2067,7 @@ const caseLabel = (c, i) => c.practice ? t("PRACTICE") : t("CASE {n}", {n:String
 function renderBar(){
   const c = CASES[state.caseIx];
   $("casebar").innerHTML = CASES.map((x,i) =>
-    `<button data-case="${i}" ${i===state.caseIx?'aria-current="true"':''} title="${esc(t(x.title))}">${caseLabel(x, i)}</button>`).join("") +
+    `<button data-case="${i}" ${i===state.caseIx?'aria-current="true"':''} ${caseOpen(state.save, i) ? "" : "disabled"} title="${esc(caseOpen(state.save, i) ? t(x.title) : t("Solve case {n} first", {n:String(i).padStart(2,"0")}))}">${caseLabel(x, i)}</button>`).join("") +
     (c.intro ? `<button id="brief">${t("BRIEFING")}</button>` + accuseButton(c) + suspicionChip() : "");
   $("lvbar").innerHTML = c.missions.map((l,i) => {
     const s = starsAt(state.save.stars, state.caseIx, i), open = i === state.lv || unlocked(state.save.stars, state.caseIx, i);
@@ -1649,7 +2106,8 @@ function renderWizard(){
   const lv = cur(), multi = state.ixs.length > 1, slot = state.ixs[state.active];
   const made = state.ixs.filter(ix => ix.length);
   $("ddl").innerHTML = made.length
-    ? hl(made.map(ix => `CREATE INDEX ${ixName(ix)}\n    ON ${lv.table} (${ix.join(", ")})`).join(";\n\n"))
+    ? hl(made.map(ix => `CREATE INDEX ${ixName(ix)}\n    ON ${lv.table} (${ix.filter(c => c !== lv.partial?.key).join(", ")})` +
+        (ix.includes(lv.partial?.key) ? `\n ${lv.partial.key}` : "")).join(";\n\n"))
     : hl("-- " + t("No index yet. Every query reads the whole table."));
   $("slots").innerHTML = state.ixs.map((ix, s) => {
     const head = multi
@@ -1667,7 +2125,8 @@ function renderWizard(){
   const full = slot.length >= lv.maxCols;
   $("cols").innerHTML = Object.entries(lv.cols).map(([c,d]) =>
     `<button data-add="${esc(c)}" ${slot.includes(c) || full ? "disabled" : ""}>${esc(c)}` +
-    `<small>${t("{d} distinct · ~{r} rows per value", {d:fmt(d), r:fmt(Math.max(1, Math.round(lv.rows/d)))})}</small></button>`).join("");
+    `<small>${c === lv.partial?.key ? t("index only these rows: {n} of {rows}", {n:fmt(Math.round(lv.rows * lv.partial.sel)), rows:fmt(lv.rows)})
+      : t("{d} distinct · ~{r} rows per value", {d:fmt(d), r:fmt(Math.max(1, Math.round(lv.rows/d)))})}</small></button>`).join("");
 }
 
 function renderTabs(){
@@ -1851,6 +2310,7 @@ function goLevel(i){
 }
 function goCase(ci){
   state.caseIx = ci;
+  state.acc = {suspect:null, MOTIVE:"", OPPORTUNITY:"", LIE:""};   // an accusation belongs to one case
   const ms = missionsOf(ci);
   let i = 0; while (i + 1 < ms.length && unlocked(state.save.stars, ci, i + 1)) i++;   // furthest open mission
   goLevel(i);
@@ -1948,6 +2408,7 @@ function boot(d){
   setLang(readLang());
   state.save = d.save ?? loadSave(readSave());
   state.caseIx = Math.min(Math.max(0, d.caseIx ?? 0), CASES.length - 1);
+  if (!caseOpen(state.save, state.caseIx)) state.caseIx = 0;
   if (d.lv == null){ goCase(state.caseIx); openStartMenu(); return; }   // start menu, then briefing (and the tour on a first visit)
   state.lv = Math.min(Math.max(0, d.lv), missionsOf(state.caseIx).length - 1);
   const lv = cur();
