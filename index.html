@@ -68,8 +68,12 @@ body{
 #tour-box .pane{padding:10px 12px; gap:10px}
 .tour-target{outline:3px dashed var(--yellow); outline-offset:3px}
 @keyframes bob{50%{translate:0 -4px}}
-.lang-pick{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-.lang-pick button{padding:14px; font-size:18px}
+.menu{display:grid; gap:12px; border-block:2px solid var(--cell); padding-block:12px}
+.menu .opt{display:grid; grid-template-columns:110px 1fr; align-items:center; gap:10px}
+.menu select{width:auto; justify-self:start}
+.menu button[aria-pressed="true"]{background:var(--line); color:var(--win)}
+.menu input[type=range]{accent-color:var(--yellow); width:140px}
+@media (max-width:480px){ .menu .opt{grid-template-columns:1fr} }
 .bar #music[aria-pressed="false"]{opacity:.6}
 .bar #vol{width:84px; accent-color:var(--title); cursor:pointer; align-self:center}
 .bar .lang select{width:auto; background:var(--line); color:var(--win); border:2px solid var(--win); font:15px var(--f-ui); padding:1px 4px; cursor:pointer}
@@ -769,6 +773,16 @@ const VI = {
     "Thao tác này xóa sao, bằng chứng và mức nghi ngờ của {case}. Các hồ sơ khác và cài đặt của bạn vẫn giữ nguyên.",
   "RESTART ▶": "CHƠI LẠI ▶",
 
+  /* ---------- start menu ---------- */
+  "Find the killer by reading as few pages as possible.": "Tìm ra hung thủ bằng cách đọc càng ít trang càng tốt.",
+  "LANGUAGE": "NGÔN NGỮ",
+  "THEME": "GIAO DIỆN",
+  "MUSIC": "NHẠC",
+  "Volume": "Âm lượng",
+  "ON": "BẬT",
+  "OFF": "TẮT",
+  "START ▶": "BẮT ĐẦU ▶",
+
   /* ---------- how to play ---------- */
   "How to play": "Hướng dẫn",
   "HOW TO PLAY · {n}/{total}": "HƯỚNG DẪN · {n}/{total}",
@@ -1456,18 +1470,26 @@ function openEnding(){
     `<div class="row"><button class="go" data-close="1">${t("CLOSE")}</button><button data-act="restart">${t("PLAY THIS CASE AGAIN")}</button></div>`);
 }
 
-// First visit: pick a language, read the briefing, then the interactive tour.
+// Every launch: the start menu (language, settings, START), then the briefing; the tour follows on the first visit.
 const GUIDE_KEY = "index-dojo-guide";
 function guideSeen(){ try { return localStorage.getItem(GUIDE_KEY) === "seen"; } catch { return false; } }
-function openLangPicker(){
-  openDialog("LANGUAGE · NGÔN NGỮ",
-    `<div class="lang-pick"><button class="${LANG === "en" ? "go" : ""}" data-langpick="en">English</button>` +
-    `<button class="${LANG === "vi" ? "go" : ""}" data-langpick="vi">Tiếng Việt</button></div>`);
+function openStartMenu(){
+  const opt = (label, control) => `<div class="opt"><span class="eyebrow">${label}</span>${control}</div>`;
+  openDialog("DBOS-98 ◆ INDEX DOJO",
+    `<p>${t("Find the killer by reading as few pages as possible.")}</p>` +
+    `<div class="menu">` +
+      opt(t("LANGUAGE"), `<div class="row">` + [["en", "English"], ["vi", "Tiếng Việt"]].map(([l, name]) =>
+        `<button data-menulang="${l}" aria-pressed="${LANG === l}">${name}</button>`).join("") + `</div>`) +
+      opt(t("THEME"), `<select data-menutheme aria-label="${t("THEME")}">` + THEMES.map(th =>
+        `<option value="${th}" ${$("theme").value === th ? "selected" : ""}>${$("theme").querySelector(`[value="${th}"]`).textContent}</option>`).join("") + `</select>`) +
+      opt(t("MUSIC"), `<div class="row"><button data-menumusic aria-pressed="${musicOn}">${musicOn ? t("ON") : t("OFF")}</button>` +
+        `<input type="range" data-menuvol min="0" max="100" step="5" value="${$("vol").value}" aria-label="${t("Volume")}"></div>`) +
+    `</div>` +
+    `<div class="row"><button class="go" id="start-go">${t("START ▶")}</button></div>`);
 }
-function pickLang(l){
-  setLang(l); legend(cur()); if (!state.result) resetPlan(); render();
-  state.tourPending = true;          // starts when the briefing closes
-  openBriefing();
+function startGame(){
+  if (!guideSeen()) state.tourPending = true;   // the tour starts when the briefing closes
+  CASES[state.caseIx].intro ? openBriefing() : $("dlg").close();
 }
 
 // Interactive tour. A step with `wait` also moves on by itself when the player does that action.
@@ -1776,9 +1798,11 @@ function startMusic(){ if (musicOn && $("bgm").paused) setMusic(true); }
 function readMusic(){ try { return localStorage.getItem(MUSIC_KEY) !== "off"; } catch { return true; } }
 function readVolume(){ try { const v = parseFloat(localStorage.getItem(VOLUME_KEY)); return Number.isFinite(v) ? v : 15; } catch { return 15; } }
 document.addEventListener("input", e => {
-  if (e.target.id !== "vol") return;
+  if (e.target.id !== "vol" && e.target.dataset.menuvol == null) return;   // header slider or the start menu's
   setVolume(+e.target.value);
   if (+e.target.value > 0 && !musicOn) setMusic(true);   // moving the slider up means "I want sound"
+  const m = document.querySelector("[data-menumusic]");
+  if (m){ m.setAttribute("aria-pressed", musicOn); m.textContent = musicOn ? t("ON") : t("OFF"); }
 });
 document.addEventListener("pointerdown", e => { if (!e.target.closest("#music")) startMusic(); });
 document.addEventListener("keydown", startMusic);
@@ -1880,7 +1904,9 @@ document.addEventListener("click", e => {
   }
   else if (b.id === "guide") startTour();
   else if (d.tour) d.tour === "next" ? tourNext() : endTour();
-  else if (d.langpick) pickLang(d.langpick);
+  else if (d.menulang){ setLang(d.menulang); legend(lv); if (!state.result) resetPlan(); render(); openStartMenu(); }
+  else if (d.menumusic != null){ setMusic(!musicOn); openStartMenu(); }
+  else if (b.id === "start-go") startGame();
   else if (b.id === "restart" || d.act === "restart") openRestart();
   else if (b.id === "restart-go") restartCase();
   else if (d.close){
@@ -1891,7 +1917,7 @@ document.addEventListener("click", e => {
 
 document.addEventListener("change", e => {
   const el = e.target;
-  if (el.id === "theme"){ setTheme(el.value); return; }
+  if (el.id === "theme" || el.dataset.menutheme != null){ setTheme(el.value); return; }
   if (el.id === "lang"){ setLang(el.value); legend(cur()); if (!state.result) resetPlan(); render(); return; }
   if (el.name === "suspect") state.acc.suspect = el.value;
   else if (el.dataset.slotsel) state.acc[el.dataset.slotsel] = el.value;
@@ -1906,7 +1932,7 @@ function boot(d){
   setLang(readLang());
   state.save = d.save ?? loadSave(readSave());
   state.caseIx = Math.min(Math.max(0, d.caseIx ?? 0), CASES.length - 1);
-  if (d.lv == null){ goCase(state.caseIx); if (!guideSeen()) openLangPicker(); return; }   // first visit: language, briefing, then the tour
+  if (d.lv == null){ goCase(state.caseIx); openStartMenu(); return; }   // start menu, then briefing (and the tour on a first visit)
   state.lv = Math.min(Math.max(0, d.lv), missionsOf(state.caseIx).length - 1);
   const lv = cur();
   state.ixs = Array.isArray(d.ixs) && d.ixs.length === (lv.maxIdx ?? 1) ? d.ixs : emptySlots(lv);
