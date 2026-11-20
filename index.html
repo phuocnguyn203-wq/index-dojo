@@ -57,7 +57,15 @@ body{
 .bar .prefs{display:flex; flex-wrap:wrap; gap:6px 14px}
 .bar .lang{display:flex; align-items:center; gap:6px}
 .bar .icon{border:2px solid var(--win); background:var(--line); color:var(--win); padding:1px 6px; font-size:15px; line-height:1.2; min-width:2em}
-.guide p{margin:0}
+/* Interactive tour: a pixel hand points at the target, a small window explains it. No backdrop, so the target stays clickable. */
+#tour-hand{position:fixed; z-index:20; width:28px; height:32px; pointer-events:none; animation:bob .8s steps(2) infinite}
+#tour-hand.up{transform:scaleY(-1)}
+#tour-box{position:fixed; z-index:20; width:min(320px, calc(100vw - 16px)); margin:0}
+#tour-box .pane{padding:10px 12px; gap:10px}
+.tour-target{outline:3px dashed var(--yellow); outline-offset:3px}
+@keyframes bob{50%{translate:0 -4px}}
+.lang-pick{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.lang-pick button{padding:14px; font-size:18px}
 .bar #music[aria-pressed="false"]{opacity:.6}
 .bar #vol{width:84px; accent-color:var(--title); cursor:pointer; align-self:center}
 .bar .lang select{width:auto; background:var(--line); color:var(--win); border:2px solid var(--win); font:15px var(--f-ui); padding:1px 4px; cursor:pointer}
@@ -214,7 +222,7 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
 .sus.flash{background:var(--red); color:var(--win)} .sus.flash .delta{color:var(--win)} .sus.flash .meter{background:transparent}
 .watch{border:2px solid var(--red); color:var(--red); padding:8px 12px}
 .watch.clean{border-color:var(--green); color:var(--green)}
-@media (prefers-reduced-motion:reduce){ .lamp.on{animation:none} }
+@media (prefers-reduced-motion:reduce){ .lamp.on,#tour-hand{animation:none} }
 </style>
 
 <header class="bar">
@@ -233,6 +241,12 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
   </div>
   <div class="lv" id="lvbar"></div>
 </header>
+
+<svg id="tour-hand" viewBox="0 0 14 16" shape-rendering="crispEdges" aria-hidden="true" hidden></svg>
+<section class="win" id="tour-box" role="dialog" aria-live="polite" hidden>
+  <h2><span id="tour-title"></span></h2>
+  <div class="pane"><p id="tour-text"></p><div class="row" id="tour-btns"></div></div>
+</section>
 
 <dialog class="win" id="dlg" aria-labelledby="dlg-title">
   <h2><span id="dlg-title"></span></h2>
@@ -754,21 +768,25 @@ const VI = {
   /* ---------- how to play ---------- */
   "How to play": "Hướng dẫn",
   "HOW TO PLAY · {n}/{total}": "HƯỚNG DẪN · {n}/{total}",
-  "◀ BACK": "◀ TRƯỚC",
+  "SKIP": "BỎ QUA",
   "NEXT ▶": "TIẾP ▶",
   "GOT IT ▶": "ĐÃ HIỂU ▶",
-  "Pages": "Trang dữ liệu",
-  "A database keeps every table on disk in pages of about 50 rows. Each page it reads costs you one point. With no index it has to read every page of the table to find your rows: a full table scan.":
-    "Database lưu mỗi bảng trên đĩa thành từng trang, mỗi trang khoảng 50 dòng. Mỗi trang nó đọc tính bạn một điểm. Không có index, nó phải đọc hết mọi trang của bảng mới tìm ra các dòng cần: đó là full table scan (quét toàn bảng).",
-  "Indexes": "Index",
-  "An index is a sorted copy of a few columns, like the index at the back of a book. The database walks down a small tree (the B-tree) to the first matching entry, then reads only the table rows it needs. Pick the columns in the INDEX WIZARD. Their order matters.":
-    "Index là một bản sao đã sắp xếp của vài cột, giống mục lục ở cuối sách. Database đi xuống một cây nhỏ (B-tree) tới mục khớp đầu tiên, rồi chỉ đọc đúng những dòng cần trong bảng. Chọn cột trong TRÌNH TẠO INDEX. Thứ tự các cột rất quan trọng.",
-  "Stars and clues": "Sao và manh mối",
-  "Press EXECUTE to run the queries. The fewer pages they read, the more stars you get. ★★ returns the rows and a clue for your notebook; below that the query is cancelled. ★★★ unlocks the lesson behind the answer.":
-    "Bấm THỰC THI để chạy truy vấn. Đọc càng ít trang, càng được nhiều sao. ★★ trả về dữ liệu và một manh mối vào sổ tay; thấp hơn thì truy vấn bị hủy. ★★★ mở bài học đằng sau đáp án.",
-  "Stay unnoticed": "Đừng để bị chú ý",
-  "Someone inside the company watches the query log. Every page you read beyond the best plan raises SUSPICION, and later missions are watched more closely. When every clue is in, ACCUSE: name the killer and back each charge with evidence.":
-    "Có người trong công ty đang theo dõi nhật ký truy vấn. Mỗi trang bạn đọc thừa so với cách tối ưu đều làm NGHI NGỜ tăng, và các nhiệm vụ về sau bị soi kỹ hơn. Khi đã đủ manh mối, hãy BUỘC TỘI: chỉ ra hung thủ và chứng minh từng cáo buộc bằng bằng chứng.",
+  "Each mission is a query the investigation needs. Read what it asks for and which table it reads.":
+    "Mỗi nhiệm vụ là một truy vấn cuộc điều tra cần. Đọc xem nó hỏi gì và đọc bảng nào.",
+  "Click a column to add it to your index. With several columns, their order matters.":
+    "Bấm vào một cột để thêm nó vào index. Khi có nhiều cột, thứ tự của chúng rất quan trọng.",
+  "Press EXECUTE. The database runs the query and counts every page it reads.":
+    "Bấm THỰC THI. Database chạy truy vấn và đếm từng trang nó đọc.",
+  "Every page read costs one point. Without a useful index the database scans the whole table.":
+    "Mỗi trang đọc tính một điểm. Không có index phù hợp, database sẽ quét toàn bộ bảng.",
+  "Fewer pages, more stars. ★★ returns the rows and a clue; below that the query is cancelled. ★★★ unlocks the lesson.":
+    "Càng ít trang, càng nhiều sao. ★★ trả về dữ liệu và một manh mối; thấp hơn thì truy vấn bị hủy. ★★★ mở bài học.",
+  "Clues collect in your notebook. Open one to read it again.":
+    "Manh mối được lưu trong sổ tay. Mở ra để đọc lại bất cứ lúc nào.",
+  "SYS_MAINT watches the query log. Every page beyond the best plan raises SUSPICION.":
+    "SYS_MAINT đang theo dõi nhật ký truy vấn. Mỗi trang đọc thừa so với cách tối ưu đều làm NGHI NGỜ tăng.",
+  "Once every mission has ★★, accuse the killer and back each charge with evidence.":
+    "Khi mọi nhiệm vụ đều đạt ★★, hãy buộc tội hung thủ và chứng minh từng cáo buộc bằng bằng chứng.",
 
   /* ---------- plan explanations ---------- */
   "No index. The database reads all {T} table pages.": "Không có index. Database đọc toàn bộ {T} trang của bảng.",
@@ -1434,27 +1452,84 @@ function openEnding(){
     `<div class="row"><button class="go" data-close="1">${t("CLOSE")}</button><button data-act="restart">${t("PLAY THIS CASE AGAIN")}</button></div>`);
 }
 
-// How to play: four short pages, shown before the first briefing and from the "?" button.
+// First visit: pick a language, read the briefing, then the interactive tour.
 const GUIDE_KEY = "index-dojo-guide";
-const guidePages = () => [
-  [t("Pages"), t("A database keeps every table on disk in pages of about 50 rows. Each page it reads costs you one point. With no index it has to read every page of the table to find your rows: a full table scan.")],
-  [t("Indexes"), t("An index is a sorted copy of a few columns, like the index at the back of a book. The database walks down a small tree (the B-tree) to the first matching entry, then reads only the table rows it needs. Pick the columns in the INDEX WIZARD. Their order matters.")],
-  [t("Stars and clues"), t("Press EXECUTE to run the queries. The fewer pages they read, the more stars you get. ★★ returns the rows and a clue for your notebook; below that the query is cancelled. ★★★ unlocks the lesson behind the answer.")],
-  [t("Stay unnoticed"), t("Someone inside the company watches the query log. Every page you read beyond the best plan raises SUSPICION, and later missions are watched more closely. When every clue is in, ACCUSE: name the killer and back each charge with evidence.")],
-];
-function openGuide(page = 0){
-  const pages = guidePages(), [head, text] = pages[page], last = page === pages.length - 1;
-  openDialog(t("HOW TO PLAY · {n}/{total}", {n:page + 1, total:pages.length}),
-    `<div class="guide pane"><h3>${head}</h3><p>${text}</p></div><div class="row">` +
-    (page ? `<button data-guide="${page - 1}">${t("◀ BACK")}</button>` : "") +
-    (last ? `<button class="go" data-act="guide-done">${t("GOT IT ▶")}</button>` : `<button class="go" data-guide="${page + 1}">${t("NEXT ▶")}</button>`) +
-    `</div>`);
-}
 function guideSeen(){ try { return localStorage.getItem(GUIDE_KEY) === "seen"; } catch { return false; } }
-function finishGuide(){
-  try { localStorage.setItem(GUIDE_KEY, "seen"); } catch {}
-  CASES[state.caseIx].intro ? openBriefing() : $("dlg").close();
+function openLangPicker(){
+  openDialog("LANGUAGE · NGÔN NGỮ",
+    `<div class="lang-pick"><button class="${LANG === "en" ? "go" : ""}" data-langpick="en">English</button>` +
+    `<button class="${LANG === "vi" ? "go" : ""}" data-langpick="vi">Tiếng Việt</button></div>`);
 }
+function pickLang(l){
+  setLang(l); legend(cur()); if (!state.result) resetPlan(); render();
+  state.tourPending = true;          // starts when the briefing closes
+  openBriefing();
+}
+
+// Interactive tour. A step with `wait` also moves on by itself when the player does that action.
+const tourSteps = () => [
+  {sel:"#mission", text:t("Each mission is a query the investigation needs. Read what it asks for and which table it reads.")},
+  {sel:"#cols", wait:"index", text:t("Click a column to add it to your index. With several columns, their order matters.")},
+  {sel:"#run", wait:"run", text:t("Press EXECUTE. The database runs the query and counts every page it reads.")},
+  {sel:".status", text:t("Every page read costs one point. Without a useful index the database scans the whole table.")},
+  {sel:"#report", text:t("Fewer pages, more stars. ★★ returns the rows and a clue; below that the query is cancelled. ★★★ unlocks the lesson.")},
+  {sel:"#nbwin", text:t("Clues collect in your notebook. Open one to read it again.")},
+  {sel:".sus", text:t("SYS_MAINT watches the query log. Every page beyond the best plan raises SUSPICION.")},
+  {sel:"#accuse", text:t("Once every mission has ★★, accuse the killer and back each charge with evidence.")},
+];
+const HAND = ["....XX........","...XooX.......","...XooX.......","...XooX.......","...XooXXX.....","...XooXooXX...",
+  "...XooXooXoXX.","XX.XooXooXoXoX","XoXXoooooooXoX","XooXoooooooooX",".XoXoooooooooX",".XooooooooooX.",
+  "..XoooooooooX.","..XooooooooX..","...XooooooX...","...XXXXXXXX..."];
+$("tour-hand").innerHTML = HAND.flatMap((row, y) => [...row].map((c, x) =>
+  c === "." ? "" : `<rect x="${x}" y="${y}" width="1" height="1" fill="${c === "X" ? "#000" : "#fff"}"/>`)).join("");
+let tour = null;
+const shown = el => el && el.offsetParent !== null;
+function startTour(){
+  try { localStorage.setItem(GUIDE_KEY, "seen"); } catch {}
+  if ($("dlg").open) $("dlg").close();
+  tour = {i:-1}; tourNext();
+}
+function tourNext(){
+  const steps = tourSteps();
+  do tour.i++; while (tour.i < steps.length && !shown(document.querySelector(steps[tour.i].sel)));   // skip what this screen doesn't have
+  if (tour.i >= steps.length) return endTour();
+  const step = steps[tour.i], last = !steps.slice(tour.i + 1).some(s => shown(document.querySelector(s.sel)));
+  $("tour-title").textContent = t("HOW TO PLAY · {n}/{total}", {n:tour.i + 1, total:steps.length});
+  $("tour-text").textContent = step.text;
+  $("tour-btns").innerHTML = `<button class="go" data-tour="next">${last ? t("GOT IT ▶") : t("NEXT ▶")}</button>` +
+    (last ? "" : `<button data-tour="end">${t("SKIP")}</button>`);
+  $("tour-box").hidden = $("tour-hand").hidden = false;
+  const el = document.querySelector(step.sel);
+  el.scrollIntoView({block: el.offsetHeight > innerHeight * .6 ? "start" : "center", behavior:"instant"});
+  tourPlace();
+}
+function endTour(){
+  tour = null;
+  $("tour-box").hidden = $("tour-hand").hidden = true;
+  document.querySelectorAll(".tour-target").forEach(e => e.classList.remove("tour-target"));
+}
+function tourEvent(kind){ if (tour && tourSteps()[tour.i]?.wait === kind) tourNext(); }
+// Puts the hand under (or over) the target and the window next to the hand, inside the viewport.
+function tourPlace(){
+  if (!tour) return;
+  const el = document.querySelector(tourSteps()[tour.i].sel);
+  document.querySelectorAll(".tour-target").forEach(e => { if (e !== el) e.classList.remove("tour-target"); });
+  if (!shown(el)) return;
+  el.classList.add("tour-target");
+  const r = el.getBoundingClientRect(), box = $("tour-box"), hand = $("tour-hand");
+  const vw = document.documentElement.clientWidth, vh = innerHeight, bh = box.offsetHeight, bw = box.offsetWidth, gap = 38;
+  const below = r.bottom + gap + bh <= vh || r.top - gap - bh < 0;
+  const x = Math.min(vw - 36, Math.max(8, r.left + Math.min(r.width / 2, 80)));
+  const y = below ? Math.min(r.bottom, vh - bh - gap - 8) : Math.max(r.top, bh + gap + 8);
+  hand.classList.toggle("up", !below);
+  hand.style.left = (x - 8) + "px"; hand.style.top = (below ? y + 4 : y - 36) + "px";
+  box.style.left = Math.min(vw - bw - 8, Math.max(8, x - 40)) + "px";
+  box.style.top = (below ? y + gap : y - gap - bh) + "px";
+}
+addEventListener("resize", tourPlace);
+addEventListener("scroll", tourPlace, {passive:true});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && tour) endTour(); });
+$("dlg").addEventListener("close", () => { if (state.tourPending){ state.tourPending = false; startTour(); } });
 
 function openRestart(){
   const c = CASES[state.caseIx];
@@ -1705,7 +1780,7 @@ function setLang(l){
   for (const [id, label] of [["guide", t("How to play")], ["restart", t("Restart this case")]]){ $(id).title = label; $(id).setAttribute("aria-label", label); }
 }
 
-function render(){ renderBar(); renderMission(); renderWizard(); renderTabs(); renderReport(); renderResults(); renderNotebook(); }
+function render(){ renderBar(); renderMission(); renderWizard(); renderTabs(); renderReport(); renderResults(); renderNotebook(); tourPlace(); }
 
 /* ---------- actions ---------- */
 function changed(){ state.result = null; resetPlan(); render(); }
@@ -1747,6 +1822,7 @@ async function execute(){
   state.bump = state.result.sus > 0;   // draw the meter at its old level once, then let it rise
   renderBar(); state.bump = false; riseMeter();
   renderReport(); renderResults(); renderNotebook();
+  tourPlace(); tourEvent("run");
 }
 
 document.addEventListener("click", e => {
@@ -1757,6 +1833,7 @@ document.addEventListener("click", e => {
     const slot = state.ixs[state.active];
     if (slot.length < lv.maxCols){
       slot.push(d.add);
+      setTimeout(() => tourEvent("index"));   // after the re-render below
       if (slot.length === lv.maxCols){   // full: move on to the next index that still has room
         const next = state.ixs.findIndex(ix => ix.length < lv.maxCols);
         if (next !== -1) state.active = next;
@@ -1782,12 +1859,15 @@ document.addEventListener("click", e => {
     storeSave(); renderBar();
     verdict === "right" ? openEnding() : openAccusation(t("The prosecutor isn't convinced. The evidence doesn't hold up."));
   }
-  else if (b.id === "guide") openGuide(0);
-  else if (d.guide) openGuide(+d.guide);
-  else if (d.act === "guide-done") finishGuide();
+  else if (b.id === "guide") startTour();
+  else if (d.tour) d.tour === "next" ? tourNext() : endTour();
+  else if (d.langpick) pickLang(d.langpick);
   else if (b.id === "restart" || d.act === "restart") openRestart();
   else if (b.id === "restart-go") restartCase();
-  else if (d.close) $("dlg").close();
+  else if (d.close){
+    $("dlg").close();
+    if (state.tourPending){ state.tourPending = false; startTour(); }   // don't wait for the async close event
+  }
 });
 
 document.addEventListener("change", e => {
@@ -1807,7 +1887,7 @@ function boot(d){
   setLang(readLang());
   state.save = d.save ?? loadSave(readSave());
   state.caseIx = Math.min(Math.max(0, d.caseIx ?? 0), CASES.length - 1);
-  if (d.lv == null){ goCase(state.caseIx); if (!guideSeen()) openGuide(0); return; }   // first visit: guide, then briefing
+  if (d.lv == null){ goCase(state.caseIx); if (!guideSeen()) openLangPicker(); return; }   // first visit: language, briefing, then the tour
   state.lv = Math.min(Math.max(0, d.lv), missionsOf(state.caseIx).length - 1);
   const lv = cur();
   state.ixs = Array.isArray(d.ixs) && d.ixs.length === (lv.maxIdx ?? 1) ? d.ixs : emptySlots(lv);
