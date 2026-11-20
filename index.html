@@ -55,6 +55,8 @@ body{
 .bar .lv button{border:0; padding:2px 6px; color:var(--win); font-size:15px; letter-spacing:0}
 .bar .prefs{display:flex; flex-wrap:wrap; gap:6px 14px}
 .bar .lang{display:flex; align-items:center; gap:6px}
+.bar #music{border:2px solid var(--win); background:var(--line); color:var(--win); padding:1px 6px; font-size:15px; line-height:1.2}
+.bar #music[aria-pressed="false"]{opacity:.6}
 .bar .lang select{width:auto; background:var(--line); color:var(--win); border:2px solid var(--win); font:15px var(--f-ui); padding:1px 4px; cursor:pointer}
 .bar .lv button[aria-current="true"],.bar .lv button:hover:not(:disabled){background:var(--title); color:var(--white)}
 .bar #lvbar{flex-basis:100%}
@@ -209,6 +211,8 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
   <b>DBOS-98 ◆ INDEX DOJO</b>
   <div class="lv" id="casebar"></div>
   <div class="prefs">
+    <button id="music" aria-pressed="true" aria-label="Music · Nhạc" title="Alex Morgan, “Noir Jazz Detective: Midnight Mystery”">🔊</button>
+    <audio id="bgm" src="audio/noir-midnight.mp3" loop preload="none"></audio>
     <label class="lang"><span aria-hidden="true">🎨</span><select id="theme" aria-label="Theme · Giao diện">
       <option value="pc98">PC-98</option><option value="sumi">墨 Sumi</option><option value="washi">和紙 Washi</option><option value="fuji">藤 Fuji</option></select></label>
     <label class="lang"><span aria-hidden="true">🌐</span><select id="lang" aria-label="Language · Ngôn ngữ">
@@ -1561,6 +1565,21 @@ function setTheme(name){
 }
 function readTheme(){ try { return localStorage.getItem(THEME_KEY); } catch { return null; } }
 
+// Background music: quiet, looped, on by default. Browsers only allow sound after a click or key press.
+const MUSIC_KEY = "index-dojo-music", MUSIC_VOLUME = 0.15;
+let musicOn = true;
+function setMusic(on){
+  musicOn = on;
+  $("music").setAttribute("aria-pressed", on); $("music").textContent = on ? "🔊" : "🔇";
+  try { localStorage.setItem(MUSIC_KEY, on ? "on" : "off"); } catch {}
+  const a = $("bgm"); a.volume = MUSIC_VOLUME;
+  on ? a.play().catch(() => {}) : a.pause();   // play() is refused until the first user gesture; startMusic retries then
+}
+function startMusic(){ if (musicOn && $("bgm").paused) setMusic(true); }
+function readMusic(){ try { return localStorage.getItem(MUSIC_KEY) !== "off"; } catch { return true; } }
+document.addEventListener("pointerdown", e => { if (!e.target.closest("#music")) startMusic(); });
+document.addEventListener("keydown", startMusic);
+
 const LANG_KEY = "index-dojo-lang";
 function readLang(){
   try { const l = localStorage.getItem(LANG_KEY); if (l) return l; } catch {}
@@ -1621,6 +1640,7 @@ async function execute(){
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b || b.disabled) return;
   const lv = cur(), d = b.dataset, ix = state.ixs[+d.s];
+  if (b.id === "music"){ setMusic(!musicOn); return; }
   if (d.add){
     const slot = state.ixs[state.active];
     if (slot.length < lv.maxCols){
@@ -1665,6 +1685,7 @@ document.addEventListener("change", e => {
 
 function boot(d){
   setTheme(readTheme());
+  setMusic(readMusic());
   setLang(readLang());
   state.save = d.save ?? loadSave(readSave());
   state.caseIx = Math.min(Math.max(0, d.caseIx ?? 0), CASES.length - 1);
