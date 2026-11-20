@@ -785,6 +785,7 @@ const VI = {
 
   /* ---------- how to play ---------- */
   "How to play": "Hướng dẫn",
+  "HOW TO PLAY": "HƯỚNG DẪN",
   "HOW TO PLAY · {n}/{total}": "HƯỚNG DẪN · {n}/{total}",
   "SKIP": "BỎ QUA",
   "NEXT ▶": "TIẾP ▶",
@@ -1471,7 +1472,7 @@ function openEnding(){
 }
 
 // Every launch: the start menu (language, settings, START), then the briefing; the tour follows on the first visit.
-const GUIDE_KEY = "index-dojo-guide";
+const GUIDE_KEY = "index-dojo-tour";   // not "index-dojo-guide": that marked the old text guide, so its readers never saw the tour
 function guideSeen(){ try { return localStorage.getItem(GUIDE_KEY) === "seen"; } catch { return false; } }
 function openStartMenu(){
   const opt = (label, control) => `<div class="opt"><span class="eyebrow">${label}</span>${control}</div>`;
@@ -1485,10 +1486,10 @@ function openStartMenu(){
       opt(t("MUSIC"), `<div class="row"><button data-menumusic aria-pressed="${musicOn}">${musicOn ? t("ON") : t("OFF")}</button>` +
         `<input type="range" data-menuvol min="0" max="100" step="5" value="${$("vol").value}" aria-label="${t("Volume")}"></div>`) +
     `</div>` +
-    `<div class="row"><button class="go" id="start-go">${t("START ▶")}</button></div>`);
+    `<div class="row"><button class="go" id="start-go">${t("START ▶")}</button><button id="start-tour">${t("HOW TO PLAY")}</button></div>`);
 }
-function startGame(){
-  if (!guideSeen()) state.tourPending = true;   // the tour starts when the briefing closes
+function startGame(withTour = !guideSeen()){
+  if (withTour) state.tourPending = true;   // the tour starts when the briefing closes
   CASES[state.caseIx].intro ? openBriefing() : $("dlg").close();
 }
 
@@ -1907,6 +1908,7 @@ document.addEventListener("click", e => {
   else if (d.menulang){ setLang(d.menulang); legend(lv); if (!state.result) resetPlan(); render(); openStartMenu(); }
   else if (d.menumusic != null){ setMusic(!musicOn); openStartMenu(); }
   else if (b.id === "start-go") startGame();
+  else if (b.id === "start-tour") startGame(true);
   else if (b.id === "restart" || d.act === "restart") openRestart();
   else if (b.id === "restart-go") restartCase();
   else if (d.close){
