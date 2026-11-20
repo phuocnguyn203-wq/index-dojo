@@ -1897,3 +1897,6 @@ function boot(d){
 window.claude?.hot?.snapshot?.(() => ({caseIx:state.caseIx, lv:state.lv, ixs:state.ixs, pick:state.pick, save:state.save}));
 window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
 </script>
+<!-- Explicit end of body: VS Code Live Server injects its reload script before it, once. Without it, it
+     injects before every closing svg tag, counts only one injection and cuts off the end of the page. -->
+</body>
