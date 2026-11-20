@@ -39,6 +39,7 @@
   --cyan:#9cc4d6; --yellow:#e8c983; --magenta:#e0a3c0; --red:#e08f8a; --green:#a9cfa2;
 }
 html,body{min-height:100%}
+[hidden]{display:none!important}   /* browsers only hide HTML elements with [hidden]; the tour hand is an <svg> */
 body{
   background:var(--desk-a);
   background-image:repeating-conic-gradient(var(--desk-a) 0 25%,var(--desk-b) 0 50%);
@@ -1498,14 +1499,14 @@ function tourNext(){
   $("tour-text").textContent = step.text;
   $("tour-btns").innerHTML = `<button class="go" data-tour="next">${last ? t("GOT IT ▶") : t("NEXT ▶")}</button>` +
     (last ? "" : `<button data-tour="end">${t("SKIP")}</button>`);
-  $("tour-box").hidden = $("tour-hand").hidden = false;
+  $("tour-box").hidden = false; $("tour-hand").toggleAttribute("hidden", false);   // an <svg> has no .hidden property
   const el = document.querySelector(step.sel);
   el.scrollIntoView({block: el.offsetHeight > innerHeight * .6 ? "start" : "center", behavior:"instant"});
   tourPlace();
 }
 function endTour(){
   tour = null;
-  $("tour-box").hidden = $("tour-hand").hidden = true;
+  $("tour-box").hidden = true; $("tour-hand").toggleAttribute("hidden", true);
   document.querySelectorAll(".tour-target").forEach(e => e.classList.remove("tour-target"));
 }
 function tourEvent(kind){ if (tour && tourSteps()[tour.i]?.wait === kind) tourNext(); }
