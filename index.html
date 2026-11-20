@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
-<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
 <title>Index Dojo</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1075,7 +1075,7 @@ const missionsOf = caseIx => CASES[caseIx].missions;
 
 // Language: English strings are the keys into each dictionary (vi.js, ...). {name} in a key is filled from vars;
 // {s} is the English plural. A new language = a new file, an entry here and an <option> in the header.
-const DICTS = {vi: VI};
+const DICTS = {vi: typeof VI === "object" ? VI : {}};   // no vi.js (or a half-saved one): still runs, in English
 let LANG = "en";
 function t(s, vars){
   const r = DICTS[LANG]?.[s] || s;
