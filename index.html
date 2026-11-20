@@ -56,7 +56,8 @@ body{
 .bar .lv button{border:0; padding:2px 6px; color:var(--win); font-size:15px; letter-spacing:0}
 .bar .prefs{display:flex; flex-wrap:wrap; gap:6px 14px}
 .bar .lang{display:flex; align-items:center; gap:6px}
-.bar #music{border:2px solid var(--win); background:var(--line); color:var(--win); padding:1px 6px; font-size:15px; line-height:1.2}
+.bar .icon{border:2px solid var(--win); background:var(--line); color:var(--win); padding:1px 6px; font-size:15px; line-height:1.2; min-width:2em}
+.guide p{margin:0}
 .bar #music[aria-pressed="false"]{opacity:.6}
 .bar #vol{width:84px; accent-color:var(--title); cursor:pointer; align-self:center}
 .bar .lang select{width:auto; background:var(--line); color:var(--win); border:2px solid var(--win); font:15px var(--f-ui); padding:1px 4px; cursor:pointer}
@@ -220,7 +221,9 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
   <b>DBOS-98 ◆ INDEX DOJO</b>
   <div class="lv" id="casebar"></div>
   <div class="prefs">
-    <button id="music" aria-pressed="true" aria-label="Music · Nhạc" title="Alex Morgan, “Noir Jazz Detective: Midnight Mystery”">🔊</button>
+    <button id="guide" class="icon">?</button>
+    <button id="restart" class="icon">↺</button>
+    <button id="music" class="icon" aria-pressed="true" aria-label="Music · Nhạc" title="Alex Morgan, “Noir Jazz Detective: Midnight Mystery”">🔊</button>
     <input type="range" id="vol" min="0" max="100" step="5" aria-label="Volume · Âm lượng">
     <audio id="bgm" src="audio/noir-midnight.mp3" loop preload="none"></audio>
     <label class="lang"><span aria-hidden="true">🎨</span><select id="theme" aria-label="Theme · Giao diện">
@@ -380,7 +383,7 @@ const PRACTICE = [{
       {tag:"Dynamic SQL", binds:":sub = 12", where:[eq("subsidiary_id",":sub")]}]}
   ],
   hint:"An index can't be searched by a condition that might be switched off. Which fields are actually filled in for each query?",
-  lesson:"A single statement for every combination of filters needs one plan that works even when a field is empty, so no condition can be used to search an index. Build the WHERE clause from the fields actually filled in, still with bind parameters, and each statement gets its own plan. Then (subsidiary_id, employee_id) serves both, as in Mission 03."
+  lesson:"A single statement for every combination of filters needs one plan that works even when a field is empty, so no condition can be used to search an index. Build the WHERE clause from the fields actually filled in, still with bind parameters, and each statement gets its own plan. Then one index on (subsidiary_id, employee_id) serves both: the lookup uses both columns, the staff list only the first."
 },{
   tier:1, name:"Order Up",
   table:"orders", rows:1000000, perPage:50, maxCols:3, two:4,
@@ -741,6 +744,31 @@ const VI = {
   "CASE CLOSED · {title}": "ĐÃ PHÁ ÁN · {title}",
   "RATING · suspicion {n}%": "XẾP HẠNG · mức nghi ngờ {n}%",
   "CLOSE": "ĐÓNG",
+  "PLAY THIS CASE AGAIN": "CHƠI LẠI HỒ SƠ NÀY",
+  "Restart this case": "Chơi lại hồ sơ này",
+  "RESTART THIS CASE?": "CHƠI LẠI HỒ SƠ NÀY?",
+  "This clears the stars, evidence and suspicion of {case}. Other cases and your settings stay.":
+    "Thao tác này xóa sao, bằng chứng và mức nghi ngờ của {case}. Các hồ sơ khác và cài đặt của bạn vẫn giữ nguyên.",
+  "RESTART ▶": "CHƠI LẠI ▶",
+
+  /* ---------- how to play ---------- */
+  "How to play": "Hướng dẫn",
+  "HOW TO PLAY · {n}/{total}": "HƯỚNG DẪN · {n}/{total}",
+  "◀ BACK": "◀ TRƯỚC",
+  "NEXT ▶": "TIẾP ▶",
+  "GOT IT ▶": "ĐÃ HIỂU ▶",
+  "Pages": "Trang dữ liệu",
+  "A database keeps every table on disk in pages of about 50 rows. Each page it reads costs you one point. With no index it has to read every page of the table to find your rows: a full table scan.":
+    "Database lưu mỗi bảng trên đĩa thành từng trang, mỗi trang khoảng 50 dòng. Mỗi trang nó đọc tính bạn một điểm. Không có index, nó phải đọc hết mọi trang của bảng mới tìm ra các dòng cần: đó là full table scan (quét toàn bảng).",
+  "Indexes": "Index",
+  "An index is a sorted copy of a few columns, like the index at the back of a book. The database walks down a small tree (the B-tree) to the first matching entry, then reads only the table rows it needs. Pick the columns in the INDEX WIZARD. Their order matters.":
+    "Index là một bản sao đã sắp xếp của vài cột, giống mục lục ở cuối sách. Database đi xuống một cây nhỏ (B-tree) tới mục khớp đầu tiên, rồi chỉ đọc đúng những dòng cần trong bảng. Chọn cột trong TRÌNH TẠO INDEX. Thứ tự các cột rất quan trọng.",
+  "Stars and clues": "Sao và manh mối",
+  "Press EXECUTE to run the queries. The fewer pages they read, the more stars you get. ★★ returns the rows and a clue for your notebook; below that the query is cancelled. ★★★ unlocks the lesson behind the answer.":
+    "Bấm THỰC THI để chạy truy vấn. Đọc càng ít trang, càng được nhiều sao. ★★ trả về dữ liệu và một manh mối vào sổ tay; thấp hơn thì truy vấn bị hủy. ★★★ mở bài học đằng sau đáp án.",
+  "Stay unnoticed": "Đừng để bị chú ý",
+  "Someone inside the company watches the query log. Every page you read beyond the best plan raises SUSPICION, and later missions are watched more closely. When every clue is in, ACCUSE: name the killer and back each charge with evidence.":
+    "Có người trong công ty đang theo dõi nhật ký truy vấn. Mỗi trang bạn đọc thừa so với cách tối ưu đều làm NGHI NGỜ tăng, và các nhiệm vụ về sau bị soi kỹ hơn. Khi đã đủ manh mối, hãy BUỘC TỘI: chỉ ra hung thủ và chứng minh từng cáo buộc bằng bằng chứng.",
 
   /* ---------- plan explanations ---------- */
   "No index. The database reads all {T} table pages.": "Không có index. Database đọc toàn bộ {T} trang của bảng.",
@@ -971,8 +999,8 @@ const VI = {
   "Dynamic SQL": "SQL động",
   "An index can't be searched by a condition that might be switched off. Which fields are actually filled in for each query?":
     "Không thể tìm trong index bằng một điều kiện có thể bị tắt. Với mỗi truy vấn, những ô nào thực sự được điền?",
-  "A single statement for every combination of filters needs one plan that works even when a field is empty, so no condition can be used to search an index. Build the WHERE clause from the fields actually filled in, still with bind parameters, and each statement gets its own plan. Then (subsidiary_id, employee_id) serves both, as in Mission 03.":
-    "Một câu lệnh cho mọi tổ hợp bộ lọc cần một kế hoạch chạy được cả khi có ô trống, nên không điều kiện nào dùng được để tìm trong index. Hãy dựng mệnh đề WHERE từ những ô thực sự được điền, vẫn dùng bind parameter, và mỗi câu lệnh sẽ có kế hoạch riêng. Khi đó (subsidiary_id, employee_id) phục vụ được cả hai, như ở Nhiệm vụ 03.",
+  "A single statement for every combination of filters needs one plan that works even when a field is empty, so no condition can be used to search an index. Build the WHERE clause from the fields actually filled in, still with bind parameters, and each statement gets its own plan. Then one index on (subsidiary_id, employee_id) serves both: the lookup uses both columns, the staff list only the first.":
+    "Một câu lệnh cho mọi tổ hợp bộ lọc cần một kế hoạch chạy được cả khi có ô trống, nên không điều kiện nào dùng được để tìm trong index. Hãy dựng mệnh đề WHERE từ những ô thực sự được điền, vẫn dùng bind parameter, và mỗi câu lệnh sẽ có kế hoạch riêng. Khi đó một index trên (subsidiary_id, employee_id) phục vụ được cả hai: tra cứu dùng cả hai cột, danh sách nhân viên chỉ dùng cột đầu.",
 
   "Order Up": "Theo thứ tự",
   "The packing station shows the 10 oldest open orders of the store. Only 10 rows are needed, but the database decides how many it reads. One index, up to three columns.":
@@ -1100,6 +1128,12 @@ function fileAccusation(save, caseIx, suspect, slots){
   if (verdict === "wrong") save.scans[caseIx] = (save.scans[caseIx] ?? 0) + 0.25 * NOTICED;
   if (verdict === "right") save.solved[caseIx] = true;
   return verdict;
+}
+
+// Restart one case: its stars, evidence, suspicion, fails and verdict go; other cases and settings stay.
+function resetCase(save, caseIx){
+  for (const k of ["stars", "clues", "scans", "fails", "solved"]) delete save[k][caseIx];
+  return save;
 }
 
 // Every piece of evidence in a case, in mission order.
@@ -1397,7 +1431,42 @@ function openEnding(){
     `<p class="hint">${esc(t(c.outroMika))}</p><p>${esc(t(c.outroHook))}</p>` +
     (c.insiderBonuses.every(id => got.includes(id)) ? `<p class="cancel">${esc(t(c.outroInsider))}</p>` : "") +
     `<div class="grade"><b>${g}</b><span>${t("RATING · suspicion {n}%", {n:Math.round(pct * 100)})}<br>${esc(t(c.grades[g]))}</span></div>` +
-    `<div class="row"><button class="go" data-close="1">${t("CLOSE")}</button></div>`);
+    `<div class="row"><button class="go" data-close="1">${t("CLOSE")}</button><button data-act="restart">${t("PLAY THIS CASE AGAIN")}</button></div>`);
+}
+
+// How to play: four short pages, shown before the first briefing and from the "?" button.
+const GUIDE_KEY = "index-dojo-guide";
+const guidePages = () => [
+  [t("Pages"), t("A database keeps every table on disk in pages of about 50 rows. Each page it reads costs you one point. With no index it has to read every page of the table to find your rows: a full table scan.")],
+  [t("Indexes"), t("An index is a sorted copy of a few columns, like the index at the back of a book. The database walks down a small tree (the B-tree) to the first matching entry, then reads only the table rows it needs. Pick the columns in the INDEX WIZARD. Their order matters.")],
+  [t("Stars and clues"), t("Press EXECUTE to run the queries. The fewer pages they read, the more stars you get. ★★ returns the rows and a clue for your notebook; below that the query is cancelled. ★★★ unlocks the lesson behind the answer.")],
+  [t("Stay unnoticed"), t("Someone inside the company watches the query log. Every page you read beyond the best plan raises SUSPICION, and later missions are watched more closely. When every clue is in, ACCUSE: name the killer and back each charge with evidence.")],
+];
+function openGuide(page = 0){
+  const pages = guidePages(), [head, text] = pages[page], last = page === pages.length - 1;
+  openDialog(t("HOW TO PLAY · {n}/{total}", {n:page + 1, total:pages.length}),
+    `<div class="guide pane"><h3>${head}</h3><p>${text}</p></div><div class="row">` +
+    (page ? `<button data-guide="${page - 1}">${t("◀ BACK")}</button>` : "") +
+    (last ? `<button class="go" data-act="guide-done">${t("GOT IT ▶")}</button>` : `<button class="go" data-guide="${page + 1}">${t("NEXT ▶")}</button>`) +
+    `</div>`);
+}
+function guideSeen(){ try { return localStorage.getItem(GUIDE_KEY) === "seen"; } catch { return false; } }
+function finishGuide(){
+  try { localStorage.setItem(GUIDE_KEY, "seen"); } catch {}
+  CASES[state.caseIx].intro ? openBriefing() : $("dlg").close();
+}
+
+function openRestart(){
+  const c = CASES[state.caseIx];
+  openDialog(t("RESTART THIS CASE?"),
+    `<p>${t("This clears the stars, evidence and suspicion of {case}. Other cases and your settings stay.", {case:esc(t(c.title))})}</p>` +
+    `<div class="row"><button class="go" id="restart-go">${t("RESTART ▶")}</button><button data-close="1">${t("NOT YET")}</button></div>`);
+}
+function restartCase(){
+  resetCase(state.save, state.caseIx); storeSave();
+  state.acc = {suspect:null, MOTIVE:"", OPPORTUNITY:"", LIE:""};
+  goCase(state.caseIx);
+  if (!CASES[state.caseIx].intro) $("dlg").close();
 }
 
 // A suspicion increase as text: one decimal, "<0.1" for the tiny ones so they never read as zero.
@@ -1633,6 +1702,7 @@ function setLang(l){
   document.querySelectorAll("[data-t]").forEach(e => { e.dataset.t ||= e.textContent; e.textContent = t(e.dataset.t); });
   $("lang").value = LANG;
   $("tree").setAttribute("aria-label", t("B-tree index and table pages read by the query"));
+  for (const [id, label] of [["guide", t("How to play")], ["restart", t("Restart this case")]]){ $(id).title = label; $(id).setAttribute("aria-label", label); }
 }
 
 function render(){ renderBar(); renderMission(); renderWizard(); renderTabs(); renderReport(); renderResults(); renderNotebook(); }
@@ -1712,6 +1782,11 @@ document.addEventListener("click", e => {
     storeSave(); renderBar();
     verdict === "right" ? openEnding() : openAccusation(t("The prosecutor isn't convinced. The evidence doesn't hold up."));
   }
+  else if (b.id === "guide") openGuide(0);
+  else if (d.guide) openGuide(+d.guide);
+  else if (d.act === "guide-done") finishGuide();
+  else if (b.id === "restart" || d.act === "restart") openRestart();
+  else if (b.id === "restart-go") restartCase();
   else if (d.close) $("dlg").close();
 });
 
@@ -1732,7 +1807,7 @@ function boot(d){
   setLang(readLang());
   state.save = d.save ?? loadSave(readSave());
   state.caseIx = Math.min(Math.max(0, d.caseIx ?? 0), CASES.length - 1);
-  if (d.lv == null){ goCase(state.caseIx); return; }
+  if (d.lv == null){ goCase(state.caseIx); if (!guideSeen()) openGuide(0); return; }   // first visit: guide, then briefing
   state.lv = Math.min(Math.max(0, d.lv), missionsOf(state.caseIx).length - 1);
   const lv = cur();
   state.ixs = Array.isArray(d.ixs) && d.ixs.length === (lv.maxIdx ?? 1) ? d.ixs : emptySlots(lv);
