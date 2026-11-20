@@ -1563,12 +1563,14 @@ const cur = () => CASES[state.caseIx].missions[state.lv];
 const starsAt = (stars, caseIx, i) => stars[caseIx]?.[i] ?? 0;
 
 // Story missions open at 2★ on the previous mission (that is when its clue is earned); practice at 1★.
+// Debug mode (add ?debug to the URL): every case and mission open, accusation ready with all evidence.
+const DEBUG = typeof location === "object" && new URLSearchParams(location.search).has("debug");
 function unlocked(stars, caseIx, i){
-  return i === 0 || starsAt(stars, caseIx, i - 1) >= (CASES[caseIx].practice ? 1 : 2);
+  return DEBUG || i === 0 || starsAt(stars, caseIx, i - 1) >= (CASES[caseIx].practice ? 1 : 2);
 }
 
 // Cases open in order: the next one once the previous is solved.
-function caseOpen(save, i){ return i === 0 || !!save.solved?.[i - 1]; }
+function caseOpen(save, i){ return DEBUG || i === 0 || !!save.solved?.[i - 1]; }
 
 /* ---------- save and evidence ---------- */
 const SAVE_KEY = "index-dojo-v2";
@@ -1898,7 +1900,7 @@ function animate(lv, p, q, instant){
 
 /* ---------- render ---------- */
 function accuseButton(c){
-  const ready = c.missions.every((_, i) => starsAt(state.save.stars, state.caseIx, i) >= 2);
+  const ready = DEBUG || c.missions.every((_, i) => starsAt(state.save.stars, state.caseIx, i) >= 2);
   return `<button id="accuse" ${ready ? "" : "disabled"} title="${ready ? t("Name the culprit") : t("Clear every mission at ★★ first")}">` +
     `${state.save.solved[state.caseIx] ? t("CASE CLOSED ✓") : t("ACCUSE")}</button>`;
 }
@@ -1907,7 +1909,7 @@ const slotText = k => ({MOTIVE:[t("MOTIVE"), t("why they did it")], OPPORTUNITY:
   LIE:[t("LIE"), t("evidence that breaks their statement")]})[k];
 function openAccusation(msg = ""){
   const c = CASES[state.caseIx], a = state.acc, got = state.save.clues[state.caseIx] ?? [];
-  const ev = evidenceOf(c).filter(e => got.includes(e.id));
+  const ev = evidenceOf(c).filter(e => DEBUG || got.includes(e.id));
   openDialog(t("ACCUSATION"),
     `<p>${t("Name the culprit, then back each charge with one piece of evidence from your notebook.")}</p>` +
     `<fieldset class="sus-cards"><legend class="eyebrow">${t("SUSPECT")}</legend>` +
@@ -2066,7 +2068,7 @@ function riseMeter(){
 const caseLabel = (c, i) => c.practice ? t("PRACTICE") : t("CASE {n}", {n:String(i+1).padStart(2,"0")});
 function renderBar(){
   const c = CASES[state.caseIx];
-  $("casebar").innerHTML = CASES.map((x,i) =>
+  $("casebar").innerHTML = (DEBUG ? `<span class="sus hot">DEBUG</span>` : "") + CASES.map((x,i) =>
     `<button data-case="${i}" ${i===state.caseIx?'aria-current="true"':''} ${caseOpen(state.save, i) ? "" : "disabled"} title="${esc(caseOpen(state.save, i) ? t(x.title) : t("Solve case {n} first", {n:String(i).padStart(2,"0")}))}">${caseLabel(x, i)}</button>`).join("") +
     (c.intro ? `<button id="brief">${t("BRIEFING")}</button>` + accuseButton(c) + suspicionChip() : "");
   $("lvbar").innerHTML = c.missions.map((l,i) => {
@@ -2164,7 +2166,7 @@ function hintBlock(lv, stars){
 function lastMissionAction(){
   const c = CASES[state.caseIx];
   if (c.practice) return "";
-  const ready = c.missions.every((_, i) => starsAt(state.save.stars, state.caseIx, i) >= 2);
+  const ready = DEBUG || c.missions.every((_, i) => starsAt(state.save.stars, state.caseIx, i) >= 2);
   if (state.save.solved[state.caseIx]) return `<button class="go" data-act="accuse">${t("READ THE ENDING ▶")}</button>`;
   return ready ? `<button class="go" data-act="accuse">${t("ACCUSE ▶")}</button>`
                : `<p class="empty">${t("Clear every mission at ★★ to open the accusation.")}</p>`;
