@@ -199,6 +199,7 @@ svg{display:block; width:100%; height:auto; max-width:100%}
 .nb p{margin:6px 0 0}
 .msg{border-left:3px solid var(--cyan); padding:4px 10px}
 .msg b{font-family:var(--f-ui); font-weight:400; color:var(--cyan)}
+.nb .role{color:var(--dim); font-size:12px; font-weight:normal}
 .sus{background:var(--win); color:var(--yellow); font-family:var(--f-ui); padding:2px 8px; letter-spacing:.04em}
 .sus.hot{color:var(--red)}
 .sus-cards{border:0; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px}
@@ -2229,7 +2230,8 @@ function renderNotebook(){
     ? `<div class="nb">` + items.map(e => `<details class="${e.bonus ? "bonus" : ""}"><summary><b>${e.bonus ? "★" : e.id}</b>${esc(t(e.title))}</summary><p>${esc(t(e.text))}</p></details>`).join("") + `</div>`
     : `<p class="empty">${t("No evidence yet. Clear a mission at ★★ and its clue lands here.")}</p>`) +
     (got.includes(c.statementsAfter) ? `<h4>${t("STATEMENTS")}</h4><div class="nb">` +
-      c.statements.map(s => `<details><summary><b>${esc(s.who)}</b></summary><p>“${esc(t(s.text))}”</p></details>`).join("") + `</div>` : "");
+      c.statements.map(s => { const role = c.suspects.find(x => x.name === s.who)?.role;   // who they are, next to the name
+        return `<details><summary><b>${esc(s.who)}</b>${role ? ` <small class="role">${esc(t(role))}</small>` : ""}</summary><p>“${esc(t(s.text))}”</p></details>`; }).join("") + `</div>` : "");
 }
 
 function storeSave(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(state.save)); } catch {} }
