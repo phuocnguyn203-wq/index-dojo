@@ -209,6 +209,7 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
 .sus .meter{width:110px; height:12px; border:1px solid currentColor; background:var(--shadow)}
 .sus .fill{display:block; height:100%; background:currentColor}
 .sus .delta{color:var(--red)}
+.sus.flash{background:var(--red); color:var(--win)} .sus.flash .delta{color:var(--win)} .sus.flash .meter{background:transparent}
 .watch{border:2px solid var(--red); color:var(--red); padding:8px 12px}
 .watch.clean{border-color:var(--green); color:var(--green)}
 @media (prefers-reduced-motion:reduce){ .lamp.on{animation:none} }
@@ -1412,7 +1413,8 @@ function suspicionChip(){
 function riseMeter(){
   const f = document.querySelector(".sus .fill");
   if (!f) return;
-  const from = parseFloat(f.style.width), to = parseFloat(f.dataset.to);
+  const from = parseFloat(f.style.width), to = parseFloat(f.dataset.to), chip = f.closest(".sus");
+  if (to > from) [0, 200, 400, 600].forEach((ms, k) => setTimeout(() => chip.classList.toggle("flash", k % 2 === 0), ms));   // two red flashes
   if (reduceMotion || from === to){ f.style.width = to + "%"; return; }
   for (let k = 1; k <= 12; k++) setTimeout(() => { if (f.isConnected) f.style.width = (from + (to - from) * k / 12) + "%"; }, k * 100);
 }
