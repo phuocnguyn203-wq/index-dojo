@@ -19,20 +19,20 @@
   color-scheme:dark;
 }
 /* Softer themes in traditional Japanese colours (wa-iro). Body text ~12:1 instead of PC-98's ~17:1; dim text ~6:1. */
-:root[data-theme="sumi"]{   /* 墨 ink wash */
+:root[data-theme="sumi"]{   /* Sumi: ink wash */
   --desk-a:#1c1a18; --desk-b:#221f1c;
   --win:#262320; --cell:#3d3934; --line:#b8ae9a; --title:#3f5470; --white:#f0e9da; --shadow:#121110;
   --ink:#e4dccb; --dim:#ada493;
   --cyan:#8fbcbc; --yellow:#dfb867; --magenta:#c98fab; --red:#db8a72; --green:#a3b98a;
 }
-:root[data-theme="washi"]{  /* 和紙 paper and sumi ink */
+:root[data-theme="washi"]{  /* Washi: paper and sumi ink */
   --desk-a:#d8cfbb; --desk-b:#ded6c4;
-  --win:#f5f0e4; --cell:#d6ccb6; --line:#5a5246; --title:#3e5573; --white:#f7f2e8; --shadow:#c2b8a2; --pre:#ebe5d7; --title-jp:#e8d9b0;
+  --win:#f5f0e4; --cell:#d6ccb6; --line:#5a5246; --title:#3e5573; --white:#f7f2e8; --shadow:#c2b8a2; --pre:#ebe5d7;
   --ink:#2f2b25; --dim:#645b4d;
   --cyan:#22656c; --yellow:#7a5512; --magenta:#8a3f63; --red:#a8402a; --green:#4a6630;
   color-scheme:light;
 }
-:root[data-theme="fuji"]{   /* 藤 wisteria at dusk */
+:root[data-theme="fuji"]{   /* Fuji: wisteria at dusk */
   --desk-a:#221f29; --desk-b:#28242f;
   --win:#2b2733; --cell:#433d4f; --line:#b9b0c9; --title:#6b52a0; --white:#f4effa; --shadow:#18161d;
   --ink:#e8e1ef; --dim:#b0a8bd;
@@ -90,7 +90,6 @@ dialog.win p{max-width:none}
   background:var(--title); color:var(--white); border-bottom:2px solid var(--line);
   font:400 15px/1.2 var(--f-ui); letter-spacing:.08em; padding:6px 10px;
 }
-.win>h2 small{font-size:13px; color:var(--title-jp,var(--cyan)); letter-spacing:.15em}
 .pane{padding:14px; display:grid; gap:12px}
 .pane p{margin:0; max-width:65ch}
 h3{margin:0; font:400 20px/1.3 var(--f-ui); color:var(--yellow); text-wrap:balance}
@@ -216,7 +215,7 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
     <input type="range" id="vol" min="0" max="100" step="5" aria-label="Volume · Âm lượng">
     <audio id="bgm" src="audio/noir-midnight.mp3" loop preload="none"></audio>
     <label class="lang"><span aria-hidden="true">🎨</span><select id="theme" aria-label="Theme · Giao diện">
-      <option value="pc98">PC-98</option><option value="sumi">墨 Sumi</option><option value="washi">和紙 Washi</option><option value="fuji">藤 Fuji</option></select></label>
+      <option value="pc98">PC-98</option><option value="sumi">Sumi</option><option value="washi">Washi</option><option value="fuji">Fuji</option></select></label>
     <label class="lang"><span aria-hidden="true">🌐</span><select id="lang" aria-label="Language · Ngôn ngữ">
       <option value="en">English</option><option value="vi">Tiếng Việt</option></select></label>
   </div>
@@ -224,18 +223,18 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
 </header>
 
 <dialog class="win" id="dlg" aria-labelledby="dlg-title">
-  <h2><span id="dlg-title"></span><small id="dlg-jp"></small></h2>
+  <h2><span id="dlg-title"></span></h2>
   <div class="pane" id="dlg-body"></div>
 </dialog>
 
 <main class="desk">
   <div class="col">
     <section class="win">
-      <h2><span id="m-title"></span><small>任務</small></h2>
+      <h2><span id="m-title"></span></h2>
       <div class="pane" id="mission"></div>
     </section>
     <section class="win">
-      <h2><span data-t>INDEX WIZARD</span><small>索引</small></h2>
+      <h2><span data-t>INDEX WIZARD</span></h2>
       <div class="pane">
         <pre id="ddl"></pre>
         <div class="slots" id="slots"></div>
@@ -248,13 +247,13 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
       </div>
     </section>
     <section class="win" id="nbwin">
-      <h2><span data-t>NOTEBOOK</span><small>手帳</small></h2>
+      <h2><span data-t>NOTEBOOK</span></h2>
       <div class="pane" id="notebook"></div>
     </section>
   </div>
   <div class="col">
     <section class="win">
-      <h2><span data-t>EXECUTION PLAN</span><small>実行計画</small></h2>
+      <h2><span data-t>EXECUTION PLAN</span></h2>
       <div class="pane">
         <div class="tabs" id="tabs" role="tablist"></div>
         <svg id="tree" viewBox="0 0 640 262" role="img" aria-label="B-tree index and table pages read by the query"></svg>
@@ -268,11 +267,11 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
       </div>
     </section>
     <section class="win" id="reswin">
-      <h2><span data-t>RESULTS</span><small>結果</small></h2>
+      <h2><span data-t>RESULTS</span></h2>
       <div class="pane" id="results"></div>
     </section>
     <section class="win">
-      <h2><span data-t>REPORT</span><small>報告</small></h2>
+      <h2><span data-t>REPORT</span></h2>
       <div class="pane" id="report"></div>
     </section>
   </div>
@@ -290,7 +289,7 @@ const SMART = "can be switched off by a NULL parameter, so the database can't us
 function smart(col, bind, given){ return {col, sql:`(${bind} IS NULL OR ${col} = ${bind})`, kind:"filter", sel: given ? undefined : 1, why:SMART}; }
 
 const PRACTICE = [{
-  tier:0, name:"Needle in a Haystack", jp:"干し草の針",
+  tier:0, name:"Needle in a Haystack",
   table:"employees", rows:100000, perPage:50, maxCols:1,
   cols:{employee_id:100000, last_name:5000, department:10, hire_year:40},
   brief:"HR's employee search hangs for seconds on every lookup. The query below runs hundreds of times an hour. You may create one index with one column. Pick the column that lets the database reach the matching rows by reading the fewest pages.",
@@ -298,7 +297,7 @@ const PRACTICE = [{
   hint:"Compare how many rows one value of each column matches: rows ÷ distinct values.",
   lesson:"Selectivity decides. An index finds the first matching entry in a few page reads, but every matching row still costs one read from the table. last_name matches about 20 rows, so the query costs 23 pages. department matches 10,000 rows, which is more work than scanning the whole table, so the optimizer ignores an index on it."
 },{
-  tier:0, name:"Shouting Names", jp:"大文字",
+  tier:0, name:"Shouting Names",
   table:"employees", rows:100000, perPage:50, maxCols:1,
   cols:{employee_id:100000, last_name:5000, "UPPER(last_name)":5000, department:10},
   brief:"Users complained that searching for 'sato' found nothing, so the search box now ignores case. The query wraps the column in UPPER(). Same employees table as Mission 01, and again one index with one column. Find the index that still works.",
@@ -306,7 +305,7 @@ const PRACTICE = [{
   hint:"The query never compares last_name directly. Find the index entry that holds exactly what the WHERE clause compares.",
   lesson:"A function hides the column from the index. An index on last_name is sorted by the stored text ('Sato'), but the query compares UPPER(last_name), a value that index doesn't contain. Index the expression itself, UPPER(last_name), and the search becomes a normal index lookup again."
 },{
-  tier:0, name:"One Index, Two Queries", jp:"二つの問い",
+  tier:0, name:"One Index, Two Queries",
   table:"orders", rows:1000000, perPage:50, maxCols:2,
   cols:{order_no:2000, store_id:500, status:4, customer_id:50000},
   brief:"Each order is identified by store_id plus order_no. Support staff run Q1 to open a single order. Store managers run Q2 to list every order from one store. The disk budget covers one index of up to two columns. Make both queries fast with that one index.",
@@ -317,7 +316,7 @@ const PRACTICE = [{
   hint:"Q2 filters on store_id only. Which column has to come first for Q2 to use the index?",
   lesson:"Column order decides which queries an index can serve. An index on (store_id, order_no) is sorted by store_id first, then by order_no within each store, the way a phone book sorts by surname and then by first name. The database can search it by store_id alone or by both columns, but not by order_no alone. Put the column every query filters on first."
 },{
-  tier:0, name:"Never Touch the Table", jp:"索引だけ",
+  tier:0, name:"Never Touch the Table",
   table:"orders", rows:1000000, perPage:50, maxCols:2,
   cols:{store_id:500, amount:100000, order_date:3650, status:4},
   brief:"The finance dashboard lists every order amount for one store. It needs only one column from the table. One index, up to two columns.",
@@ -325,7 +324,7 @@ const PRACTICE = [{
   hint:"Each of those 2,000 table reads fetches a single value: amount.",
   lesson:"When the index holds every column the query needs, the database never reads the table. That is an index-only scan. (store_id, amount) answers the query from 22 index pages instead of 2,000 table reads. The price is a wider index that every INSERT and UPDATE has to maintain."
 },{
-  tier:0, name:"Between the Dates", jp:"期間",
+  tier:0, name:"Between the Dates",
   table:"orders", rows:1000000, perPage:50, maxCols:2, two:6,
   cols:{store_id:500, order_date:3650, status:4, customer_id:50000},
   brief:"Store managers pull one quarter of orders for their store. The query mixes an exact match on store_id with a date range on order_date. One index, up to two columns. Try both column orders and compare the leaf pages read.",
@@ -334,7 +333,7 @@ const PRACTICE = [{
   hint:"Watch the leaf pages. Which column, placed first, keeps the matching entries next to each other?",
   lesson:"Put equality columns first and range columns last. With (store_id, order_date), store 17's orders sit together sorted by date, so the scan reads one quarter of one store. With (order_date, store_id), the scan walks every store's orders for that quarter and checks store_id along the way. A range ends the searchable part of an index; columns after it can only filter."
 },{
-  tier:0, name:"Wild Cards", jp:"伏せ字",
+  tier:0, name:"Wild Cards",
   table:"customers", rows:500000, perPage:50, maxCols:2,
   cols:{customer_id:500000, last_name:20000, city:100, birth_year:80},
   brief:"Support searches customers by the end of their surname, like '%MOTO' to find Yamamoto, Sakamoto and Hashimoto, within one city. One index, up to two columns.",
@@ -343,7 +342,7 @@ const PRACTICE = [{
   hint:"LIKE '%MOTO' can't lead an index. Can it still help from the second position?",
   lesson:"A pattern that starts with a wildcard has no starting point in a sorted list, so LIKE '%MOTO' can never be used to search the index. It still helps as a filter: with (city, last_name), the database searches by city, then checks last_name in the leaf pages before touching the table. Only 100 of the 5,000 Nagoya customers need a table read."
 },{
-  tier:1, name:"Midnight", jp:"真夜中",
+  tier:1, name:"Midnight",
   table:"sales", rows:1000000, perPage:50, maxCols:1,
   cols:{sale_time:1000000, "TRUNC(sale_time)":3650, employee_id:5000, product_id:2000},
   brief:"From this tier on you can also rewrite the queries. Q1 is the daily sales report; Q2 is a live ticker that shows the last hour. One index with one column has to serve both.",
@@ -356,7 +355,7 @@ const PRACTICE = [{
   hint:"An index on TRUNC(sale_time) can't help the ticker. Can Q1 be written so it compares sale_time itself?",
   lesson:"TRUNC() hides sale_time from the index just as UPPER() hid last_name. Indexing TRUNC(sale_time) would fix the report but leave the ticker scanning the table. Writing the day as an explicit range, sale_time >= day AND sale_time < next day, lets one plain index on sale_time serve both."
 },{
-  tier:1, name:"Smart Logic", jp:"万能",
+  tier:1, name:"Smart Logic",
   table:"employees", rows:100000, perPage:50, maxCols:2,
   cols:{subsidiary_id:200, employee_id:500, last_name:5000, hire_year:40},
   brief:"One search form, three optional fields. The developers wrote a single 'smart' query that ignores any field left empty. Q1 is a lookup with subsidiary and employee number filled in; Q2 lists a subsidiary's staff. One index, up to two columns. Rewrites allowed.",
@@ -374,7 +373,7 @@ const PRACTICE = [{
   hint:"An index can't be searched by a condition that might be switched off. Which fields are actually filled in for each query?",
   lesson:"A single statement for every combination of filters needs one plan that works even when a field is empty, so no condition can be used to search an index. Build the WHERE clause from the fields actually filled in, still with bind parameters, and each statement gets its own plan. Then (subsidiary_id, employee_id) serves both, as in Mission 03."
 },{
-  tier:1, name:"Order Up", jp:"順番",
+  tier:1, name:"Order Up",
   table:"orders", rows:1000000, perPage:50, maxCols:3, two:4,
   cols:{store_id:500, status:4, order_date:3650, customer_id:50000},
   brief:"The packing station shows the 10 oldest open orders of the store. Only 10 rows are needed, but the database decides how many it reads. One index, up to three columns.",
@@ -383,7 +382,7 @@ const PRACTICE = [{
   hint:"If the index already returns rows sorted by order_date, the database can stop after 10. Where must order_date sit in the index for that?",
   lesson:"An index is a sorted list, so it can deliver rows already in ORDER BY order. Put the columns compared with = first and the ORDER BY column right after them: (store_id, status, order_date). The database then reads the first 10 entries and stops, a pipelined top-N query. Without that, it finds all 500 open orders and sorts them before returning any."
 },{
-  tier:1, name:"Page Two Hundred", jp:"頁",
+  tier:1, name:"Page Two Hundred",
   table:"posts", rows:1000000, perPage:50, maxCols:2,
   cols:{topic_id:200, post_id:1000000, author_id:20000},
   brief:"A busy forum topic has 5,000 posts, 20 per page, newest first. Readers who scroll far back make the database work hard. One index, up to two columns. Rewrites allowed.",
@@ -394,7 +393,7 @@ const PRACTICE = [{
   hint:"OFFSET still reads every row it skips. What if the query started right after the last post the reader saw?",
   lesson:"OFFSET makes the database find, read and throw away every row before the page you want, so page 101 costs a hundred times page 1. The seek method remembers the last post_id the reader saw and asks for the 20 posts before it. With (topic_id, post_id) that is a pipelined top-N query, and every page costs the same 23 pages."
 },{
-  tier:2, name:"Every Index Has a Price", jp:"代価",
+  tier:2, name:"Every Index Has a Price",
   table:"orders", rows:1000000, perPage:50, maxCols:2, maxIdx:2, inserts:50000, two:1.2,
   cols:{customer_id:50000, status:4, order_date:3650, store_id:500},
   brief:"From this tier on, queries run many times a day and new rows keep arriving. Score = pages read per day + pages written to keep your indexes up to date. You may create up to two indexes.",
@@ -406,7 +405,7 @@ const PRACTICE = [{
   hint:"Compare what an index saves per day with what it costs per day to maintain.",
   lesson:"Every index slows down every INSERT, UPDATE and DELETE, because each change has to be written into the sorted index too. The returns report runs twice a day: scanning the table costs 40,000 pages per day, while keeping a second index costs 150,000. Index the queries that run often and let rare reports scan."
 },{
-  tier:2, name:"Three Queries, Two Indexes", jp:"三つ巴",
+  tier:2, name:"Three Queries, Two Indexes",
   table:"sales", rows:1000000, perPage:50, maxCols:2, maxIdx:2, inserts:5000, two:4,
   cols:{shop_id:200, product_id:5000, sale_date:3650, channel:3},
   brief:"Three queries share one table and two indexes. Every rule from the earlier missions applies at once. Score = pages read per day + index upkeep.",
@@ -430,7 +429,7 @@ const ON = (col, val, sel) => ({...eq(col, val), sel});
 const KAITO = ["Kaito Trading", "KAITO TRADING", "kaito trading", "Kaito trading"];
 
 const CASE1 = {
-  id:"case1", title:"The Last Train", jp:"終電",
+  id:"case1", title:"The Last Train",
   intro:[
     "A man is found dead at 06:10 on 20 November, in the level-3 stairwell of the Kanayama Station parking garage. Time of death: between 23:30 and 00:30.",
     "On him: a Kinjo Logistics staff badge, number 1180. No wallet. No phone.",
@@ -465,7 +464,7 @@ const CASE1 = {
     C:"The insider knows exactly what you looked at, and when.",
   },
   missions:[{
-    name:"Badge 1180", jp:"社員証",
+    name:"Badge 1180",
     table:"employees", rows:50000, perPage:50, maxCols:1,
     cols:{employee_id:50000, last_name:25000, department:40, hire_year:35},
     story:"All you have is a staff badge, number 1180. Find out who the dead man was.",
@@ -477,7 +476,7 @@ const CASE1 = {
       rows:[[1180,"MORI Hideo","AUDIT","Internal auditor","090-5518-2204"]]}],
     clue:{id:"E1", title:"The victim", text:"Hideo Mori, 54, internal auditor at Kinjo Logistics. Phone 090-5518-2204."},
   },{
-    name:"Open Items", jp:"未決",
+    name:"Open Items",
     table:"tasks", rows:200000, perPage:50, maxCols:1,
     cols:{task_id:200000, assignee_id:50000, status:4, project_id:500},
     story:"Mori was an internal auditor. What was he working on when he died? The company task tracker lists every open item, assigned by employee id.",
@@ -489,7 +488,7 @@ const CASE1 = {
       rows:[[88213,"AUD-2611","Payments to Kaito Trading (req. SALES-07, appr. FIN-01)","OPEN","Board meeting Mon 23 Nov. Escalate."]]}],
     clue:{id:"E2", title:"Mori's open audit", text:"AUD-2611: payments to Kaito Trading, requested by SALES-07 and approved by FIN-01. His note: “Board meeting Mon 23 Nov. Escalate.”"},
   },{
-    name:"The Numbers", jp:"帳簿",
+    name:"The Numbers",
     table:"payments", rows:1000000, perPage:50, maxCols:1,
     cols:{payment_id:1000000, payee:71429, "UPPER(payee)":71429, approver:300},
     story:"AUD-2611 is about payments to Kaito Trading. Clerks typed the payee name any way they liked, so the query compares it in upper case. Find every payment.",
@@ -505,7 +504,7 @@ const CASE1 = {
     clue:{id:"E3", title:"¥67.2 million", text:"14 monthly payments of ¥4,800,000 to Kaito Trading, ¥67.2M in total. All requested by SALES-07 and approved by FIN-01."},
     bonus:{title:"A dead company", text:"Company registry: Kaito Trading was dissolved in 2019. Nobody has delivered anything for these payments."},
   },{
-    name:"Who Signs", jp:"署名",
+    name:"Who Signs",
     table:"employees", rows:50000, perPage:50, maxCols:2,
     cols:{department:40, last_name:625, employee_id:50000, hire_year:35},
     story:"Two codes sign every payment: SALES-07 and FIN-01. Mori's notebook names a Sato. Q1 finds the Satos in Sales; Q2 lists the eight people in the executive office, where codes like FIN-01 sit. Both queries have to share one index.",
@@ -530,7 +529,7 @@ const CASE1 = {
         [58,"SUGA Emi","EXE-12","Executive assistant","090-1213-4408","—","T-0058"]]}],
     clue:{id:"E4", title:"Who's who", text:"Kenji Sato is SALES-07: sales manager, car NGY 330 TA 51-12, phone 090-7731-0042. Mika Sato is SALES-12: accountant, no car, phone 090-6620-1187, transit card T-9025. FIN-01 is Daisuke Ono, Chief Financial Officer."},
   },{
-    name:"Last Words", jp:"最後の言葉",
+    name:"Last Words",
     table:"messages", rows:2000000, perPage:50, maxCols:3,
     cols:{sender:500000, recipient:500000, sent_at:86400, body:2000000},
     story:"The phone company only hands over metadata, so the query asks for two columns: who Mori texted that day, and when.",
@@ -543,7 +542,7 @@ const CASE1 = {
     clue:{id:"E5", title:"Mori's last messages", text:"21:02 to Kenji Sato. 23:20 and 23:59 to Mika Sato. 00:07 to an unknown number, 090-2231-7781. Mika said she went straight home. Kenji never said who he had dinner with."},
     bonus:{title:"Someone else is reading", text:"Query log: session SYS_MAINT read the same rows from messages two minutes after you."},
   },{
-    name:"The Ticket Gates", jp:"改札",
+    name:"The Ticket Gates",
     table:"swipes", rows:1000000, perPage:50, maxCols:2,
     cols:{station:100, swipe_time:86400, card_id:300000, gate:8},
     story:"Mika said she went straight home. Kanayama's ticket gates log every card. Check every swipe there between 23:00 and 00:30.",
@@ -557,7 +556,7 @@ const CASE1 = {
       ["23:47","T-2218","IN"],["23:58","T-9025","IN"],["00:12","T-7741","OUT"]]}],
     clue:{id:"E6", title:"Mika's card", text:"Mika's card T-9025 left Kanayama station at 23:25 and went back in at 23:58. It did not come out at Kanayama again that night."},
   },{
-    name:"Ends in 12", jp:"末尾",
+    name:"Ends in 12",
     table:"garage_cam", rows:500000, perPage:50, maxCols:2,
     cols:{camera:1250, plate:100000, cam_time:86400, lane:4},
     story:"Hara remembers a plate ending in 12. The garage entrance camera logged every car that night.",
@@ -571,7 +570,7 @@ const CASE1 = {
       ["00:14","NGY 300 SE 4?-12","IN"],["00:31","NGY 300 SE 4?-12","OUT"]]}],
     clue:{id:"E7", title:"Two cars", text:"Kenji's car came in at 21:15 and left at 22:41. A second car, plate only partly read as NGY 300 SE 4?-12, came in at 00:14 and left at 00:31."},
   },{
-    name:"Half a Plate", jp:"半分",
+    name:"Half a Plate",
     table:"vehicles", rows:2000000, perPage:50, maxCols:1,
     cols:{plate:2000000, owner_type:5, model_year:30, color:12},
     story:"The camera only half-read the second car: NGY 300 SE 4?-12. Search the vehicle registry for plates that start with the part you have and end in -12.",
@@ -587,7 +586,7 @@ const CASE1 = {
     clue:{id:"E8", title:"The company car", text:"NGY 300 SE 47-12 is a black sedan in Kinjo Logistics' executive car pool."},
     bonus:{title:"Someone got there first", text:"Query log: session SYS_MAINT looked up this plate four minutes before you did."},
   },{
-    name:"Who Had the Keys", jp:"鍵",
+    name:"Who Had the Keys",
     table:"pool_bookings", rows:300000, perPage:50, maxCols:2,
     cols:{plate:200, booked_at:300000, employee_id:50000, purpose:20},
     story:"Car 47-12 belongs to the executive pool, and pool cars are booked. Q1 asks who had it that night, and Q2 lists its whole booking history, both through the same index.",
@@ -605,7 +604,7 @@ const CASE1 = {
     clue:{id:"E9", title:"The driver", text:"Car 47-12 was booked by Daisuke Ono (FIN-01) from 23:35 to 01:10 for a “client dinner”. His contact number is 090-2231-7781, the number Mori texted at 00:07."},
     bonus:{title:"A habit", text:"Ono booked this car for a late night six times in the last two months."},
   },{
-    name:"Home All Night", jp:"在宅",
+    name:"Home All Night",
     table:"door_log", rows:5000000, perPage:50, maxCols:3, two:2,
     cols:{resident_id:20000, event_time:5000000, event:4, gate:10},
     story:"Ono says he was home all night at Chikusa Tower, unit 3302: resident R-3302. The building logs every door event. You only need the event and its time.",
@@ -622,7 +621,7 @@ const CASE1 = {
 
 const CASES = [
   CASE1,
-  { id:"practice", title:"Practice", jp:"練習", practice:true, missions:PRACTICE.slice(6) },
+  { id:"practice", title:"Practice", practice:true, missions:PRACTICE.slice(6) },
 ];
 </script>
 <script>
@@ -640,11 +639,11 @@ const VI = {
   "RESULTS": "KẾT QUẢ",
   "REPORT": "BÁO CÁO",
   "B-tree index and table pages read by the query": "Index B-tree và các trang của bảng mà truy vấn đã đọc",
-  "BASIC 初級": "CƠ BẢN 初級",
-  "INTERMEDIATE 中級": "TRUNG CẤP 中級",
-  "ADVANCED 上級": "NÂNG CAO 上級",
-  "PRACTICE {jp}": "LUYỆN TẬP {jp}",
-  "CASE {n} {jp}": "HỒ SƠ {n} {jp}",
+  "BASIC": "CƠ BẢN",
+  "INTERMEDIATE": "TRUNG CẤP",
+  "ADVANCED": "NÂNG CAO",
+  "PRACTICE": "LUYỆN TẬP",
+  "CASE {n}": "HỒ SƠ {n}",
   "BRIEFING": "TÓM TẮT VỤ ÁN",
   "START INVESTIGATION ▶": "BẮT ĐẦU ĐIỀU TRA ▶",
   "MISSION {n}": "NHIỆM VỤ {n}",
@@ -687,7 +686,7 @@ const VI = {
   "Suspicion": "Nghi ngờ",
   "{n} pages": "{n} trang",
   "{n}/day": "{n}/ngày",
-  "LESSON 教訓": "BÀI HỌC 教訓",
+  "LESSON": "BÀI HỌC",
   "Reach ★★★ to unlock this mission's lesson.": "Đạt ★★★ để mở bài học của nhiệm vụ này.",
   "TRY AGAIN": "THỬ LẠI",
   "NEXT MISSION ▶": "NHIỆM VỤ TIẾP ▶",
@@ -698,7 +697,6 @@ const VI = {
   "Query cancelled, so there are no rows and no clue.": "Truy vấn bị hủy, nên không có dữ liệu và không có manh mối.",
   "FUJIMOTO (night sysadmin) >": "FUJIMOTO (quản trị hệ thống ca đêm) >",
   "READ THE ENDING ▶": "ĐỌC KẾT CỤC ▶",
-  "ACCUSE 告発 ▶": "BUỘC TỘI 告発 ▶",
   "Clear every mission at ★★ to open the accusation.": "Đạt ★★ ở mọi nhiệm vụ để mở phần buộc tội.",
 
   "Rows appear here after EXECUTE.": "Dữ liệu sẽ hiện ở đây sau khi THỰC THI.",
@@ -713,7 +711,7 @@ const VI = {
   "Name the killer": "Chỉ ra hung thủ",
   "Clear every mission at ★★ first": "Hãy đạt ★★ ở mọi nhiệm vụ trước",
   "CASE CLOSED ✓": "ĐÃ PHÁ ÁN ✓",
-  "ACCUSE 告発": "BUỘC TỘI 告発",
+  "ACCUSE": "BUỘC TỘI",
   "SUSPICION": "NGHI NGỜ",
   "How much I/O the insider has seen: {n}% of what gets noticed": "Lượng I/O kẻ nội gián đã thấy: {n}% ngưỡng bị chú ý",
   "ACCUSATION": "BUỘC TỘI",
@@ -1010,7 +1008,7 @@ const VI = {
 const FANOUT = 100, LEAF_ROWS = 100;   // index entries per branch page / per leaf page
 const INSERT_PAGES = 3;                 // pages one INSERT writes into each index (find leaf + write)
 const LEAF_BOXES = 40, CELLS = 240;     // how many boxes the diagram draws
-const tier = i => [t("BASIC 初級"), t("INTERMEDIATE 中級"), t("ADVANCED 上級")][i];
+const tier = i => [t("BASIC"), t("INTERMEDIATE"), t("ADVANCED")][i];
 
 CASES.forEach(c => c.missions.forEach(lv => lv.queries.forEach(q => {
   q.variants ??= [{where:q.where, select:q.select, order:q.order, fetch:q.fetch, offset:q.offset}];
@@ -1351,7 +1349,7 @@ function animate(lv, p, q, instant){
 function accuseButton(c){
   const ready = c.missions.every((_, i) => starsAt(state.save.stars, state.caseIx, i) >= 2);
   return `<button id="accuse" ${ready ? "" : "disabled"} title="${ready ? t("Name the killer") : t("Clear every mission at ★★ first")}">` +
-    `${state.save.solved[state.caseIx] ? t("CASE CLOSED ✓") : t("ACCUSE 告発")}</button>`;
+    `${state.save.solved[state.caseIx] ? t("CASE CLOSED ✓") : t("ACCUSE")}</button>`;
 }
 
 const slotText = k => ({MOTIVE:[t("MOTIVE"), t("why they did it")], OPPORTUNITY:[t("OPPORTUNITY"), t("proof they were there")],
@@ -1359,7 +1357,7 @@ const slotText = k => ({MOTIVE:[t("MOTIVE"), t("why they did it")], OPPORTUNITY:
 function openAccusation(msg = ""){
   const c = CASES[state.caseIx], a = state.acc, got = state.save.clues[state.caseIx] ?? [];
   const ev = evidenceOf(c).filter(e => got.includes(e.id));
-  openDialog(t("ACCUSATION"), "告発",
+  openDialog(t("ACCUSATION"),
     `<p>${t("Name the killer, then back each charge with one piece of evidence from your notebook.")}</p>` +
     `<fieldset class="sus-cards"><legend class="eyebrow">${t("SUSPECT")}</legend>` +
       c.suspects.map(s => `<label><input type="radio" name="suspect" value="${s.id}" ${a.suspect === s.id ? "checked" : ""}><b>${esc(s.name)}</b><small>${esc(t(s.role))}</small></label>`).join("") +
@@ -1383,7 +1381,7 @@ function syncAccusation(){
 }
 function openEnding(){
   const c = CASES[state.caseIx], got = state.save.clues[state.caseIx] ?? [], pct = suspicion(state.save, state.caseIx), g = rating(pct);
-  openDialog(t("CASE CLOSED · {title}", {title:t(c.title).toUpperCase()}), c.jp,
+  openDialog(t("CASE CLOSED · {title}", {title:t(c.title).toUpperCase()}),
     c.outro.map(p => `<p>${esc(t(p))}</p>`).join("") +
     `<p class="hint">${esc(t(c.outroMika))}</p><p>${esc(t(c.outroHook))}</p>` +
     (c.insiderBonuses.every(id => got.includes(id)) ? `<p class="cancel">${esc(t(c.outroInsider))}</p>` : "") +
@@ -1396,7 +1394,7 @@ function suspicionChip(){
   return `<span class="sus ${pct >= 0.75 ? "hot" : ""}" title="${t("How much I/O the insider has seen: {n}% of what gets noticed", {n:Math.round(pct * 100)})}">` +
     `${t("SUSPICION")} <span aria-hidden="true">${"▮".repeat(on)}${"▯".repeat(10 - on)}</span></span>`;
 }
-const caseLabel = (c, i) => c.practice ? t("PRACTICE {jp}", {jp:c.jp}) : t("CASE {n} {jp}", {n:String(i+1).padStart(2,"0"), jp:c.jp});
+const caseLabel = (c, i) => c.practice ? t("PRACTICE") : t("CASE {n}", {n:String(i+1).padStart(2,"0")});
 function renderBar(){
   const c = CASES[state.caseIx];
   $("casebar").innerHTML = CASES.map((x,i) =>
@@ -1408,13 +1406,13 @@ function renderBar(){
   }).join("");
 }
 
-function openDialog(title, jp, html){
-  $("dlg-title").textContent = title; $("dlg-jp").textContent = jp; $("dlg-body").innerHTML = html;
+function openDialog(title, html){
+  $("dlg-title").textContent = title; $("dlg-body").innerHTML = html;
   if (!$("dlg").open) $("dlg").showModal();
 }
 function openBriefing(){
   const c = CASES[state.caseIx];
-  openDialog(`${caseLabel(c, state.caseIx).replace(c.jp, "").trim()} · ${t(c.title).toUpperCase()}`, c.jp,
+  openDialog(`${caseLabel(c, state.caseIx)} · ${t(c.title).toUpperCase()}`,
     c.intro.map(p => `<p>${esc(t(p))}</p>`).join("") + `<p class="hint">${esc(t(c.witness))}</p>` +
     `<div class="row"><button class="go" data-close="1">${t("START INVESTIGATION ▶")}</button></div>`);
 }
@@ -1423,7 +1421,7 @@ function renderMission(){
   const lv = cur(), c = CASES[state.caseIx];
   $("m-title").textContent = t("MISSION {n}", {n:String(state.lv+1).padStart(2,"0")});
   $("mission").innerHTML =
-    `<div class="eyebrow"><b>${c.practice ? tier(lv.tier) : `${t(c.title).toUpperCase()} ${c.jp}`}</b> · ${esc(lv.jp)}</div><h3>${esc(t(lv.name))}</h3><p>${esc(t(lv.story ?? lv.brief))}</p>` +
+    `<div class="eyebrow"><b>${c.practice ? tier(lv.tier) : t(c.title).toUpperCase()}</b></div><h3>${esc(t(lv.name))}</h3><p>${esc(t(lv.story ?? lv.brief))}</p>` +
     lv.queries.map((q,i) => {
       const v = variantOf(lv, i);
       const seg = q.variants.length > 1
@@ -1495,7 +1493,7 @@ function lastMissionAction(){
   if (c.practice) return "";
   const ready = c.missions.every((_, i) => starsAt(state.save.stars, state.caseIx, i) >= 2);
   if (state.save.solved[state.caseIx]) return `<button class="go" data-act="accuse">${t("READ THE ENDING ▶")}</button>`;
-  return ready ? `<button class="go" data-act="accuse">${t("ACCUSE 告発 ▶")}</button>`
+  return ready ? `<button class="go" data-act="accuse">${t("ACCUSE ▶")}</button>`
                : `<p class="empty">${t("Clear every mission at ★★ to open the accusation.")}</p>`;
 }
 
@@ -1515,7 +1513,7 @@ function renderReport(){
       return `<div class="qres ${p.kind==="index"?"good":"bad"}"><div><b>${q.label}</b> <span class="tag">${scanLabel(lv, p, variantOf(lv, i))}</span> ${t("{n} pages", {n:fmt(p.cost)})}${q.freq ? ` × ${t("{n}/day", {n:fmt(q.freq)})}` : ""}</div><p>${esc(explain(lv, p, variantOf(lv, i)))}</p></div>`;
     }).join("") +
     (r.stars < 3 ? hintBlock(lv, r.stars) : "") +
-    (r.stars === 3 ? `<div class="lesson"><b>${t("LESSON 教訓")}</b><p>${esc(t(lv.lesson))}</p></div>`
+    (r.stars === 3 ? `<div class="lesson"><b>${t("LESSON")}</b><p>${esc(t(lv.lesson))}</p></div>`
       : r.stars ? `<p class="empty">${t("Reach ★★★ to unlock this mission's lesson.")}</p>` : "") +
     `<div class="row"><button id="retry">${t("TRY AGAIN")}</button>` +
     (last ? lastMissionAction()
