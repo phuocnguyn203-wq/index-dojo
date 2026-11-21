@@ -112,6 +112,7 @@ dialog.win p{max-width:none}
   font:400 15px/1.2 var(--f-ui); letter-spacing:.08em; padding:6px 10px;
 }
 .pane{padding:14px; display:grid; gap:12px}
+#ixpane, #writepane{padding:0}
 .pane p{margin:0; max-width:65ch}
 h3{margin:0; font:400 20px/1.3 var(--f-ui); color:var(--yellow); text-wrap:balance}
 .eyebrow{font-family:var(--f-ui); color:var(--dim); font-size:13px; letter-spacing:.12em}
@@ -145,6 +146,11 @@ button.go:hover:not(:disabled){background:var(--white); border-color:var(--white
 .cols button{text-align:left; display:grid; gap:5px; padding:9px 10px; font-family:var(--f-code); font-size:14px; line-height:1.2}
 .cols button small{font-size:11.5px; color:var(--dim); font-variant-numeric:tabular-nums}
 .cols button:hover:not(:disabled) small{color:var(--win)}
+.sqled{width:100%; box-sizing:border-box; min-height:120px; resize:vertical; font:14px/1.55 var(--f-code); color:var(--ink); background:var(--pre,var(--shadow)); border:1px solid var(--dim); padding:10px 12px; tab-size:2}
+.sqled:focus{outline:2px solid var(--yellow); outline-offset:1px}
+@media (pointer:coarse){ .sqled{font-size:16px} }   /* iOS zooms into anything smaller */
+.sqlerr{margin:0; padding:8px 12px 8px 28px; border:1px solid var(--magenta); color:var(--ink); font-size:14px; line-height:1.45}
+.sqlerr code{font-family:var(--f-code); color:var(--yellow)}
 .slots{display:grid; gap:12px}
 .slot{display:grid; gap:6px}
 .chips{list-style:none; margin:0; padding:0; display:grid; gap:6px}
@@ -296,12 +302,15 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
       <div class="pane" id="mission"></div>
     </section>
     <section class="win" id="wizwin">
-      <h2><span data-t>INDEX WIZARD</span></h2>
+      <h2><span id="wiz-title"></span></h2>
       <div class="pane">
-        <pre id="ddl"></pre>
-        <div class="slots" id="slots"></div>
-        <div class="eyebrow" id="colhint"></div>
-        <div class="cols" id="cols"></div>
+        <div class="pane" id="ixpane">
+          <pre id="ddl"></pre>
+          <div class="slots" id="slots"></div>
+          <div class="eyebrow" id="colhint"></div>
+          <div class="cols" id="cols"></div>
+        </div>
+        <div class="pane" id="writepane" hidden></div>
         <div class="row">
           <button class="go" id="run" data-t>EXECUTE ▶</button>
           <button id="clear" data-t>CLEAR INDEXES</button>
@@ -354,6 +363,29 @@ function isnull(col, sel){ return {col, sql:`${col} IS NULL`, kind:"null", sel, 
 // A comparison on an expression of a column (FUNC(col), col + 0): only an index on that exact expression could search it.
 function expr(col, sql, sel){ return {col, sql, kind:"range", sel}; }
 function smart(col, bind, given){ return {col, sql:`(${bind} IS NULL OR ${col} = ${bind})`, kind:"filter", sel: given ? undefined : 1, why:SMART}; }
+
+/* Table columns for EASY mode, where the player writes the query: {table: {column: [what it holds, an example value]}}.
+   Examples show the format only; never the value a mission needs. Columns the missions name but this list lacks still show, without a note. */
+const SCHEMA = {
+  employees:{employee_id:["Staff badge number", "2051"], last_name:["Family name, in capitals", "'TANAKA'"], first_name:["Given name, in capitals", "'YUKI'"],
+    department:["Department code, in capitals", "'AUDIT'"], manager_id:["Badge number of their manager", "3010"], hire_year:["Year they joined", "2014"]},
+  tasks:{task_id:["Task number", "90412"], assignee_id:["Badge number of the person it is assigned to", "2051"], reporter_id:["Badge number of the person who filed it", "3010"],
+    status:["Task status, in capitals", "'DONE'"], project_id:["Project number", "311"], due_date:["Due date", "'2026-12-01'"]},
+  payments:{payment_id:["Payment number", "5520311"], payee:["Who was paid, typed by hand in any mix of capitals", "'Nagoya Paper Co.'"],
+    approver:["Code of whoever approved it", "'FIN-02'"], paid_on:["Payment date", "'2025-09-30'"]},
+  messages:{sender:["Sender's phone number", "'090-1234-5678'"], recipient:["Recipient's phone number", "'090-8765-4321'"],
+    sent_at:["Date and time sent", "'2026-11-18 20:14'"], cell_id:["Phone tower that carried it", "'NGY-C-0412'"], body:["Message text (the phone company withholds it)", "NULL"]},
+  swipes:{station:["Station name, in capitals", "'NAGOYA'"], line:["Train line", "'MEIJO'"], swipe_time:["Time of the swipe, hours:minutes", "'22:47'"],
+    card_id:["Transit card number", "'T-2290'"], gate:["Gate number", "4"], fare:["Fare in yen", "240"]},
+  garage_cam:{camera:["Camera name: -ENT at the entrance, -EXIT at the exit", "'KANAYAMA-EXIT'"], plate:["Number plate as the camera read it", "'NGY 500 RE 12-34'"],
+    cam_time:["Time, hours:minutes", "'21:40'"], lane:["Lane number", "2"], direction:["IN or OUT", "'OUT'"]},
+  vehicles:{plate:["Number plate", "'NGY 500 RE 12-34'"], owner_type:["Owner type, in capitals", "'COMPANY'"], body_type:["Body type, in capitals", "'HATCHBACK'"],
+    model_year:["Model year", "2019"], color:["Colour, in capitals", "'WHITE'"], make:["Maker, in capitals", "'TOYOTA'"]},
+  pool_bookings:{plate:["Number plate of the pool car", "'NGY 500 RE 12-34'"], booked_at:["When the booking starts", "'2026-11-18 09:30'"],
+    returned_at:["When the car came back", "'2026-11-18 13:05'"], employee_id:["Badge number of the driver", "2051"], purpose:["Reason given", "'Site visit'"]},
+  door_log:{resident_id:["Resident code: R- and the unit number", "'R-1204'"], unit:["Unit number", "1204"], event_time:["Date and time", "'2026-11-18 07:45'"],
+    event:["IN or OUT", "'IN'"], gate:["Which door", "'LOBBY'"]},
+};
 
 const PRACTICE = [{
   tier:0, name:"Needle in a Haystack",
@@ -649,7 +681,7 @@ const CASE1 = {
     table:"vehicles", rows:2000000, perPage:50, maxCols:1,
     cols:{plate:2000000, owner_type:5, body_type:8, model_year:30, color:12, make:40},
     story:"The camera only half-read the second car: NGY 300 SE 4?-12. Hara saw a dark sedan. Search the vehicle registry for sedans whose plate starts with the part you have and ends in -12.",
-    queries:[{label:"Q1", who:"NGY 300 SE 4?-12, a sedan", where:[
+    queries:[{label:"Q1", who:"NGY 300 SE 4?-12, a sedan", also:["SELECT * FROM vehicles WHERE plate LIKE 'NGY 300 SE 4_-12' AND body_type = 'SEDAN'", "SELECT * FROM vehicles WHERE plate LIKE 'NGY 300 SE 4%-12' AND body_type = 'SEDAN'"], where:[
       range("plate","plate LIKE 'NGY 300 SE 4%'",0.00015), like("plate","plate LIKE '%-12'",0.01), eq("body_type","'SEDAN'")]}],
     hint:"One plate pattern starts with a wildcard. Does the other one?",
     hint2:"Index plate. 'NGY 300 SE 4%' becomes a range scan; the '%-12' part is checked while scanning.",
@@ -662,7 +694,7 @@ const CASE1 = {
     name:"Who Had the Keys",
     table:"pool_bookings", rows:300000, perPage:50, maxCols:2,
     cols:{plate:200, booked_at:300000, "TRUNC(booked_at)":730, employee_id:50000, returned_at:300000, purpose:20},
-    story:"Car 47-12 belongs to the executive pool, and pool cars are booked. Q1 asks who had it that night, and Q2 lists its whole booking history, both through the same index.",
+    story:"Car 47-12 belongs to the executive pool, and pool cars are booked. Q1 asks who had it on the night of 19 Nov (bookings from 18:00 to 06:00), and Q2 lists its whole booking history, both through the same index.",
     queries:[
       {label:"Q1", who:"Bookings on the night of 19 Nov", where:[eq("plate","'NGY 300 SE 47-12'"),
         range("booked_at","booked_at BETWEEN '2026-11-19 18:00' AND '2026-11-20 06:00'",1/1500)]},
@@ -680,7 +712,7 @@ const CASE1 = {
     name:"Home All Night",
     table:"door_log", rows:5000000, perPage:50, maxCols:3, two:2,
     cols:{resident_id:20000, unit:5000, event_time:5000000, "TRUNC(event_time)":1825, event:4, gate:10},
-    story:"Ono says he was home all night at Chikusa Tower, unit 3302: resident R-3302. The building logs every door event. You only need the event and its time.",
+    story:"Ono says he was home all night at Chikusa Tower, unit 3302: resident R-3302. The building logs every door event. Look from 22:00 on 19 Nov to 03:00. You only need the event and its time.",
     queries:[{label:"Q1", who:"R-3302, night of 19 Nov", select:["event","event_time"], where:[eq("resident_id","'R-3302'"),
       range("event_time","event_time BETWEEN '2026-11-19 22:00' AND '2026-11-20 03:00'",0.012)]}],
     hint:"The query uses three columns: resident_id, event_time and event.",
@@ -1726,8 +1758,8 @@ const VI = {
 
   // M09
   "Who Had the Keys": "Ai giữ chìa khóa",
-  "Car 47-12 belongs to the executive pool, and pool cars are booked. Q1 asks who had it that night, and Q2 lists its whole booking history, both through the same index.":
-    "Xe 47-12 thuộc đội xe ban điều hành, và xe trong đội phải đặt trước. Q1 hỏi đêm đó ai giữ xe, Q2 liệt kê toàn bộ lịch sử đặt xe, cả hai qua cùng một index.",
+  "Car 47-12 belongs to the executive pool, and pool cars are booked. Q1 asks who had it on the night of 19 Nov (bookings from 18:00 to 06:00), and Q2 lists its whole booking history, both through the same index.":
+    "Xe 47-12 thuộc đội xe ban điều hành, và xe trong đội phải đặt trước. Q1 hỏi đêm 19/11 ai giữ xe (các lượt đặt từ 18:00 tới 06:00), Q2 liệt kê toàn bộ lịch sử đặt xe, cả hai qua cùng một index.",
   "Bookings on the night of 19 Nov": "Lượt đặt xe đêm 19/11",
   "The car's booking history": "Lịch sử đặt xe",
   "Q2 filters on plate only.": "Q2 chỉ lọc theo plate.",
@@ -1744,8 +1776,8 @@ const VI = {
 
   // M10
   "Home All Night": "Ở nhà cả đêm",
-  "Ono says he was home all night at Chikusa Tower, unit 3302: resident R-3302. The building logs every door event. You only need the event and its time.":
-    "Ono nói cả đêm ông ta ở nhà, Chikusa Tower, căn 3302: cư dân R-3302. Tòa nhà ghi lại mọi lần ra vào cửa. Bạn chỉ cần loại sự kiện và thời gian của nó.",
+  "Ono says he was home all night at Chikusa Tower, unit 3302: resident R-3302. The building logs every door event. Look from 22:00 on 19 Nov to 03:00. You only need the event and its time.":
+    "Ono nói cả đêm ông ta ở nhà, Chikusa Tower, căn 3302: cư dân R-3302. Tòa nhà ghi lại mọi lần ra vào cửa. Xem từ 22:00 ngày 19/11 tới 03:00. Bạn chỉ cần loại sự kiện và thời gian của nó.",
   "R-3302, night of 19 Nov": "R-3302, đêm 19/11",
   "The query uses three columns: resident_id, event_time and event.": "Truy vấn dùng ba cột: resident_id, event_time và event.",
   "(resident_id, event_time) gets you the rows. Add event as a third column and the table is never read.":
@@ -2572,6 +2604,139 @@ const VI = {
   "DIFFICULTY": "ĐỘ KHÓ",
   "NORMAL": "THƯỜNG",
   "EASY": "DỄ",
+  /* ---------- easy mode: writing the query ---------- */
+  "QUERY EDITOR":
+    "TRÌNH VIẾT QUERY",
+  "Can't read the query near {x}. Check the quotes and brackets.":
+    "Không đọc được query ở chỗ {x}. Kiểm tra lại dấu nháy và dấu ngoặc.",
+  "Start with SELECT.":
+    "Bắt đầu bằng SELECT.",
+  "Say which table to read: FROM and the table name.":
+    "Ghi bảng cần đọc: FROM và tên bảng.",
+  "This one needs a {op} statement.":
+    "Màn này cần câu lệnh {op}.",
+  "The rows are in the {table} table.":
+    "Dữ liệu nằm trong bảng {table}.",
+  "WHERE is missing a condition on {col}.":
+    "WHERE còn thiếu điều kiện về {col}.",
+  "The condition on {col} isn't right yet. Check the operator and the value.":
+    "Điều kiện về {col} chưa đúng. Kiểm tra lại phép so sánh và giá trị.",
+  "Not needed: {sql}":
+    "Không cần: {sql}",
+  "The query needs {clause}.":
+    "Query cần có {clause}.",
+  "{clause} isn't needed here.":
+    "Ở đây không cần {clause}.",
+  "{clause} isn't right yet.":
+    "{clause} chưa đúng.",
+  "Your query for {q}":
+    "Query của bạn cho {q}",
+  "TABLE {table} · click a column to insert it":
+    "BẢNG {table} · bấm vào cột để chèn tên cột",
+  "e.g. {v}":
+    "vd: {v}",
+  "SHOW THE ANSWER":
+    "XEM ĐÁP ÁN",
+  "Not yet. The notes under your query say what to fix.":
+    "Chưa đúng. Ghi chú dưới query cho biết cần sửa gì.",
+  "Write the query, then press EXECUTE.":
+    "Viết query, rồi bấm THỰC THI.",
+  "Write the query here. Click a column below the editor to insert its name.":
+    "Viết query ở đây. Bấm vào một cột bên dưới để chèn tên cột.",
+  "Staff badge number":
+    "Số thẻ nhân viên",
+  "Family name, in capitals":
+    "Họ, viết in hoa",
+  "Given name, in capitals":
+    "Tên, viết in hoa",
+  "Department code, in capitals":
+    "Mã phòng ban, viết in hoa",
+  "Badge number of their manager":
+    "Số thẻ của người quản lý trực tiếp",
+  "Year they joined":
+    "Năm vào công ty",
+  "Task number":
+    "Số công việc",
+  "Badge number of the person it is assigned to":
+    "Số thẻ của người được giao việc",
+  "Badge number of the person who filed it":
+    "Số thẻ của người tạo việc",
+  "Task status, in capitals":
+    "Trạng thái công việc, viết in hoa",
+  "Project number":
+    "Số dự án",
+  "Due date":
+    "Hạn chót",
+  "Payment number":
+    "Số khoản chi",
+  "Who was paid, typed by hand in any mix of capitals":
+    "Bên nhận tiền, gõ tay, chữ hoa chữ thường lẫn lộn",
+  "Code of whoever approved it":
+    "Mã của người phê duyệt",
+  "Payment date":
+    "Ngày chi",
+  "Sender's phone number":
+    "Số điện thoại người gửi",
+  "Recipient's phone number":
+    "Số điện thoại người nhận",
+  "Date and time sent":
+    "Ngày giờ gửi",
+  "Phone tower that carried it":
+    "Trạm phát sóng đã chuyển tin",
+  "Message text (the phone company withholds it)":
+    "Nội dung tin (nhà mạng không cung cấp)",
+  "Station name, in capitals":
+    "Tên ga, viết in hoa",
+  "Train line":
+    "Tuyến tàu",
+  "Time of the swipe, hours:minutes":
+    "Giờ quẹt thẻ, giờ:phút",
+  "Transit card number":
+    "Số thẻ đi tàu",
+  "Gate number":
+    "Số cổng soát vé",
+  "Fare in yen":
+    "Giá vé (yên)",
+  "Camera name: -ENT at the entrance, -EXIT at the exit":
+    "Tên camera: -ENT ở lối vào, -EXIT ở lối ra",
+  "Number plate as the camera read it":
+    "Biển số theo camera đọc được",
+  "Time, hours:minutes":
+    "Giờ, giờ:phút",
+  "Lane number":
+    "Số làn",
+  "IN or OUT":
+    "IN (vào) hoặc OUT (ra)",
+  "Number plate":
+    "Biển số",
+  "Owner type, in capitals":
+    "Loại chủ xe, viết in hoa",
+  "Body type, in capitals":
+    "Kiểu thân xe, viết in hoa",
+  "Model year":
+    "Năm sản xuất",
+  "Colour, in capitals":
+    "Màu, viết in hoa",
+  "Maker, in capitals":
+    "Hãng xe, viết in hoa",
+  "Number plate of the pool car":
+    "Biển số xe trong đội xe",
+  "When the booking starts":
+    "Giờ bắt đầu đặt xe",
+  "When the car came back":
+    "Giờ trả xe",
+  "Badge number of the driver":
+    "Số thẻ của người lái",
+  "Reason given":
+    "Lý do ghi khi đặt",
+  "Resident code: R- and the unit number":
+    "Mã cư dân: R- và số căn hộ",
+  "Unit number":
+    "Số căn hộ",
+  "Date and time":
+    "Ngày giờ",
+  "Which door":
+    "Cửa nào",
 };
 </script>
 <script>
@@ -2867,6 +3032,102 @@ function sqlOf(lv, v){
   if (v.fetch) s += `\n FETCH ${v.offset ? "NEXT" : "FIRST"} ${v.fetch} ROWS ONLY`;
   return s;
 }
+/* ---------- write mode (EASY): the player writes the query; it is checked against the mission's own SQL ---------- */
+// Tokens: 'strings' as typed, numbers, :binds, words in upper case, operators. Comments and a final ; are dropped.
+function sqlTokens(s){
+  const out = [], re = /\s+|--[^\n]*|('(?:[^']|'')*')|(:\w+|\d+(?:\.\d+)?|[A-Za-z_][\w$#]*)|(<=|>=|<>|!=|\|\||[=<>(),*+\-\/%.])|(;\s*$)|(.)/gy;
+  for (let m; (m = re.exec(s)); ){
+    if (m[5]) return {near: s.slice(m.index, m.index + 14)};
+    if (m[1]) out.push(m[1]);
+    else if (m[2]) out.push(/^[A-Za-z_]/.test(m[2]) ? m[2].toUpperCase() : m[2]);
+    else if (m[3]) out.push(m[3] === "!=" ? "<>" : m[3]);
+  }
+  return out;
+}
+const sqlDepth = ts => { let d = 0; return ts.map(x => { if (x === ")") d--; const r = d; if (x === "(") d++; return r; }); };
+const splitTop = (ts, sep) => { const d = sqlDepth(ts), out = [[]]; ts.forEach((x, i) => !d[i] && x === sep ? out.push([]) : out.at(-1).push(x)); return out; };
+const FLIP = {"=":"=", "<>":"<>", "<":">", ">":"<", "<=":">=", ">=":"<="};
+const isLit = ts => ts.length === 1 && /^['\d:]/.test(ts[0]) || ts.length === 2 && /^(DATE|TIMESTAMP)$/.test(ts[0]) && ts[1][0] === "'";
+// One condition, written one way: outer brackets off, BETWEEN as >= and <=, a value on the left moved to the right.
+function normPred(p){
+  while (p[0] === "(" && p.at(-1) === ")" && sqlDepth(p).slice(1, -1).every(x => x >= 1)) p = p.slice(1, -1);
+  const b = p.indexOf("BETWEEN"), a = p.indexOf("AND", b);
+  if (b > 0 && p[b - 1] !== "NOT" && a > b)
+    return [[...p.slice(0, b), ">=", ...p.slice(b + 1, a)], [...p.slice(0, b), "<=", ...p.slice(a + 1)]].map(x => x.join(" "));
+  const d = sqlDepth(p), o = p.findIndex((x, i) => !d[i] && Object.hasOwn(FLIP, x));
+  if (o > 0 && isLit(p.slice(0, o)) && !isLit(p.slice(o + 1))) p = [...p.slice(o + 1), FLIP[p[o]], ...p.slice(0, o)];
+  return [p.join(" ")];
+}
+function wherePreds(ts){
+  const d = sqlDepth(ts), out = [[]]; let between = false;
+  ts.forEach((x, i) => {
+    if (!d[i] && x === "BETWEEN") between = true;
+    else if (!d[i] && x === "AND"){ if (!between) return out.push([]); between = false; }
+    out.at(-1).push(x);
+  });
+  return out.filter(p => p.length).flatMap(normPred);
+}
+const SQL_CLAUSES = ["SELECT", "UPDATE", "DELETE", "FROM", "SET", "WHERE", "GROUP", "ORDER", "OFFSET", "FETCH", "LIMIT"];
+// The parts of a statement that decide its rows. The SELECT list is not checked (the result table is fixed).
+function parseSql(text){
+  const ts = sqlTokens(text);
+  if (!Array.isArray(ts)) return {error:"near", near:ts.near};
+  const d = sqlDepth(ts), at = {};
+  ts.forEach((x, i) => { if (!d[i] && SQL_CLAUSES.includes(x) && !(x in at)) at[x] = i; });
+  const keys = Object.keys(at).sort((a, b) => at[a] - at[b]);
+  const part = k => k in at ? ts.slice(at[k] + 1, at[keys[keys.indexOf(k) + 1]] ?? ts.length) : null;
+  const by = k => { const p = part(k); return p && (p[0] === "BY" ? p.slice(1) : p); };
+  const num = k => { const n = part(k)?.find(x => /^\d+$/.test(x)); return n == null ? null : +n; };
+  const op = {SELECT:"select", UPDATE:"update", DELETE:"delete"}[ts[0]];
+  if (!op) return {error:"start"};
+  const table = (op === "update" ? part("UPDATE") : part("FROM"))?.join(" ").toLowerCase();
+  if (!table) return {error:"from"};
+  return {op, table, where: wherePreds(part("WHERE") ?? []),
+    set: part("SET") ? splitTop(part("SET"), ",").map(normPred).flat().sort() : [],
+    group: by("GROUP")?.join(" ") || null, order: by("ORDER")?.filter(x => x !== "ASC").join(" ") || null,
+    offset: num("OFFSET"), fetch: num("FETCH") ?? num("LIMIT")};
+}
+// The table's real columns: the described ones (SCHEMA), then every column the mission's SQL names.
+// In the data, columns are lower case and SQL words upper case.
+function tableColumns(lv){
+  const words = s => s.replace(/'[^']*'|:\w+/g, "").match(/\b[a-z_][a-z0-9_]*\b/g) ?? [];
+  const named = [...Object.keys(lv.cols), ...lv.queries.flatMap(q => q.variants.flatMap(v =>
+    [...v.where.map(p => p.sql), ...(v.set ?? []).map(x => x.sql), v.group?.col ?? "", v.order?.col ?? "", ...(v.select ?? [])]))].flatMap(words);
+  return [...new Set([...Object.keys(SCHEMA[lv.table] ?? {}), ...named])];
+}
+// What separates the player's statement from one the mission accepts: [{code, ...}], empty when they match.
+function sqlDiff(want, got, table, cols){
+  if (got.op !== want.op) return [{code:"op", op:want.op.toUpperCase()}];
+  const errs = got.table === table ? [] : [{code:"table", table}];
+  const colOf = s => s.split(/[\s(),]+/).map(x => x.toLowerCase()).find(x => cols.includes(x)) ?? s;
+  const missing = want.where.filter(w => !got.where.includes(w)), extra = got.where.filter(w => !want.where.includes(w));
+  const named = new Set();
+  for (const w of missing){
+    const c = colOf(w); if (named.has(c)) continue; named.add(c);
+    errs.push({code: extra.some(x => colOf(x) === c) ? "cond" : "missing", col:c});
+  }
+  for (const x of extra) if (!named.has(colOf(x))) errs.push({code:"extra", sql:x});
+  for (const [k, clause] of [["set", "SET"], ["group", "GROUP BY"], ["order", "ORDER BY"], ["offset", "OFFSET"], ["fetch", "FETCH FIRST"]]){
+    const none = v => v == null || v.length === 0;
+    if (JSON.stringify(want[k]) === JSON.stringify(got[k])) continue;
+    errs.push({code: none(got[k]) ? "needs" : none(want[k]) ? "noneed" : "clause", clause});
+  }
+  return errs;
+}
+// {k} = the rewrite the text matches (As written first), or {errs} from the closest one. q.also: other accepted texts.
+function checkSql(lv, qi, text){
+  const got = parseSql(text);
+  if (got.error) return {errs:[{code:got.error, near:got.near}]};
+  const q = lv.queries[qi], cols = tableColumns(lv);
+  const tries = [...q.variants.map((v, k) => ({k, sql:sqlOf(lv, v)})), ...(q.also ?? []).map(sql => ({k:0, sql}))]
+    .map(x => ({k:x.k, errs:sqlDiff(parseSql(x.sql), got, lv.table, cols)}));
+  const best = tries.reduce((a, b) => b.errs.length < a.errs.length ? b : a);
+  return best.errs.length ? {errs:best.errs} : {k:best.k};
+}
+// The empty statement the editor starts from.
+const sqlStub = (lv, qi) => { const v = lv.queries[qi].variants[0];
+  return v.op === "update" ? `UPDATE ${lv.table}\n   SET \n WHERE ` : v.op === "delete" ? `DELETE FROM ${lv.table}\n WHERE ` : `SELECT *\n  FROM ${lv.table}\n WHERE `; };
+
 const ixName = idx => "ix_" + idx.filter(c => !c.startsWith("WHERE ")).map(c => c.toLowerCase().replace(/\W+/g, "_").replace(/^_|_$/g, "")).join("_");
 
 // The index operation as the plan prints it.
@@ -3167,7 +3428,8 @@ function startGame(withTour = !guideSeen()){
 // Interactive tour. A step with `wait` also moves on by itself when the player does that action.
 const tourSteps = () => [
   {sel:"#mission", text:t("Each mission is a query the investigation needs. Read what it asks for and which table it reads.")},
-  {sel:"#cols", wait:"index", text:t("Click a column to add it to your index. With several columns, their order matters.")},
+  easyOn ? {sel:"#writepane", text:t("Write the query here. Click a column below the editor to insert its name.")}
+    : {sel:"#cols", wait:"index", text:t("Click a column to add it to your index. With several columns, their order matters.")},
   {sel:"#run", wait:"run", text:t("Press EXECUTE. The database runs the query and counts every page it reads.")},
   {sel:".status", text:t("Every page read costs one point. Without a useful index the database scans the whole table.")},
   {sel:"#report", text:t("Fewer pages, more stars. ★★ returns the rows and a clue; below that the query is cancelled. ★★★ unlocks the lesson.")},
@@ -3297,7 +3559,7 @@ function renderMission(){
       const seg = q.variants.length > 1
         ? `<div class="seg"><span>${t("REWRITE")}</span>` + q.variants.map((x,k) =>
             `<button data-pick="${i}" data-v="${k}" aria-pressed="${(state.pick[i] ?? 0) === k}">${k ? "ABC"[k - 1] : t("As written")}</button>`).join("") + `</div>` : "";
-      return `<div class="qlabel"><b>${q.label}</b> · ${esc(t(q.who))}${q.freq ? ` · <em>${t("runs {n}×/day", {n:fmt(q.freq)})}</em>` : ""}</div>${seg}<pre>${hl(sqlOf(lv, v))}</pre>`;
+      return `<div class="qlabel"><b>${q.label}</b> · ${esc(t(q.who))}${q.freq ? ` · <em>${t("runs {n}×/day", {n:fmt(q.freq)})}</em>` : ""}</div>` + (easyOn ? "" : `${seg}<pre>${hl(sqlOf(lv, v))}</pre>`);
     }).join("") +
     `<div class="stats">${t("{table}: {rows} rows · {pages} table pages · {leaf} index entries per leaf page", {table:lv.table, rows:fmt(lv.rows), pages:fmt(tablePages(lv)), leaf:LEAF_ROWS})}</div>` +
     (lv.growth ? `<div class="stats"><b>${t("Scored twice: today, and {label}, when the table holds {rows} rows.", {label:t(lv.growth.label), rows:fmt(lv.rows * lv.growth.factor)})}</b></div>` : "") +
@@ -3305,7 +3567,41 @@ function renderMission(){
     (lv.clustered ? `<div class="stats">${t("Rows are stored in {col} order: each new row goes at the end of the table.", {col:lv.clustered})}</div>` : "");
 }
 
+// EASY mode: the player writes each query; drafts live per mission until the page reloads.
+const draftKey = () => state.caseIx + "-" + state.lv;
+const drafts = lv => (state.drafts ??= {})[draftKey()] ??= lv.queries.map((_, i) => sqlStub(lv, i));
+function sqlErr(e){
+  const c = x => `<code>${esc(String(x))}</code>`;
+  switch (e.code){
+    case "near": return t("Can't read the query near {x}. Check the quotes and brackets.", {x:c(e.near)});
+    case "start": return t("Start with SELECT.");
+    case "from": return t("Say which table to read: FROM and the table name.");
+    case "op": return t("This one needs a {op} statement.", {op:c(e.op)});
+    case "table": return t("The rows are in the {table} table.", {table:c(e.table)});
+    case "missing": return t("WHERE is missing a condition on {col}.", {col:c(e.col)});
+    case "cond": return t("The condition on {col} isn't right yet. Check the operator and the value.", {col:c(e.col)});
+    case "extra": return t("Not needed: {sql}", {sql:c(e.sql)});
+    case "needs": return t("The query needs {clause}.", {clause:c(e.clause)});
+    case "noneed": return t("{clause} isn't needed here.", {clause:c(e.clause)});
+    default: return t("{clause} isn't right yet.", {clause:c(e.clause)});
+  }
+}
+function renderWriter(lv){
+  const ds = drafts(lv), chk = state.checks?.[draftKey()] ?? [], desc = SCHEMA[lv.table] ?? {};
+  $("writepane").innerHTML = lv.queries.map((q, i) =>
+      `<div class="qlabel"><b>${q.label}</b> · ${esc(t(q.who))}</div>` +
+      `<textarea class="sqled" data-sql="${i}" rows="5" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="${t("Your query for {q}", {q:q.label})}">${esc(ds[i])}</textarea>` +
+      (chk[i]?.errs ? `<ul class="sqlerr">${chk[i].errs.map(e => `<li>${sqlErr(e)}</li>`).join("")}</ul>` : "")).join("") +
+    `<div class="eyebrow">${t("TABLE {table} · click a column to insert it", {table:esc(lv.table)})}</div>` +
+    `<div class="cols">` + tableColumns(lv).map(c => `<button data-ins="${esc(c)}">${esc(c)}` +
+      (desc[c] ? `<small>${esc(t(desc[c][0]))} · ${t("e.g. {v}", {v:esc(desc[c][1])})}</small>` : "") + `</button>`).join("") + `</div>` +
+    ((state.wfails?.[draftKey()] ?? 0) >= 2 ? `<div class="row"><button data-act="answer">${t("SHOW THE ANSWER")}</button></div>` : "");
+}
+
 function renderWizard(){
+  $("wiz-title").textContent = easyOn ? t("QUERY EDITOR") : t("INDEX WIZARD");
+  $("ixpane").hidden = $("clear").hidden = easyOn; $("writepane").hidden = !easyOn;
+  if (easyOn) return renderWriter(cur());
   const lv = cur(), multi = state.ixs.length > 1, slot = state.ixs[state.active];
   const made = state.ixs.filter(ix => ix.length);
   $("ddl").innerHTML = made.length
@@ -3341,7 +3637,7 @@ function renderTabs(){
 function resetPlan(){
   animTok++;
   drawTree(); legend(cur());
-  $("plan").innerHTML = `<span class="c">-- ${t("Build an index, then press EXECUTE.")}</span>`;
+  $("plan").innerHTML = `<span class="c">-- ${easyOn ? t("Write the query, then press EXECUTE.") : t("Build an index, then press EXECUTE.")}</span>`;
   $("pages").textContent = "000000"; $("prog").style.width = "0"; $("lamp").classList.remove("on");
 }
 
@@ -3396,9 +3692,9 @@ function renderReport(){
       return `<div class="qres ${p.kind==="index"?"good":"bad"}"><div><b>${q.label}</b> <span class="tag">${scanLabel(lv, p, variantOf(lv, i))}</span> ${t("{n} pages", {n:fmt(p.cost)})}${q.freq ? ` × ${t("{n}/day", {n:fmt(q.freq)})}` : ""}</div><p>${esc(explain(lv, p, variantOf(lv, i)))}` +
         (r.later ? ` <b>${esc(t("{label}: {n} pages.", {label:cap(t(lv.growth.label)), n:fmt(r.later.plans[i].cost)}))}</b>` : "") + `</p></div>`;
     }).join("") +
-    (r.stars < 3 ? hintBlock(lv, r.stars) : "") +
+    (r.stars < 3 && !(easyOn && r.stars >= 2) ? hintBlock(lv, r.stars) : "") +
     (r.stars === 3 ? `<div class="lesson"><b>${t("LESSON")}</b><p>${esc(t(lv.lesson))}</p></div>`
-      : r.stars ? `<p class="empty">${t("Reach ★★★ to unlock this mission's lesson.")}</p>` : "") +
+      : r.stars && !easyOn ? `<p class="empty">${t("Reach ★★★ to unlock this mission's lesson.")}</p>` : "") +
     `<div class="row"><button id="retry">${t("TRY AGAIN")}</button>` +
     (last ? lastMissionAction()
           : `<button class="go" id="next" ${unlocked(state.save.stars, state.caseIx, state.lv + 1) ? "" : "disabled"}>${t("NEXT MISSION ▶")}</button>`) + `</div>`;
@@ -3502,6 +3798,7 @@ function caseMusic(){
 function readMusic(){ try { return localStorage.getItem(MUSIC_KEY) !== "off"; } catch { return true; } }
 function readVolume(){ try { const v = parseFloat(localStorage.getItem(VOLUME_KEY)); return Number.isFinite(v) ? v : 15; } catch { return 15; } }
 document.addEventListener("input", e => {
+  if (e.target.dataset.sql != null){ drafts(cur())[+e.target.dataset.sql] = e.target.value; return; }
   if (e.target.dataset.menuvol == null) return;
   setVolume(+e.target.value);
   if (+e.target.value > 0 && !musicOn) setMusic(true);   // moving the slider up means "I want sound"
@@ -3510,6 +3807,7 @@ document.addEventListener("input", e => {
 });
 document.addEventListener("pointerdown", e => { if (!e.target.closest("[data-menumusic]")) startMusic(); });
 document.addEventListener("keydown", startMusic);
+document.addEventListener("focusin", e => { if (e.target.dataset?.sql != null) state.edQ = +e.target.dataset.sql; });
 
 // Sound effects, synthesised (square waves, like a 90s PC speaker): no files.
 // On/off in the settings menu, loudness follows the volume slider. The AudioContext starts on the first click.
@@ -3589,6 +3887,17 @@ function goCase(ci){
 
 async function execute(){
   const lv = cur();
+  if (easyOn){
+    const key = draftKey(), res = drafts(lv).map((s, i) => checkSql(lv, i, s));
+    (state.checks ??= {})[key] = res;
+    if (res.some(r => r.errs)){
+      (state.wfails ??= {})[key] = (state.wfails[key] ?? 0) + 1;
+      state.result = null; resetPlan(); renderWizard(); renderResults(); sfx.buzz();
+      $("report").innerHTML = `<p class="hint">${t("Not yet. The notes under your query say what to fix.")}</p>`;
+      return;
+    }
+    state.pick = res.map(r => r.k); state.ixs = emptySlots(lv); renderMission(); renderWizard();
+  }
   const sc = judge(lv, state.ixs, state.pick, easyOn), {none, stars} = sc;
   state.result = {...sc, done:false};
   const run = animTok + 1;
@@ -3607,7 +3916,7 @@ async function execute(){
   if (!CASES[state.caseIx].practice) earn(state.save, state.caseIx, state.lv, stars);
   const before = suspicion(state.save, state.caseIx);
   logRun(state.save, state.caseIx, state.lv, easyOn ? sc.best : sc.wrong.length ? none : sc.total, stars);   // wrong rows = the work was wasted; easy mode never raises suspicion
-  state.result.sus = suspicion(state.save, state.caseIx) - before;
+  state.result.sus = easyOn ? null : suspicion(state.save, state.caseIx) - before;   // easy mode has no watcher
   storeSave();
   state.result.done = true;
   state.bump = state.result.sus > 0;   // draw the meter at its old level once, then let it rise
@@ -3622,7 +3931,14 @@ const glide = el => el.scrollIntoView({block:"start", behavior: reduceMotion ? "
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b || b.disabled) return;
   const lv = cur(), d = b.dataset, ix = state.ixs[+d.s];
-  if (d.add){
+  if (d.ins != null){
+    const el = document.querySelector(`[data-sql="${state.edQ ?? 0}"]`) ?? document.querySelector("[data-sql]");
+    const s = el.selectionStart ?? el.value.length, pre = el.value.slice(0, s);
+    el.setRangeText((!pre || /[\s(,]$/.test(pre) ? "" : " ") + d.ins + " ", s, el.selectionEnd ?? s, "end");
+    el.focus(); drafts(lv)[+el.dataset.sql] = el.value;
+  }
+  else if (d.act === "answer"){ state.drafts[draftKey()] = lv.queries.map(q => sqlOf(lv, q.variants[0])); delete state.checks[draftKey()]; renderWizard(); }
+  else if (d.add){
     const slot = state.ixs[state.active];
     if (slot.length < lv.maxCols){
       slot.push(d.add);
@@ -3667,7 +3983,7 @@ document.addEventListener("click", e => {
   else if (d.tour) d.tour === "next" ? tourNext() : endTour();
   else if (d.menulang){ setLang(d.menulang); legend(lv); if (!state.result) resetPlan(); render(); openStartMenu(state.menuMidGame); }
   else if (d.menumusic != null){ setMusic(!musicOn); openStartMenu(state.menuMidGame); }
-  else if (d.menueasy != null){ setEasy(d.menueasy === "true"); openStartMenu(state.menuMidGame); }
+  else if (d.menueasy != null){ setEasy(d.menueasy === "true"); state.ixs = emptySlots(lv); state.pick = []; changed(); openStartMenu(state.menuMidGame); }
   else if (d.menusfx != null){ setSfx(!sfxOn); sfx.tick(); openStartMenu(state.menuMidGame); }
   else if (b.id === "start-go") startGame();
   else if (b.id === "start-tour") startGame(true);
