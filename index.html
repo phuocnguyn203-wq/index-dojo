@@ -890,10 +890,10 @@ const CASE3 = {
     {who:"Masaru Iida", after:"E9", text:"My backup jobs log in as SYS_MAINT at two every night. They have for years."},
   ],
   statementsAfter:"E5",
-  accusation:{culprit:"kaneda", MOTIVE:["E8"], OPPORTUNITY:["E6","E7"], LIE:["E6","E7"],
+  accusation:{culprit:"kaneda", MOTIVE:["E8"], OPPORTUNITY:["E6","E7"], LIE:["E5","E6","E7"],
     second:{culprit:"fujimoto", slots:{ACCESS:["E9"], PRESENCE:["E10","E8"]},
       charged:"Yuji Kaneda is charged. He never knew the man's name. Someone else gave him the plate, the address and the time.",
-      lead:"SYS_MAINT read the calendar that put Nomura on your list. Name the person behind the account: where it logged in from, and proof they sat there.",
+      lead:"Nomura was coming to tell you who SYS_MAINT is. Finish his work: name the person behind the account, where it logged in from, and proof they sat there.",
       suspects:[
         {id:"fujimoto", name:"Goro Fujimoto", role:"Night sysadmin · console NC-02"},
         {id:"nishida", name:"Aiko Nishida", role:"Day-shift analyst · console DC-01"},
@@ -906,7 +906,7 @@ const CASE3 = {
   ],
   outroQuote:"Aiko Nishida: “Takeshi set that history trigger and told no one. I'll take the night console from here. Send me your queries.”",
   outroHook:"Fujimoto is gone, but his accounts aren't. Something on the night console is still deleting.",
-  outroInsider:"He read along with you from the first night. Every bonus you found was him.",
+  outroInsider:"He read along with you from the first night. You saw his traces in the bonus evidence all along.",
   insiderBonuses:["B2","B9"],
   grades:{
     S:"Fujimoto never saw you coming.",
@@ -948,7 +948,7 @@ const CASE3 = {
     name:"Page Three",
     table:"tickets", rows:1000000, perPage:50, maxCols:2,
     cols:{ticket_id:1000000, author:2000, created_at:1000000, status:4, system:60, priority:4},
-    story:"Nomura's newest ticket, from Monday, says only: 'See my note of 21 Nov.' His ticket list shows 20 per page, newest first, and you have reached page 3.",
+    story:"Nomura's newest ticket, from Monday, ends with: 'Background in my note of 21 Nov.' His ticket list shows 20 per page, newest first, and you have reached page 3.",
     queries:[{label:"Q1", who:"Nomura's tickets, page 3", variants:[
       {where:[eq("author","'NOMURA'")], order:{col:"created_at", dir:"DESC"}, offset:40, fetch:20},
       {where:[eq("author","'NOMURA'"), range("created_at","created_at < :last_seen",0.9)], order:{col:"created_at", dir:"DESC"}, fetch:20},
@@ -961,13 +961,13 @@ const CASE3 = {
     clue:{id:"E3", title:"Nomura's notes", text:"21 Nov: Nomura saw SYS_MAINT read police tables at night and quietly added a history trigger on door_events and three more tables, telling no one. 30 Nov: 'Found where SYS_MAINT logs in from. Bringing proof Thursday.'"},
   },{
     name:"Fushimi X3",
-    table:"anpr", rows:60000000, perPage:50, maxCols:2, two:30,
-    cols:{read_id:60000000, camera:4000, passed_at:60000000, plate:3000000, lane:4, speed_kmh:150},
-    grows:["read_id","passed_at"], growth:{factor:12, label:"a year from now"},
-    story:"The city's plate cameras write 2 million reads a day, and the table keeps growing. Pull the crossing camera from 08:05 to 08:20. Your index is scored on today's table and on the table a year from now.",
+    table:"crossing_cam", rows:2000000, perPage:50, maxCols:2, two:30,
+    cols:{read_id:2000000, camera:4000, passed_at:2000000, plate:100000, lane:4, speed_kmh:150},
+    grows:["read_id","passed_at"], growth:{factor:365, label:"a year from now"},
+    story:"The city's new crossing cameras went live on Wednesday. They already hold 2 million reads and add 2 million a day. Pull the Fushimi camera from 08:05 to 08:20. Your index is scored on today's table and on the table a year from now.",
     queries:[{label:"Q1", who:"Fushimi crossing, 08:05 to 08:20", where:[eq("camera","'FUSHIMI-X3'"),
-      range("passed_at","passed_at BETWEEN TIMESTAMP '2026-12-03 08:05:00' AND TIMESTAMP '2026-12-03 08:20:00'",15/43200)]}],
-    hint:"A year from now, each camera has twelve times more reads. Does your index read more of them?",
+      range("passed_at","passed_at BETWEEN TIMESTAMP '2026-12-03 08:05:00' AND TIMESTAMP '2026-12-03 08:20:00'",15/1440)]}],
+    hint:"A year from now, each camera has 365 times more reads. Does your index read more of them?",
     hint2:"Index (camera, passed_at). Fifteen minutes stay fifteen minutes however big the table gets.",
     lesson:"An index on camera alone reads every read that camera has ever made, so it slows down as the table grows. (camera, passed_at) goes straight to the fifteen minutes you asked for. Its cost stays flat, apart from maybe one more tree level.",
     results:[{columns:["passed_at","plate","lane","speed_kmh","note"], rows:[
@@ -976,7 +976,7 @@ const CASE3 = {
       ["08:12:04","NGY 400 HA 18-07","2","61","white van, blue lettering"],
       ["08:13:10","NGY 500 RE 33-90","1","4","stopped 40 s"],
       ["08:16:47","NGY 300 TA 77-02","2","36","—"]]}],
-    clue:{id:"E4", title:"The crossing camera", text:"A white van, NGY 400 HA 18-07, crossed at 08:12 at 61 km/h. A minute later NGY 500 RE 33-90 stopped for 40 seconds, then drove on."},
+    clue:{id:"E4", title:"The crossing camera", text:"A white van, NGY 400 HA 18-07, crossed at 08:12 at 61 km/h. A minute later NGY 500 RE 33-90, a private car registered to Ren Takagi, stopped for 40 seconds, then drove on."},
   },{
     name:"The Van",
     table:"fleet_log", rows:5000000, perPage:50, maxCols:2,
@@ -1056,15 +1056,15 @@ const CASE3 = {
       where:[eq("account","'SYS_MAINT'"), range("login_at","login_at >= DATE '2026-11-01'",0.0148)], group:{col:"console"}, groups:2}],
     hint:"COUNT(*) needs no column. The grouping needs console.",
     hint2:"Index (account, login_at, console): find November, count consoles from the index alone.",
-    lesson:"A GROUP BY query can be answered from the index alone when the index holds every column it groups or aggregates. Put the range before the grouping column here: rows already grouped are no use if the database must read the account's whole history to get them.",
+    lesson:"A GROUP BY query can be answered from the index alone when the index holds every column it groups or aggregates. Put the range before the grouping column here: rows already grouped are no use if the database must read the account's whole history to get them. And ORDER BY COUNT(*) can never stop early, because the counts exist only after every group has been read.",
     results:[{columns:["console","COUNT(*)"], rows:[["BK-01","33"],["NC-02","41"]]}],
-    clue:{id:"E9", title:"Where SYS_MAINT logs in", text:"Since 1 November, SYS_MAINT logged in 33 times from BK-01, the backup server, every night at 02:00, and 41 times from NC-02, the night operations console. Not once from DC-01, the day console. Three people work those consoles."},
-    bonus:{title:"Three quiet nights", text:"There are no NC-02 sessions at all on 24, 25 and 26 November."},
+    clue:{id:"E9", title:"Where SYS_MAINT logs in", text:"Since 1 November, SYS_MAINT logged in 33 times from BK-01, the backup server, every night at 02:00, and 41 times from NC-02, the night operations console, including 03:12 on 28 November, the minute the door log was edited. Not once from DC-01, the day console. Three people work those consoles."},
+    bonus:{title:"Three quiet nights", text:"No SYS_MAINT session came from NC-02 on 24, 25 or 26 November."},
   },{
     name:"The Night Console",
     table:"duty_roster", rows:400000, perPage:50, maxCols:3, two:12,
     cols:{roster_id:400000, console:120, shift_date:3300, staff_id:300, shift:3, site:4},
-    grows:["roster_id","shift_date"], growth:{factor:10, label:"ten years from now"},
+    grows:["roster_id","shift_date"], growth:{factor:2, label:"nine years from now"},
     story:"The data center's duty roster goes back nine years and grows every night. Who worked console NC-02 between 1 November and 3 December, and how many nights each?",
     queries:[{label:"Q1", who:"NC-02, 1 Nov to 3 Dec", select:["staff_id","COUNT(*)","MIN(shift_date)"],
       where:[eq("console","'NC-02'"), range("shift_date","shift_date BETWEEN DATE '2026-11-01' AND DATE '2026-12-03'",33/3300)],
@@ -1786,8 +1786,8 @@ const VI = {
     "Tác vụ sao lưu của tôi đăng nhập bằng SYS_MAINT lúc hai giờ mỗi đêm. Từ nhiều năm nay rồi.",
   "Yuji Kaneda is charged. He never knew the man's name. Someone else gave him the plate, the address and the time.":
     "Yuji Kaneda bị buộc tội. Hắn chưa từng biết tên nạn nhân. Có người khác đưa cho hắn biển số, địa chỉ và giờ giấc.",
-  "SYS_MAINT read the calendar that put Nomura on your list. Name the person behind the account: where it logged in from, and proof they sat there.":
-    "SYS_MAINT đã đọc lịch hẹn đưa Nomura đến chỗ bạn. Hãy gọi tên người đứng sau tài khoản này: nó đăng nhập từ đâu, và bằng chứng người đó ngồi ở đó.",
+  "Nomura was coming to tell you who SYS_MAINT is. Finish his work: name the person behind the account, where it logged in from, and proof they sat there.":
+    "Nomura đang trên đường tới nói cho bạn biết SYS_MAINT là ai. Hãy làm nốt việc của anh: gọi tên người đứng sau tài khoản này, nó đăng nhập từ đâu, và bằng chứng người đó ngồi ở đó.",
   "Night sysadmin · console NC-02": "Quản trị hệ thống ca đêm · console NC-02",
   "Day-shift analyst · console DC-01": "Chuyên viên phân tích ca ngày · console DC-01",
   "Backup contractor · runs jobs on BK-01": "Kỹ sư hãng sao lưu · chạy tác vụ trên BK-01",
@@ -1801,8 +1801,8 @@ const VI = {
     "Aiko Nishida: “Takeshi cài cái trigger lịch sử đó mà không nói với ai. Từ giờ tôi trực console đêm. Cứ gửi query cho tôi.”",
   "Fujimoto is gone, but his accounts aren't. Something on the night console is still deleting.":
     "Fujimoto đã đi, nhưng các tài khoản của ông ta thì chưa. Có thứ gì đó trên console đêm vẫn đang xóa.",
-  "He read along with you from the first night. Every bonus you found was him.":
-    "Ông ta đọc theo bạn từ đêm đầu tiên. Mọi bằng chứng phụ bạn tìm được đều là ông ta.",
+  "He read along with you from the first night. You saw his traces in the bonus evidence all along.":
+    "Ông ta đọc theo bạn từ đêm đầu tiên. Dấu vết của ông ta nằm trong các bằng chứng phụ từ lâu rồi.",
   "Fujimoto never saw you coming.": "Fujimoto không hề thấy bạn đến.",
   "He saw some of it. Not enough to stop you.": "Ông ta thấy một phần. Không đủ để cản bạn.",
   "He knew who you would ask for next.": "Ông ta biết bạn sẽ tra ai tiếp theo.",
@@ -1842,8 +1842,8 @@ const VI = {
     "Nhật ký lịch: lời mời họp 10:00 thứ Năm đã được SYS_MAINT mở lúc 21:48 thứ Ba.",
 
   "Page Three": "Trang ba",
-  "Nomura's newest ticket, from Monday, says only: 'See my note of 21 Nov.' His ticket list shows 20 per page, newest first, and you have reached page 3.":
-    "Ticket mới nhất của Nomura, từ thứ Hai, chỉ ghi: 'Xem ghi chú ngày 21/11.' Danh sách ticket hiện 20 cái mỗi trang, mới nhất trước, và bạn đã tới trang 3.",
+  "Nomura's newest ticket, from Monday, ends with: 'Background in my note of 21 Nov.' His ticket list shows 20 per page, newest first, and you have reached page 3.":
+    "Ticket mới nhất của Nomura, từ thứ Hai, kết thúc bằng: 'Bối cảnh xem ghi chú ngày 21/11.' Danh sách ticket hiện 20 cái mỗi trang, mới nhất trước, và bạn đã tới trang 3.",
   "Nomura's tickets, page 3": "Ticket của Nomura, trang 3",
   "<= also returns the ticket you last saw, so every page starts with a repeat of the one before.":
     "<= trả lại cả ticket bạn vừa xem, nên trang nào cũng bắt đầu bằng một dòng lặp của trang trước.",
@@ -1860,18 +1860,18 @@ const VI = {
 
   "Fushimi X3": "Fushimi X3",
   "a year from now": "một năm sau",
-  "The city's plate cameras write 2 million reads a day, and the table keeps growing. Pull the crossing camera from 08:05 to 08:20. Your index is scored on today's table and on the table a year from now.":
-    "Camera biển số của thành phố ghi 2 triệu lượt mỗi ngày, và bảng cứ lớn dần. Lấy dữ liệu camera ngã tư từ 08:05 đến 08:20. Index của bạn được chấm trên bảng hôm nay và trên bảng một năm sau.",
+  "The city's new crossing cameras went live on Wednesday. They already hold 2 million reads and add 2 million a day. Pull the Fushimi camera from 08:05 to 08:20. Your index is scored on today's table and on the table a year from now.":
+    "Hệ thống camera ngã tư mới của thành phố chạy từ thứ Tư. Nó đã có 2 triệu lượt ghi và mỗi ngày thêm 2 triệu. Lấy dữ liệu camera Fushimi từ 08:05 đến 08:20. Index của bạn được chấm trên bảng hôm nay và trên bảng một năm sau.",
   "Fushimi crossing, 08:05 to 08:20": "Ngã tư Fushimi, 08:05 đến 08:20",
-  "A year from now, each camera has twelve times more reads. Does your index read more of them?":
-    "Một năm sau, mỗi camera có gấp mười hai lần số lượt ghi. Index của bạn có phải đọc nhiều hơn không?",
+  "A year from now, each camera has 365 times more reads. Does your index read more of them?":
+    "Một năm sau, mỗi camera có gấp 365 lần số lượt ghi. Index của bạn có phải đọc nhiều hơn không?",
   "Index (camera, passed_at). Fifteen minutes stay fifteen minutes however big the table gets.":
     "Index (camera, passed_at). Mười lăm phút vẫn là mười lăm phút, bảng lớn đến đâu cũng vậy.",
   "An index on camera alone reads every read that camera has ever made, so it slows down as the table grows. (camera, passed_at) goes straight to the fifteen minutes you asked for. Its cost stays flat, apart from maybe one more tree level.":
     "Index chỉ có camera phải đọc mọi lượt ghi camera đó từng có, nên chậm dần khi bảng lớn lên. (camera, passed_at) đi thẳng tới mười lăm phút bạn cần. Chi phí của nó gần như không đổi, có chăng thêm một tầng cây.",
   "The crossing camera": "Camera ngã tư",
-  "A white van, NGY 400 HA 18-07, crossed at 08:12 at 61 km/h. A minute later NGY 500 RE 33-90 stopped for 40 seconds, then drove on.":
-    "Một chiếc van trắng, NGY 400 HA 18-07, qua ngã tư lúc 08:12 với tốc độ 61 km/h. Một phút sau NGY 500 RE 33-90 dừng 40 giây rồi chạy tiếp.",
+  "A white van, NGY 400 HA 18-07, crossed at 08:12 at 61 km/h. A minute later NGY 500 RE 33-90, a private car registered to Ren Takagi, stopped for 40 seconds, then drove on.":
+    "Một chiếc van trắng, NGY 400 HA 18-07, qua ngã tư lúc 08:12 với tốc độ 61 km/h. Một phút sau NGY 500 RE 33-90, xe riêng đứng tên Ren Takagi, dừng 40 giây rồi chạy tiếp.",
 
   "The Van": "Chiếc van",
   "Every company van logs who took it out each day. Q1 asks who had this van on Thursday. Q2 lists its last ten shifts. One index for both.":
@@ -1944,16 +1944,18 @@ const VI = {
   "COUNT(*) needs no column. The grouping needs console.": "COUNT(*) không cần cột nào. Gom nhóm cần console.",
   "Index (account, login_at, console): find November, count consoles from the index alone.":
     "Index (account, login_at, console): tìm tháng 11, rồi đếm console ngay trong index.",
-  "A GROUP BY query can be answered from the index alone when the index holds every column it groups or aggregates. Put the range before the grouping column here: rows already grouped are no use if the database must read the account's whole history to get them.":
-    "Query GROUP BY trả lời được chỉ từ index khi index chứa mọi cột mà nó gom nhóm hoặc tính gộp. Ở đây hãy đặt khoảng trước cột gom nhóm: dòng ra sẵn theo nhóm chẳng ích gì nếu database phải đọc cả lịch sử của tài khoản mới có được chúng.",
+  "A GROUP BY query can be answered from the index alone when the index holds every column it groups or aggregates. Put the range before the grouping column here: rows already grouped are no use if the database must read the account's whole history to get them. And ORDER BY COUNT(*) can never stop early, because the counts exist only after every group has been read.":
+    "Query GROUP BY trả lời được chỉ từ index khi index chứa mọi cột mà nó gom nhóm hoặc tính gộp. Ở đây hãy đặt khoảng trước cột gom nhóm: dòng ra sẵn theo nhóm chẳng ích gì nếu database phải đọc cả lịch sử của tài khoản mới có được chúng. Còn ORDER BY COUNT(*) thì không bao giờ dừng sớm được, vì số đếm chỉ có sau khi đã đọc hết mọi nhóm.",
   "Where SYS_MAINT logs in": "SYS_MAINT đăng nhập từ đâu",
-  "Since 1 November, SYS_MAINT logged in 33 times from BK-01, the backup server, every night at 02:00, and 41 times from NC-02, the night operations console. Not once from DC-01, the day console. Three people work those consoles.":
-    "Từ 1/11, SYS_MAINT đăng nhập 33 lần từ BK-01, máy chủ sao lưu, đều đặn 02:00 mỗi đêm, và 41 lần từ NC-02, console vận hành ca đêm. Không lần nào từ DC-01, console ca ngày. Có ba người làm việc ở các console đó.",
+  "Since 1 November, SYS_MAINT logged in 33 times from BK-01, the backup server, every night at 02:00, and 41 times from NC-02, the night operations console, including 03:12 on 28 November, the minute the door log was edited. Not once from DC-01, the day console. Three people work those consoles.":
+    "Từ 1/11, SYS_MAINT đăng nhập 33 lần từ BK-01, máy chủ sao lưu, đều đặn 02:00 mỗi đêm, và 41 lần từ NC-02, console vận hành ca đêm, trong đó có lúc 03:12 ngày 28/11, đúng phút nhật ký cửa bị sửa. Không lần nào từ DC-01, console ca ngày. Có ba người làm việc ở các console đó.",
   "Three quiet nights": "Ba đêm yên ắng",
-  "There are no NC-02 sessions at all on 24, 25 and 26 November.": "Không có phiên NC-02 nào trong các ngày 24, 25 và 26/11.",
+  "No SYS_MAINT session came from NC-02 on 24, 25 or 26 November.":
+    "Không có phiên SYS_MAINT nào từ NC-02 trong các ngày 24, 25 và 26/11.",
 
   "The Night Console": "Console ca đêm",
-  "ten years from now": "mười năm sau",
+  "nine years from now":
+    "chín năm sau",
   "The data center's duty roster goes back nine years and grows every night. Who worked console NC-02 between 1 November and 3 December, and how many nights each?":
     "Lịch trực của trung tâm dữ liệu kéo dài chín năm và dài thêm mỗi đêm. Ai đã trực console NC-02 từ 1/11 đến 3/12, và mỗi người bao nhiêu đêm?",
   "NC-02, 1 Nov to 3 Dec": "NC-02, 1/11 đến 3/12",
@@ -1988,6 +1990,7 @@ function t(s, vars){
   return vars ? r.replace(/\{(\w+)\}/g, (m, k) => k in vars ? vars[k] : m) : r;
 }
 const pl = n => n === 1 ? "" : "s";
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);   // a label that starts a line
 
 const $ = id => document.getElementById(id);
 const fmt = n => n.toLocaleString(LANG === "vi" ? "vi-VN" : "en-US");
@@ -2662,7 +2665,7 @@ function renderReport(){
     `<div class="stars" aria-label="${t("{n} of 3 stars", {n:r.stars})}">${"★".repeat(r.stars)}<span class="off">${"★".repeat(3-r.stars)}</span></div>` +
     `<dl class="score">` +
       (lv.inserts ? `<dt>${perDay ? t("Pages read per day") : t("Pages read")}</dt><dd>${fmt(r.reads)}</dd><dt>${t("Index upkeep per day")}</dt><dd>${fmt(r.writes)}</dd>` : "") +
-      (r.later ? `<dt>${t("Pages read today")}</dt><dd>${fmt(r.reads)}</dd><dt>${esc(t(lv.growth.label))}</dt><dd>${fmt(r.later.reads)}</dd>` : "") +
+      (r.later ? `<dt>${t("Pages read today")}</dt><dd>${fmt(r.reads)}</dd><dt>${esc(cap(t(lv.growth.label)))}</dt><dd>${fmt(r.later.reads)}</dd>` : "") +
       `<dt>${lv.inserts ? t("Total per day") : r.later ? t("Total") : t("Pages read")}</dt><dd>${fmt(r.total)}</dd>` +
       `<dt>${t("Best possible")}</dt><dd>${r.stars===3 ? fmt(r.best) : "?"}</dd><dt>${t("Without an index")}</dt><dd>${fmt(r.none)}</dd>` +
       `</dl>` +
@@ -2673,7 +2676,7 @@ function renderReport(){
       const q = lv.queries[i], v = variantOf(lv, i);
       if (v.wrong) return `<div class="qres bad"><div><b>${q.label}</b> <span class="tag">${t("WRONG ROWS")}</span></div><p>${esc(t(v.wrong))}</p></div>`;
       return `<div class="qres ${p.kind==="index"?"good":"bad"}"><div><b>${q.label}</b> <span class="tag">${scanLabel(lv, p, variantOf(lv, i))}</span> ${t("{n} pages", {n:fmt(p.cost)})}${q.freq ? ` × ${t("{n}/day", {n:fmt(q.freq)})}` : ""}</div><p>${esc(explain(lv, p, variantOf(lv, i)))}` +
-        (r.later ? ` <b>${esc(t("{label}: {n} pages.", {label:t(lv.growth.label), n:fmt(r.later.plans[i].cost)}))}</b>` : "") + `</p></div>`;
+        (r.later ? ` <b>${esc(t("{label}: {n} pages.", {label:cap(t(lv.growth.label)), n:fmt(r.later.plans[i].cost)}))}</b>` : "") + `</p></div>`;
     }).join("") +
     (r.stars < 3 ? hintBlock(lv, r.stars) : "") +
     (r.stars === 3 ? `<div class="lesson"><b>${t("LESSON")}</b><p>${esc(t(lv.lesson))}</p></div>`
@@ -2689,7 +2692,7 @@ function renderResults(){
   if (c.practice) return;
   if (!r || !r.done){ el.innerHTML = `<p class="empty">${r ? t("Running…") : t("Rows appear here after EXECUTE.")}</p>`; return; }
   if (r.stars < 2){
-    el.innerHTML = `<p class="cancel">${CANCEL_LINE}</p><p class="empty">${t("I/O guard: query cancelled after {n} pages. Reach ★★ to get the rows.", {n:fmt(r.total)})}</p>`;
+    el.innerHTML = `<p class="cancel">${CANCEL_LINE}</p><p class="empty">${t("I/O guard: query cancelled after {n} pages. Reach ★★ to get the rows.", {n:fmt(r.total - (r.later?.reads ?? 0))})}</p>`;   // pages read today, not the future table's
     return;
   }
   const res = lv.results[state.tab];
