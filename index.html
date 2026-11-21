@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta charset="utf-8">
 <title>Index Dojo</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -95,7 +95,15 @@ dialog.win p{max-width:none}
   padding-block:20px 32px; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
 }
 .col{display:grid; gap:20px; min-width:0}
-@media (max-width:880px){ .desk{grid-template-columns:minmax(0,1fr)} }
+@media (max-width:880px){
+  /* One column on phones and narrow windows: the run, its report and results come right after EXECUTE; the notebook last. */
+  .desk{grid-template-columns:minmax(0,1fr)}
+  .col{display:contents}
+  #mwin{order:1} #wizwin{order:2} #planwin{order:3} #repwin{order:4} #reswin{order:5} #nbwin{order:6}
+}
+@media (max-width:640px){ .bar{position:static} .desk{gap:16px; padding-block:16px 24px} }
+/* Touch: the case and mission tabs in the header are the smallest targets in the game. */
+@media (pointer:coarse){ .bar .lv button{min-height:36px; padding:4px 10px} .bar .icon{height:36px; min-width:36px} }
 
 .win{background:var(--win); border:4px double var(--line); box-shadow:6px 6px 0 var(--shadow); min-width:0}
 .win>h2{
@@ -268,11 +276,11 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
 
 <main class="desk">
   <div class="col">
-    <section class="win">
+    <section class="win" id="mwin">
       <h2><span id="m-title"></span></h2>
       <div class="pane" id="mission"></div>
     </section>
-    <section class="win">
+    <section class="win" id="wizwin">
       <h2><span data-t>INDEX WIZARD</span></h2>
       <div class="pane">
         <pre id="ddl"></pre>
@@ -291,7 +299,7 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
     </section>
   </div>
   <div class="col">
-    <section class="win">
+    <section class="win" id="planwin">
       <h2><span data-t>EXECUTION PLAN</span></h2>
       <div class="pane">
         <div class="tabs" id="tabs" role="tablist"></div>
@@ -309,7 +317,7 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
       <h2><span data-t>RESULTS</span></h2>
       <div class="pane" id="results"></div>
     </section>
-    <section class="win">
+    <section class="win" id="repwin">
       <h2><span data-t>REPORT</span></h2>
       <div class="pane" id="report"></div>
     </section>
@@ -3484,6 +3492,7 @@ async function execute(){
   $("run").disabled = true;
   $("report").innerHTML = `<p class="empty">${t("Running…")}</p>`;
   renderResults();
+  oneColumn() && !tour && glide($("planwin"));   // on a phone the plan sits below the wizard: bring the run into view
   for (let i = 0; i < sc.plans.length; i++){
     await showQuery(i, false);
     if (animTok !== run + i) break;   // user switched tabs mid-run
@@ -3500,8 +3509,11 @@ async function execute(){
   state.bump = state.result.sus > 0;   // draw the meter at its old level once, then let it rise
   renderBar(); state.bump = false; riseMeter();
   renderReport(); renderResults(); renderNotebook();
+  oneColumn() && !tour && glide($("repwin"));   // then the stars (the tour scrolls on its own)
   tourPlace(); tourEvent("run");
 }
+const oneColumn = () => matchMedia("(max-width:880px)").matches;
+const glide = el => el.scrollIntoView({block:"start", behavior: reduceMotion ? "instant" : "smooth"});
 
 document.addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b || b.disabled) return;
