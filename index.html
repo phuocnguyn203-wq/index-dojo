@@ -225,8 +225,11 @@ svg{display:block; width:100%; height:auto; max-width:100%}
 .sus-cards label:has(.face){grid-template-columns:56px minmax(0,1fr); column-gap:10px; align-items:center}
 .sus-cards .face{grid-row:span 2; width:56px; height:56px}
 .scene{display:block; width:100%; height:auto; aspect-ratio:3/2; image-rendering:pixelated; border:2px solid var(--line); margin-bottom:12px; background:var(--desk-a)}
-.clue .face, .msg .face{float:left; width:48px; height:48px; margin:2px 10px 4px 0}
-.msg .face{width:32px; height:32px}
+.msg .face{float:left; width:32px; height:32px; margin:2px 10px 4px 0}
+.faces{display:flex; flex-wrap:wrap; gap:12px; margin:8px 0 2px}
+.faces figure{margin:0; display:grid; justify-items:center; gap:3px; width:80px}
+.faces .face{width:72px; height:72px}
+.faces figcaption{font-size:12px; color:var(--dim); text-align:center; line-height:1.25}
 .nb summary .face{width:32px; height:32px; vertical-align:middle; margin-right:8px; border-width:1px}
 .sus-cards input{position:absolute; opacity:0; pointer-events:none}
 .sus-cards label:has(input:checked){background:var(--line); color:var(--win)}
@@ -546,7 +549,7 @@ const CASE1 = {
     lesson:"employee_id is unique, so the database walks the B-tree to exactly one leaf entry and reads one row: an INDEX UNIQUE SCAN. The cost is one page per level of the tree plus one table read, and the tree stays shallow even with millions of rows.",
     results:[{columns:["employee_id","name","department","title","phone"],
       rows:[[1180,"MORI Hideo","AUDIT","Internal auditor","090-5518-2204"]]}],
-    clue:{id:"E1", face:"mori", title:"The victim", text:"Hideo Mori, 54, internal auditor at Kinjo Logistics. Phone 090-5518-2204."},
+    clue:{id:"E1", title:"The victim", text:"Hideo Mori, 54, internal auditor at Kinjo Logistics. Phone 090-5518-2204."},
   },{
     name:"Open Items",
     table:"tasks", rows:200000, perPage:50, maxCols:1,
@@ -745,7 +748,7 @@ const CASE2 = {
       ["06:00-14:00","OTA Jun","0412","Gate 1","—"],
       ["14:00-22:00","ISOBE Kai","0398","Gate 1","—"],
       ["22:00-06:00","AOKI Shin","0417","W7 rounds","swap with HIRATA Ken, requested 18:05"]]}],
-    clue:{id:"E1", face:"aoki", title:"The night shift", text:"Shin Aoki, badge 0417, took the 22:00 to 06:00 shift at warehouse 7. It was Ken Hirata's shift until Hirata asked to swap at 18:05 that evening."},
+    clue:{id:"E1", title:"The night shift", text:"Shin Aoki, badge 0417, took the 22:00 to 06:00 shift at warehouse 7. It was Ken Hirata's shift until Hirata asked to swap at 18:05 that evening."},
   },{
     name:"The Archive Door",
     table:"door_events", rows:5000000, perPage:50, maxCols:2,
@@ -969,7 +972,7 @@ const CASE3 = {
     hint2:"Index (frame_no, registered_at). The database reads it from the newest end and stops after one row.",
     lesson:"Put the ORDER BY column right after the column compared with =. The index then keeps each frame's rows in date order, so the database reads the newest one and stops: a top-N query that touches one row however many renewals there are.",
     results:[{columns:["owner","born","address","phone","registered_at"], rows:[["NOMURA Takeshi","1988","Kamimaezu 2-14, Naka-ku","090-3318-5520","2026-04-02"]]}],
-    clue:{id:"E1", face:"nomura", title:"The cyclist", text:"The bicycle belongs to Takeshi Nomura, 38, a database administrator at the city data center. He lives in Kamimaezu. Phone 090-3318-5520."},
+    clue:{id:"E1", title:"The cyclist", text:"The bicycle belongs to Takeshi Nomura, 38, a database administrator at the city data center. He lives in Kamimaezu. Phone 090-3318-5520."},
     bonus:{title:"Old owners", text:"The frame was registered to two other people before 2023. Both sold it years ago."},
   },{
     name:"His Calendar",
@@ -2688,6 +2691,23 @@ const statementsFrom = (c, clueId) => (c.statements ?? []).filter(s => (s.after 
 const evidenceOf = c => c.missions.flatMap((m, i) => [
   ...(m.clue ? [{...m.clue, mission:i}] : []),
   ...(m.bonus ? [{...m.bonus, id:"B" + (i + 1), mission:i, bonus:true}] : [])]);
+// People with a portrait who are not suspects in every case they appear in (victims, the two analysts).
+const PEOPLE = [{id:"mori", name:"Hideo Mori"}, {id:"aoki", name:"Shin Aoki"}, {id:"nomura", name:"Takeshi Nomura"},
+  {id:"fujimoto", name:"Goro Fujimoto"}, {id:"nishida", name:"Aiko Nishida"}];
+// Who a clue names, in the order they first appear: a full name, or a surname no one else in the case shares
+// (case 1 has two Satos, so a bare "Sato" names nobody); people from other cases only by full name.
+// Read from the English text, so it works in every language.
+function peopleIn(c, text){
+  const all = k => [...k.suspects ?? [], ...k.accusation?.second?.suspects ?? []];
+  const roster = [...all(c), ...PEOPLE].filter((p, i, a) => a.findIndex(q => q.id === p.id) === i);
+  const others = CASES.flatMap(all).filter((p, i, a) => !roster.some(q => q.id === p.id) && a.findIndex(q => q.id === p.id) === i);
+  const last = p => p.name.split(" ").pop(), shared = p => roster.filter(q => last(q) === last(p)).length > 1;
+  return [...roster, ...others.map(p => ({...p, other:true}))].map(p => {
+    const full = text.indexOf(p.name), sur = p.other || shared(p) ? -1 : text.search(new RegExp(`\\b${last(p)}\\b`));
+    const at = [full, sur].filter(i => i >= 0);
+    return {id:p.id, name:p.name, at: at.length ? Math.min(...at) : -1};
+  }).filter(p => p.at >= 0).sort((a, b) => a.at - b.at);
+}
 const emptySlots = lv => Array.from({length: lv.maxIdx ?? 1}, () => []);
 
 /* ---------- cost model ---------- */
@@ -3393,7 +3413,7 @@ function renderResults(){
       `<p class="stats">${t("{n} row{s}", {n:res.rows.length, s:pl(res.rows.length)})}</p>`
     : `<p>${t("{n} row{s}.", {n:fmt(res.count), s:pl(res.count)})} ${esc(t(res.note))}</p>`;
   el.innerHTML = rows +
-    `<div class="clue">${lv.clue.face ? face(lv.clue.face, 48) : ""}<b>${t("EVIDENCE")} ${lv.clue.id} · ${esc(t(lv.clue.title))}</b><p>${esc(t(lv.clue.text))}</p>${lv.clue.note ? `<p class="note">${esc(t(lv.clue.note))}</p>` : ""}` +
+    `<div class="clue"><b>${t("EVIDENCE")} ${lv.clue.id} · ${esc(t(lv.clue.title))}</b><p>${esc(t(lv.clue.text))}</p>${lv.clue.note ? `<p class="note">${esc(t(lv.clue.note))}</p>` : ""}${faces(c, lv.clue.text)}` +
       (statementsFrom(c, lv.clue.id).length ? `<button class="go" data-act="stmts">${t("{n} new statements in your notebook ▸", {n:statementsFrom(c, lv.clue.id).length})}</button>` : "") +
     `</div>` +
     (r.stars === 3 && lv.bonus ? `<div class="clue bonus"><b>★ ${t("BONUS")} · ${esc(t(lv.bonus.title))}</b><p>${esc(t(lv.bonus.text))}</p></div>` : "");
@@ -3406,17 +3426,20 @@ function renderNotebook(){
   const got = state.save.clues[state.caseIx] ?? [];
   const items = evidenceOf(c).filter(e => got.includes(e.id));
   $("notebook").innerHTML = (items.length
-    ? `<div class="nb">` + items.map(e => `<details class="${e.bonus ? "bonus" : ""}"><summary>${e.face ? face(e.face, 32) : ""}<b>${e.bonus ? "★" : e.id}</b>${esc(t(e.title))}</summary><p>${esc(t(e.text))}</p>${e.note ? `<p class="note">${esc(t(e.note))}</p>` : ""}</details>`).join("") + `</div>`
+    ? `<div class="nb">` + items.map(e => `<details class="${e.bonus ? "bonus" : ""}"><summary><b>${e.bonus ? "★" : e.id}</b>${esc(t(e.title))}</summary><p>${esc(t(e.text))}</p>${e.note ? `<p class="note">${esc(t(e.note))}</p>` : ""}${faces(c, e.text)}</details>`).join("") + `</div>`
     : `<p class="empty">${t("No evidence yet. Clear a mission at ★★ and its clue lands here.")}</p>`) +
     (got.includes(c.statementsAfter) ? `<h4>${t("STATEMENTS")}</h4><div class="nb">` +
       c.statements.filter(s => !s.after || got.includes(s.after)).map(s => {
         const who = [...c.suspects, ...(c.accusation.second?.suspects ?? [])].find(x => x.name === s.who), role = who?.role;   // who they are, next to the name
         const fresh = !(state.save.read?.[state.caseIx] ?? []).includes(s.who);
         return `<details data-stmt="${esc(s.who)}"><summary>${who ? face(who.id, 32) : ""}<b>${esc(s.who)}</b>${role ? ` <small class="role">${esc(t(role))}</small>` : ""}` +
-          `${fresh ? ` <span class="tag new">${t("NEW")}</span>` : ""}</summary><p>“${esc(t(s.text))}”</p></details>`; }).join("") + `</div>` : "");
+          `${fresh ? ` <span class="tag new">${t("NEW")}</span>` : ""}</summary><p>“${esc(t(s.text))}”</p>${who ? faces(c, who.name) : ""}</details>`; }).join("") + `</div>` : "");
 }
 
 // A suspect portrait (art/portraits/<id>.png); removes itself if the file is missing, so a face can be added any time.
+// The faces a text names, each with a caption, in a row under the text (see peopleIn).
+const faces = (c, text) => { const ps = peopleIn(c, text);
+  return ps.length ? `<div class="faces">` + ps.map(p => `<figure>${face(p.id, 72)}<figcaption>${esc(p.name)}</figcaption></figure>`).join("") + `</div>` : ""; };
 const face = (id, px) => `<img class="face" src="art/portraits/${id}.png" width="${px}" height="${px}" alt="" onerror="this.remove()">`;
 
 function storeSave(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(state.save)); } catch {} }
