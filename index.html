@@ -220,6 +220,9 @@ svg{display:block; width:100%; height:auto; max-width:100%}
 .face{image-rendering:pixelated; border:2px solid var(--line); background:var(--desk-a); flex:none}
 .sus-cards label:has(.face){grid-template-columns:56px minmax(0,1fr); column-gap:10px; align-items:center}
 .sus-cards .face{grid-row:span 2; width:56px; height:56px}
+.scene{display:block; width:100%; height:auto; aspect-ratio:3/2; image-rendering:pixelated; border:2px solid var(--line); margin-bottom:12px; background:var(--desk-a)}
+.clue .face, .msg .face{float:left; width:48px; height:48px; margin:2px 10px 4px 0}
+.msg .face{width:32px; height:32px}
 .nb summary .face{width:32px; height:32px; vertical-align:middle; margin-right:8px; border-width:1px}
 .sus-cards input{position:absolute; opacity:0; pointer-events:none}
 .sus-cards label:has(input:checked){background:var(--line); color:var(--win)}
@@ -494,7 +497,7 @@ const ON = (col, val, sel) => ({...eq(col, val), sel});
 const KAITO = ["Kaito Trading", "KAITO TRADING", "kaito trading", "Kaito trading"];
 
 const CASE1 = {
-  id:"case1", title:"The Last Train",
+  id:"case1", title:"The Last Train", scene:"case1",
   intro:[
     "A man is found dead at 06:10 on 20 November, in the level-3 stairwell of the Kanayama Station parking garage. Time of death: between 23:30 and 00:30.",
     "On him: a Kinjo Logistics staff badge, number 1180. No wallet. No phone.",
@@ -539,7 +542,7 @@ const CASE1 = {
     lesson:"employee_id is unique, so the database walks the B-tree to exactly one leaf entry and reads one row: an INDEX UNIQUE SCAN. The cost is one page per level of the tree plus one table read, and the tree stays shallow even with millions of rows.",
     results:[{columns:["employee_id","name","department","title","phone"],
       rows:[[1180,"MORI Hideo","AUDIT","Internal auditor","090-5518-2204"]]}],
-    clue:{id:"E1", title:"The victim", text:"Hideo Mori, 54, internal auditor at Kinjo Logistics. Phone 090-5518-2204."},
+    clue:{id:"E1", face:"mori", title:"The victim", text:"Hideo Mori, 54, internal auditor at Kinjo Logistics. Phone 090-5518-2204."},
   },{
     name:"Open Items",
     table:"tasks", rows:200000, perPage:50, maxCols:1,
@@ -689,7 +692,7 @@ const BETWEEN_DAY = "BETWEEN includes both ends, so this also returns rows from 
 const PENDING = "WHERE status = 'PENDING'";
 
 const CASE2 = {
-  id:"case2", title:"Paper Ghosts",
+  id:"case2", title:"Paper Ghosts", scene:"case2",
   intro:[
     "02:50, 28 November. Fire in warehouse 7 of Kinjo Logistics at Nagoya port. The records archive on the first floor burned out.",
     "Night guard Shin Aoki was carried out of the smoke. He is in a coma and can't say what he saw.",
@@ -738,7 +741,7 @@ const CASE2 = {
       ["06:00-14:00","OTA Jun","0412","Gate 1","—"],
       ["14:00-22:00","ISOBE Kai","0398","Gate 1","—"],
       ["22:00-06:00","AOKI Shin","0417","W7 rounds","swap with HIRATA Ken, requested 18:05"]]}],
-    clue:{id:"E1", title:"The night shift", text:"Shin Aoki, badge 0417, took the 22:00 to 06:00 shift at warehouse 7. It was Ken Hirata's shift until Hirata asked to swap at 18:05 that evening."},
+    clue:{id:"E1", face:"aoki", title:"The night shift", text:"Shin Aoki, badge 0417, took the 22:00 to 06:00 shift at warehouse 7. It was Ken Hirata's shift until Hirata asked to swap at 18:05 that evening."},
   },{
     name:"The Archive Door",
     table:"door_events", rows:5000000, perPage:50, maxCols:2,
@@ -906,7 +909,7 @@ const CASE2 = {
 const KANEDA = "'090-2875-6614'";
 
 const CASE3 = {
-  id:"case3", title:"Rush Hour",
+  id:"case3", title:"Rush Hour", scene:"case3",
   intro:[
     "08:12, Thursday 3 December. Fushimi crossing, morning rush. A white van hits a cyclist and drives on. The man dies at the scene.",
     "No wallet, no phone. The only number on him is the frame registration of his bicycle: NGY-B-48213.",
@@ -962,7 +965,7 @@ const CASE3 = {
     hint2:"Index (frame_no, registered_at). The database reads it from the newest end and stops after one row.",
     lesson:"Put the ORDER BY column right after the column compared with =. The index then keeps each frame's rows in date order, so the database reads the newest one and stops: a top-N query that touches one row however many renewals there are.",
     results:[{columns:["owner","born","address","phone","registered_at"], rows:[["NOMURA Takeshi","1988","Kamimaezu 2-14, Naka-ku","090-3318-5520","2026-04-02"]]}],
-    clue:{id:"E1", title:"The cyclist", text:"The bicycle belongs to Takeshi Nomura, 38, a database administrator at the city data center. He lives in Kamimaezu. Phone 090-3318-5520."},
+    clue:{id:"E1", face:"nomura", title:"The cyclist", text:"The bicycle belongs to Takeshi Nomura, 38, a database administrator at the city data center. He lives in Kamimaezu. Phone 090-3318-5520."},
     bonus:{title:"Old owners", text:"The frame was registered to two other people before 2023. Both sold it years ago."},
   },{
     name:"His Calendar",
@@ -1140,7 +1143,7 @@ const CASE3 = {
 // Index writes matter from here on: UPDATE / DELETE statements (op) and clustered tables (clustered).
 const PICKUP = "'080-4417-2290'", SHOPCAR = "'NGY 300 SE 51-12'", TAKAGI_CAR = "'NGY 500 RE 33-90'";
 const CASE4 = {
-  id:"case4", title:"Night Ferry", hinter:"NISHIDA (night console) >",
+  id:"case4", title:"Night Ferry", scene:"case4", hinter:"NISHIDA (night console) >", hinterFace:"nishida",
   watchLine:"Not the best plan: SUSPICION +{n}%. Slow searches keep the phone company and the traffic desk busy, people talk, and talk reaches Kitamura Credit. Later missions are watched more closely.",
   cleanLine:"Best plan. Nobody outside your team noticed the search.",
   intro:[
@@ -3241,6 +3244,7 @@ function openDialog(title, html){
 function openBriefing(){
   const c = CASES[state.caseIx];
   openDialog(`${caseLabel(c, state.caseIx)} · ${t(c.title).toUpperCase()}`,
+    (c.scene ? `<img class="scene" src="art/scenes/${c.scene}.png" width="240" height="160" alt="" onerror="this.remove()">` : "") +
     c.intro.map(p => `<p>${esc(t(p))}</p>`).join("") + `<p class="hint">${esc(t(c.witness))}</p>` +
     `<div class="row"><button class="go" data-close="1">${t("START INVESTIGATION ▶")}</button></div>`);
 }
@@ -3318,7 +3322,7 @@ function hintBlock(lv, stars){
   const fails = state.save.fails[state.caseIx]?.[state.lv] ?? 0;
   const h = stars >= 2 ? lv.hint : hintFor(lv, fails);
   return `<p class="hint">${stars >= 2 ? t("Clue recovered. A cheaper index exists.") : t("Query cancelled, so there are no rows and no clue.")}</p>` +
-    `<div class="msg"><b>${esc(CASES[state.caseIx].hinter ? t(CASES[state.caseIx].hinter) : t("FUJIMOTO (night sysadmin) >"))}</b> ${esc(t(h))}</div>`;
+    `<div class="msg">${face(CASES[state.caseIx].hinterFace ?? "fujimoto", 32)}<b>${esc(CASES[state.caseIx].hinter ? t(CASES[state.caseIx].hinter) : t("FUJIMOTO (night sysadmin) >"))}</b> ${esc(t(h))}</div>`;
 }
 
 // After the last mission of a case: point the player at the accusation once every clue is in.
@@ -3378,7 +3382,7 @@ function renderResults(){
       `<p class="stats">${t("{n} row{s}", {n:res.rows.length, s:pl(res.rows.length)})}</p>`
     : `<p>${t("{n} row{s}.", {n:fmt(res.count), s:pl(res.count)})} ${esc(t(res.note))}</p>`;
   el.innerHTML = rows +
-    `<div class="clue"><b>${t("EVIDENCE")} ${lv.clue.id} · ${esc(t(lv.clue.title))}</b><p>${esc(t(lv.clue.text))}</p>` +
+    `<div class="clue">${lv.clue.face ? face(lv.clue.face, 48) : ""}<b>${t("EVIDENCE")} ${lv.clue.id} · ${esc(t(lv.clue.title))}</b><p>${esc(t(lv.clue.text))}</p>` +
       (statementsFrom(c, lv.clue.id).length ? `<button class="go" data-act="stmts">${t("{n} new statements in your notebook ▸", {n:statementsFrom(c, lv.clue.id).length})}</button>` : "") +
     `</div>` +
     (r.stars === 3 && lv.bonus ? `<div class="clue bonus"><b>★ ${t("BONUS")} · ${esc(t(lv.bonus.title))}</b><p>${esc(t(lv.bonus.text))}</p></div>` : "");
@@ -3391,7 +3395,7 @@ function renderNotebook(){
   const got = state.save.clues[state.caseIx] ?? [];
   const items = evidenceOf(c).filter(e => got.includes(e.id));
   $("notebook").innerHTML = (items.length
-    ? `<div class="nb">` + items.map(e => `<details class="${e.bonus ? "bonus" : ""}"><summary><b>${e.bonus ? "★" : e.id}</b>${esc(t(e.title))}</summary><p>${esc(t(e.text))}</p></details>`).join("") + `</div>`
+    ? `<div class="nb">` + items.map(e => `<details class="${e.bonus ? "bonus" : ""}"><summary>${e.face ? face(e.face, 32) : ""}<b>${e.bonus ? "★" : e.id}</b>${esc(t(e.title))}</summary><p>${esc(t(e.text))}</p></details>`).join("") + `</div>`
     : `<p class="empty">${t("No evidence yet. Clear a mission at ★★ and its clue lands here.")}</p>`) +
     (got.includes(c.statementsAfter) ? `<h4>${t("STATEMENTS")}</h4><div class="nb">` +
       c.statements.filter(s => !s.after || got.includes(s.after)).map(s => {
