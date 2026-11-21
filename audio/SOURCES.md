@@ -29,3 +29,13 @@
 - Content ID: not checked yet (only matters for videos of the game, e.g. YouTube)
 - Downloaded: 2026-11-22 by the project owner as `uniquecreativeaudio-dark-story-investigator-sinister-mystery-instrumental-309020.mp3` (256 kbps, 2:34)
 - Changes: re-encoded to 128 kbps with ffmpeg, metadata stripped
+
+## gothic-piano.mp3 (case 2, Paper Ghosts)
+
+- Title: Piano Gothic Fantasy Mystery Horror
+- Artist: Pixabay user welc0mei0
+- Source: Pixabay, item 155650
+- License: Pixabay Content License (use in games allowed; attribution not required)
+- Content ID: not checked yet (only matters for videos of the game, e.g. YouTube)
+- Downloaded: 2026-11-22 by the project owner as `welc0mei0-221109-piano-gothic-fantasy-mystery-horror-155650.mp3` (256 kbps, 1:54)
+- Changes: re-encoded to 128 kbps with ffmpeg, metadata stripped
