@@ -201,6 +201,7 @@ svg{display:block; width:100%; height:auto; max-width:100%}
 .msg b{font-family:var(--f-ui); font-weight:400; color:var(--cyan)}
 .debug{background:var(--win); color:var(--red); font-family:var(--f-ui); padding:2px 8px; letter-spacing:.04em}   /* not .sus: the tour points at .sus */
 .nb .role{color:var(--dim); font-size:12px; font-weight:normal}
+.nb .new{color:var(--yellow); margin-left:6px}
 .sus{background:var(--win); color:var(--yellow); font-family:var(--f-ui); padding:2px 8px; letter-spacing:.04em}
 .sus.hot{color:var(--red)}
 .sus-cards{border:0; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px}
@@ -1197,6 +1198,8 @@ const VI = {
   "LIE": "LỜI NÓI DỐI",
   "evidence that breaks their statement": "bằng chứng nói dối",
   "Choose evidence": "Chọn bằng chứng",
+  "NEW": "MỚI",
+  "{n} new statements in your notebook ▸": "{n} lời khai mới trong sổ tay ▸",
   "Point at a piece of evidence to read it here.": "Trỏ vào một bằng chứng để đọc nội dung ở đây.",
   "ACCUSE ▶": "BUỘC TỘI ▶",
   "NOT YET": "CHƯA",
@@ -2030,7 +2033,7 @@ function caseOpen(save, i){ return DEBUG || i === 0 || !!save.solved?.[i - 1]; }
 /* ---------- save and evidence ---------- */
 const SAVE_KEY = "index-dojo-v2";
 const CANCEL_LINE = "ORA-01013: user requested cancel of current operation";
-const emptySave = () => ({stars:{}, clues:{}, scans:{}, fails:{}, solved:{}, stage:{}});   // stage 1 = first accusation step done
+const emptySave = () => ({stars:{}, clues:{}, scans:{}, fails:{}, solved:{}, stage:{}, read:{}});   // stage 1 = first accusation step done; read = statements opened
 function loadSave(raw){
   try { const s = JSON.parse(raw); if (s && typeof s === "object" && !Array.isArray(s)) return {...emptySave(), ...s}; } catch {}
   return emptySave();
@@ -2090,9 +2093,12 @@ function fileAccusation(save, caseIx, suspect, slots){
 
 // Restart one case: its stars, evidence, suspicion, fails and verdict go; other cases and settings stay.
 function resetCase(save, caseIx){
-  for (const k of ["stars", "clues", "scans", "fails", "solved", "stage"]) delete save[k][caseIx];
+  for (const k of ["stars", "clues", "scans", "fails", "solved", "stage", "read"]) delete save[k][caseIx];
   return save;
 }
+
+// The statements a clue adds to the notebook (each statement waits for its own clue, or the case's default one).
+const statementsFrom = (c, clueId) => (c.statements ?? []).filter(s => (s.after ?? c.statementsAfter) === clueId);
 
 // Every piece of evidence in a case, in mission order.
 const evidenceOf = c => c.missions.flatMap((m, i) => [
@@ -2459,6 +2465,12 @@ document.addEventListener("keydown", e => {
     const k = o.dataset.evpick; evList(k, false); document.querySelector(`[data-evopen="${k}"]`)?.focus();
   }
 });
+// Opening a statement marks it read: its NEW tag goes and stays gone.
+document.addEventListener("toggle", e => {
+  const d = e.target; if (!d.open || !d.dataset?.stmt) return;
+  const r = (state.save.read ??= {})[state.caseIx] ??= [];
+  if (!r.includes(d.dataset.stmt)){ r.push(d.dataset.stmt); storeSave(); d.querySelector(".new")?.remove(); }
+}, true);
 // A click outside an open list closes it.
 document.addEventListener("click", e => { if (!e.target.closest(".slot-sel")) evList(null, false); });
 
@@ -2753,7 +2765,9 @@ function renderResults(){
       `<p class="stats">${t("{n} row{s}", {n:res.rows.length, s:pl(res.rows.length)})}</p>`
     : `<p>${t("{n} rows.", {n:fmt(res.count)})} ${esc(t(res.note))}</p>`;
   el.innerHTML = rows +
-    `<div class="clue"><b>${t("EVIDENCE")} ${lv.clue.id} · ${esc(t(lv.clue.title))}</b><p>${esc(t(lv.clue.text))}</p></div>` +
+    `<div class="clue"><b>${t("EVIDENCE")} ${lv.clue.id} · ${esc(t(lv.clue.title))}</b><p>${esc(t(lv.clue.text))}</p>` +
+      (statementsFrom(c, lv.clue.id).length ? `<button class="go" data-act="stmts">${t("{n} new statements in your notebook ▸", {n:statementsFrom(c, lv.clue.id).length})}</button>` : "") +
+    `</div>` +
     (r.stars === 3 && lv.bonus ? `<div class="clue bonus"><b>★ ${t("BONUS")} · ${esc(t(lv.bonus.title))}</b><p>${esc(t(lv.bonus.text))}</p></div>` : "");
 }
 
@@ -2769,7 +2783,9 @@ function renderNotebook(){
     (got.includes(c.statementsAfter) ? `<h4>${t("STATEMENTS")}</h4><div class="nb">` +
       c.statements.filter(s => !s.after || got.includes(s.after)).map(s => {
         const role = [...c.suspects, ...(c.accusation.second?.suspects ?? [])].find(x => x.name === s.who)?.role;   // who they are, next to the name
-        return `<details><summary><b>${esc(s.who)}</b>${role ? ` <small class="role">${esc(t(role))}</small>` : ""}</summary><p>“${esc(t(s.text))}”</p></details>`; }).join("") + `</div>` : "");
+        const fresh = !(state.save.read?.[state.caseIx] ?? []).includes(s.who);
+        return `<details data-stmt="${esc(s.who)}"><summary><b>${esc(s.who)}</b>${role ? ` <small class="role">${esc(t(role))}</small>` : ""}` +
+          `${fresh ? ` <span class="tag new">${t("NEW")}</span>` : ""}</summary><p>“${esc(t(s.text))}”</p></details>`; }).join("") + `</div>` : "");
 }
 
 function storeSave(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(state.save)); } catch {} }
@@ -2914,6 +2930,11 @@ document.addEventListener("click", e => {
   else if (d.case) goCase(+d.case);
   else if (b.id === "brief") openBriefing();
   else if (b.id === "accuse" || d.act === "accuse") state.save.solved[state.caseIx] ? openEnding() : openAccusation();
+  else if (d.act === "stmts"){
+    const c = CASES[state.caseIx], ids = statementsFrom(c, cur().clue.id).map(x => x.who);
+    const el = [...document.querySelectorAll("[data-stmt]")].find(x => ids.includes(x.dataset.stmt));
+    if (el){ el.open = true; el.scrollIntoView({block:"center", behavior: reduceMotion ? "instant" : "smooth"}); el.querySelector("summary").focus({preventScroll:true}); }
+  }
   else if (d.evopen) evList(d.evopen, b.getAttribute("aria-expanded") !== "true");
   else if (d.evpick){
     state.acc[d.evpick] = d.ev; openAccusation();
