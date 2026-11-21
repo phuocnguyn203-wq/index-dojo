@@ -2593,8 +2593,8 @@ function unlocked(stars, caseIx, i){
   return DEBUG || i === 0 || starsAt(stars, caseIx, i - 1) >= (CASES[caseIx].practice ? 1 : 2);
 }
 
-// Cases open in order: the next one once the previous is solved.
-function caseOpen(save, i){ return DEBUG || i === 0 || !!save.solved?.[i - 1]; }
+// Cases open in order: a case opens once every case before it is solved (restarting case 1 shuts the later ones again).
+function caseOpen(save, i){ return DEBUG || [...Array(i).keys()].every(j => save.solved?.[j]); }
 
 /* ---------- save and evidence ---------- */
 const SAVE_KEY = "index-dojo-v2";
