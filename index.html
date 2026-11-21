@@ -150,7 +150,10 @@ button.go:hover:not(:disabled){background:var(--white); border-color:var(--white
 .sqled:focus{outline:2px solid var(--yellow); outline-offset:1px}
 @media (pointer:coarse){ .sqled{font-size:16px} }   /* iOS zooms into anything smaller */
 .sqlerr{margin:0; padding:8px 12px 8px 28px; border:1px solid var(--magenta); color:var(--ink); font-size:14px; line-height:1.45}
-.sqlerr code{font-family:var(--f-code); color:var(--yellow)}
+.sqlerr code, .qhint code{font-family:var(--f-code); color:var(--yellow)}
+.qhint p{margin:0}
+.qhint{display:grid; gap:8px; padding:8px 12px; border:1px dashed var(--cyan); font-size:14px; line-height:1.45}
+.inscols button{font-family:var(--f-code); text-transform:none; letter-spacing:0}
 .slots{display:grid; gap:12px}
 .slot{display:grid; gap:6px}
 .chips{list-style:none; margin:0; padding:0; display:grid; gap:6px}
@@ -304,13 +307,13 @@ h4{margin:4px 0 0; font:400 13px var(--f-ui); color:var(--dim); letter-spacing:.
     <section class="win" id="wizwin">
       <h2><span id="wiz-title"></span></h2>
       <div class="pane">
+        <div class="pane" id="writepane"></div>
         <div class="pane" id="ixpane">
           <pre id="ddl"></pre>
           <div class="slots" id="slots"></div>
           <div class="eyebrow" id="colhint"></div>
           <div class="cols" id="cols"></div>
         </div>
-        <div class="pane" id="writepane" hidden></div>
         <div class="row">
           <button class="go" id="run" data-t>EXECUTE ▶</button>
           <button id="clear" data-t>CLEAR INDEXES</button>
@@ -1428,7 +1431,6 @@ const CASES = [CASE1, CASE2, CASE3, CASE4];
 // SQL, column names, plan output and query result rows stay in English, as in a real database.
 const VI = {
   /* ---------- interface ---------- */
-  "INDEX WIZARD": "TRÌNH TẠO INDEX",
   "EXECUTE ▶": "THỰC THI ▶",
   "CLEAR INDEXES": "XÓA INDEX",
   "NOTEBOOK": "SỔ TAY",
@@ -1445,7 +1447,6 @@ const VI = {
   "BRIEFING": "TÓM TẮT VỤ ÁN",
   "START INVESTIGATION ▶": "BẮT ĐẦU ĐIỀU TRA ▶",
   "MISSION {n}": "NHIỆM VỤ {n}",
-  "REWRITE": "VIẾT LẠI",
   "runs {n}×/day": "chạy {n} lần/ngày",
   "{table}: {rows} rows · {pages} table pages · {leaf} index entries per leaf page": "{table}: {rows} dòng · {pages} trang bảng · {leaf} mục index mỗi trang lá",
   "{n} new rows/day.": "{n} dòng mới mỗi ngày.",
@@ -1465,7 +1466,6 @@ const VI = {
   "TABLE COLUMNS · click to add": "CÁC CỘT CỦA BẢNG · bấm để thêm",
   "{d} distinct · ~{r} rows per value": "{d} giá trị khác nhau · ~{r} dòng mỗi giá trị",
 
-  "Build an index, then press EXECUTE.": "Tạo index rồi bấm THỰC THI.",
   "index path": "đường đi trong index",
   "leaf: {L} pages, {per} per box": "lá: {L} trang, {per} trang mỗi ô",
   "full scan": "quét toàn bảng",
@@ -1797,7 +1797,6 @@ const VI = {
   "From this tier on you can also rewrite the queries. Q1 is the daily sales report; Q2 is a live ticker that shows the last hour. One index with one column has to serve both.":
     "Từ cấp này bạn còn được viết lại truy vấn. Q1 là báo cáo doanh số hằng ngày; Q2 là bảng tin trực tiếp hiển thị một giờ vừa qua. Một index một cột phải phục vụ cả hai.",
   "Daily report: yesterday's sales": "Báo cáo ngày: doanh số hôm qua",
-  "As written": "Như đang viết",
   "BETWEEN includes both ends, so this also returns sales made at exactly midnight on 20 November.":
     "BETWEEN lấy cả hai đầu mút, nên câu này trả thêm cả các giao dịch đúng 0:00 ngày 20 tháng 11.",
   "Live ticker: the last hour": "Bảng tin trực tiếp: một giờ qua",
@@ -2605,6 +2604,24 @@ const VI = {
   "NORMAL": "THƯỜNG",
   "EASY": "DỄ",
   /* ---------- easy mode: writing the query ---------- */
+  "QUERY AND INDEX":
+    "QUERY VÀ INDEX",
+  "THE SYSTEM'S QUERY · keep it or write a faster one with the same rows":
+    "QUERY HIỆN TẠI CỦA HỆ THỐNG · giữ nguyên hoặc viết lại cho nhanh hơn, cùng kết quả",
+  "The query uses {cols}.":
+    "Query dùng {cols}.",
+  "It also needs {clauses}.":
+    "Còn cần thêm {clauses}.",
+  "The system's version can be written to read fewer pages, with the same rows.":
+    "Câu của hệ thống có thể viết lại để đọc ít trang hơn mà vẫn ra đúng các dòng đó.",
+  "HINT {n}/3":
+    "GỢI Ý {n}/3",
+  "The last hint opens after one failed EXECUTE.":
+    "Gợi ý cuối mở sau một lần THỰC THI chưa đúng.",
+  "Write the query and build an index, then press EXECUTE.":
+    "Viết query và tạo index, rồi bấm THỰC THI.",
+  "Write the query here. Click a column name to insert it. Stuck? HINT opens one step at a time.":
+    "Viết query ở đây. Bấm vào tên cột để chèn. Bí thì bấm GỢI Ý, mỗi lần mở thêm một bước.",
   "QUERY EDITOR":
     "TRÌNH VIẾT QUERY",
   "Can't read the query near {x}. Check the quotes and brackets.":
@@ -2635,14 +2652,10 @@ const VI = {
     "BẢNG {table} · bấm vào cột để chèn tên cột",
   "e.g. {v}":
     "vd: {v}",
-  "SHOW THE ANSWER":
-    "XEM ĐÁP ÁN",
   "Not yet. The notes under your query say what to fix.":
     "Chưa đúng. Ghi chú dưới query cho biết cần sửa gì.",
   "Write the query, then press EXECUTE.":
     "Viết query, rồi bấm THỰC THI.",
-  "Write the query here. Click a column below the editor to insert its name.":
-    "Viết query ở đây. Bấm vào một cột bên dưới để chèn tên cột.",
   "Staff badge number":
     "Số thẻ nhân viên",
   "Family name, in capitals":
@@ -3032,7 +3045,7 @@ function sqlOf(lv, v){
   if (v.fetch) s += `\n FETCH ${v.offset ? "NEXT" : "FIRST"} ${v.fetch} ROWS ONLY`;
   return s;
 }
-/* ---------- write mode (EASY): the player writes the query; it is checked against the mission's own SQL ---------- */
+/* ---------- writing the query (both modes): it is checked against the mission's own SQL ---------- */
 // Tokens: 'strings' as typed, numbers, :binds, words in upper case, operators. Comments and a final ; are dropped.
 function sqlTokens(s){
   const out = [], re = /\s+|--[^\n]*|('(?:[^']|'')*')|(:\w+|\d+(?:\.\d+)?|[A-Za-z_][\w$#]*)|(<=|>=|<>|!=|\|\||[=<>(),*+\-\/%.])|(;\s*$)|(.)/gy;
@@ -3127,6 +3140,27 @@ function checkSql(lv, qi, text){
 // The empty statement the editor starts from.
 const sqlStub = (lv, qi) => { const v = lv.queries[qi].variants[0];
   return v.op === "update" ? `UPDATE ${lv.table}\n   SET \n WHERE ` : v.op === "delete" ? `DELETE FROM ${lv.table}\n WHERE ` : `SELECT *\n  FROM ${lv.table}\n WHERE `; };
+
+// A query the story's system already runs, shown to the player and put in the editor to start from: a query with
+// rewrites, bind values, SYSDATE, a daily frequency, or a condition on an expression. The rest the player writes.
+const givenQuery = q => !!(q.freq || q.variants.length > 1 || q.variants.some(v => v.binds || v.op ||
+  v.where.some(p => /[(+|]|:\w|SYS(DATE|TIMESTAMP)/.test(p.sql.replace(/'[^']*'/g, "")))));
+// The rewrite a hint leads to: the cheapest one that keeps the rows (the others as written), or As written in EASY mode.
+function hintTarget(lv, qi, easy){
+  const q = lv.queries[qi];
+  if (easy || q.variants.length < 2) return 0;
+  return q._hintK ??= q.variants.map((v, k) => v.wrong ? Infinity
+    : Math.min(...allIndexSets(lv).map(s => score(lv, s, lv.queries.map((_, i) => i === qi ? k : 0)).total)))
+    .reduce((b, x, k, a) => x < a[b] ? k : b, 0);
+}
+// What the three hint steps show: the columns and clauses, then the query with its values blanked, then the query.
+function queryHint(lv, qi, easy = false){
+  const k = hintTarget(lv, qi, easy), v = lv.queries[qi].variants[k], sql = sqlOf(lv, v).replace(/^--[^\n]*\n/, ""), cols = tableColumns(lv);
+  const col = s => (s.replace(/'[^']*'|:\w+/g, "").match(/\b[a-z_][a-z0-9_]*\b/g) ?? []).find(w => cols.includes(w));
+  return {k, sql, cols: [...new Set([...v.where, ...(v.set ?? [])].map(p => col(p.sql)).filter(Boolean))],
+    clauses: [v.group && "GROUP BY", v.order && "ORDER BY", v.offset && "OFFSET", v.fetch && "FETCH FIRST"].filter(Boolean),
+    blank: sql.replace(/'(?:[^']|'')*'/g, "___").replace(/\b\d+(?:\.\d+)?\b/g, "___")};
+}
 
 const ixName = idx => "ix_" + idx.filter(c => !c.startsWith("WHERE ")).map(c => c.toLowerCase().replace(/\W+/g, "_").replace(/^_|_$/g, "")).join("_");
 
@@ -3428,8 +3462,8 @@ function startGame(withTour = !guideSeen()){
 // Interactive tour. A step with `wait` also moves on by itself when the player does that action.
 const tourSteps = () => [
   {sel:"#mission", text:t("Each mission is a query the investigation needs. Read what it asks for and which table it reads.")},
-  easyOn ? {sel:"#writepane", text:t("Write the query here. Click a column below the editor to insert its name.")}
-    : {sel:"#cols", wait:"index", text:t("Click a column to add it to your index. With several columns, their order matters.")},
+  {sel:"#writepane", text:t("Write the query here. Click a column name to insert it. Stuck? HINT opens one step at a time.")},
+  ...(easyOn ? [] : [{sel:"#cols", wait:"index", text:t("Click a column to add it to your index. With several columns, their order matters.")}]),
   {sel:"#run", wait:"run", text:t("Press EXECUTE. The database runs the query and counts every page it reads.")},
   {sel:".status", text:t("Every page read costs one point. Without a useful index the database scans the whole table.")},
   {sel:"#report", text:t("Fewer pages, more stars. ★★ returns the rows and a clue; below that the query is cancelled. ★★★ unlocks the lesson.")},
@@ -3555,11 +3589,8 @@ function renderMission(){
   $("mission").innerHTML =
     `<div class="eyebrow"><b>${c.practice ? tier(lv.tier) : t(c.title).toUpperCase()}</b></div><h3>${esc(t(lv.name))}</h3><p>${esc(t(lv.story ?? lv.brief))}</p>` +
     lv.queries.map((q,i) => {
-      const v = variantOf(lv, i);
-      const seg = q.variants.length > 1
-        ? `<div class="seg"><span>${t("REWRITE")}</span>` + q.variants.map((x,k) =>
-            `<button data-pick="${i}" data-v="${k}" aria-pressed="${(state.pick[i] ?? 0) === k}">${k ? "ABC"[k - 1] : t("As written")}</button>`).join("") + `</div>` : "";
-      return `<div class="qlabel"><b>${q.label}</b> · ${esc(t(q.who))}${q.freq ? ` · <em>${t("runs {n}×/day", {n:fmt(q.freq)})}</em>` : ""}</div>` + (easyOn ? "" : `${seg}<pre>${hl(sqlOf(lv, v))}</pre>`);
+      return `<div class="qlabel"><b>${q.label}</b> · ${esc(t(q.who))}${q.freq ? ` · <em>${t("runs {n}×/day", {n:fmt(q.freq)})}</em>` : ""}</div>` +
+        (givenQuery(q) ? `<div class="eyebrow">${t("THE SYSTEM'S QUERY · keep it or write a faster one with the same rows")}</div><pre>${hl(sqlOf(lv, q.variants[0]))}</pre>` : "");
     }).join("") +
     `<div class="stats">${t("{table}: {rows} rows · {pages} table pages · {leaf} index entries per leaf page", {table:lv.table, rows:fmt(lv.rows), pages:fmt(tablePages(lv)), leaf:LEAF_ROWS})}</div>` +
     (lv.growth ? `<div class="stats"><b>${t("Scored twice: today, and {label}, when the table holds {rows} rows.", {label:t(lv.growth.label), rows:fmt(lv.rows * lv.growth.factor)})}</b></div>` : "") +
@@ -3567,9 +3598,23 @@ function renderMission(){
     (lv.clustered ? `<div class="stats">${t("Rows are stored in {col} order: each new row goes at the end of the table.", {col:lv.clustered})}</div>` : "");
 }
 
-// EASY mode: the player writes each query; drafts live per mission until the page reloads.
+// The player writes each query (both modes); drafts live per mission until the page reloads.
 const draftKey = () => state.caseIx + "-" + state.lv;
-const drafts = lv => (state.drafts ??= {})[draftKey()] ??= lv.queries.map((_, i) => sqlStub(lv, i));
+const drafts = lv => (state.drafts ??= {})[draftKey()] ??= lv.queries.map((q, i) => givenQuery(q) ? sqlOf(lv, q.variants[0]) : sqlStub(lv, i));
+// Hint steps opened per query (1 columns, 2 blanked query, 3 the query). Step 3 needs one failed EXECUTE first.
+const hintSteps = () => (state.hints ??= {})[draftKey()] ??= [];
+function hintHtml(lv, qi){
+  const n = hintSteps()[qi] ?? 0, max = (state.wfails?.[draftKey()] ?? 0) ? 3 : 2, h = n && queryHint(lv, qi, easyOn), c = x => `<code>${esc(x)}</code>`;
+  const lines = [];
+  if (n >= 1) lines.push("<p>" + (h.cols.length ? t("The query uses {cols}.", {cols:h.cols.map(c).join(", ")}) : "") +
+    (h.clauses.length ? " " + t("It also needs {clauses}.", {clauses:h.clauses.map(c).join(", ")}) : "") +
+    (h.k ? " " + t("The system's version can be written to read fewer pages, with the same rows.") : "") + "</p>");
+  if (n >= 2) lines.push(`<pre>${hl(h.blank)}</pre>`);
+  if (n >= 3) lines.push(`<pre>${hl(h.sql)}</pre>`);
+  return (lines.length ? `<div class="qhint">${lines.join("")}</div>` : "") +
+    (n < 3 ? `<div class="row"><button data-qhint="${qi}" ${n >= max ? "disabled" : ""}>${t("HINT {n}/3", {n:n + 1})}</button>` +
+      (n >= max ? `<span class="eyebrow">${t("The last hint opens after one failed EXECUTE.")}</span>` : "") + `</div>` : "");
+}
 function sqlErr(e){
   const c = x => `<code>${esc(String(x))}</code>`;
   switch (e.code){
@@ -3591,17 +3636,18 @@ function renderWriter(lv){
   $("writepane").innerHTML = lv.queries.map((q, i) =>
       `<div class="qlabel"><b>${q.label}</b> · ${esc(t(q.who))}</div>` +
       `<textarea class="sqled" data-sql="${i}" rows="5" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="${t("Your query for {q}", {q:q.label})}">${esc(ds[i])}</textarea>` +
-      (chk[i]?.errs ? `<ul class="sqlerr">${chk[i].errs.map(e => `<li>${sqlErr(e)}</li>`).join("")}</ul>` : "")).join("") +
+      (chk[i]?.errs ? `<ul class="sqlerr">${chk[i].errs.map(e => `<li>${sqlErr(e)}</li>`).join("")}</ul>` : "") + hintHtml(lv, i)).join("") +
     `<div class="eyebrow">${t("TABLE {table} · click a column to insert it", {table:esc(lv.table)})}</div>` +
-    `<div class="cols">` + tableColumns(lv).map(c => `<button data-ins="${esc(c)}">${esc(c)}` +
-      (desc[c] ? `<small>${esc(t(desc[c][0]))} · ${t("e.g. {v}", {v:esc(desc[c][1])})}</small>` : "") + `</button>`).join("") + `</div>` +
-    ((state.wfails?.[draftKey()] ?? 0) >= 2 ? `<div class="row"><button data-act="answer">${t("SHOW THE ANSWER")}</button></div>` : "");
+    (easyOn ? `<div class="cols">` + tableColumns(lv).map(c => `<button data-ins="${esc(c)}">${esc(c)}` +
+      (desc[c] ? `<small>${esc(t(desc[c][0]))} · ${t("e.g. {v}", {v:esc(desc[c][1])})}</small>` : "") + `</button>`).join("") + `</div>`
+      : `<div class="seg inscols">` + tableColumns(lv).map(c => `<button data-ins="${esc(c)}">${esc(c)}</button>`).join("") + `</div>`);
 }
 
 function renderWizard(){
-  $("wiz-title").textContent = easyOn ? t("QUERY EDITOR") : t("INDEX WIZARD");
-  $("ixpane").hidden = $("clear").hidden = easyOn; $("writepane").hidden = !easyOn;
-  if (easyOn) return renderWriter(cur());
+  $("wiz-title").textContent = easyOn ? t("QUERY EDITOR") : t("QUERY AND INDEX");
+  $("ixpane").hidden = $("clear").hidden = easyOn;
+  renderWriter(cur());
+  if (easyOn) return;
   const lv = cur(), multi = state.ixs.length > 1, slot = state.ixs[state.active];
   const made = state.ixs.filter(ix => ix.length);
   $("ddl").innerHTML = made.length
@@ -3624,6 +3670,7 @@ function renderWizard(){
   const full = slot.length >= lv.maxCols;
   $("cols").innerHTML = Object.entries(lv.cols).map(([c,d]) =>
     `<button data-add="${esc(c)}" ${slot.includes(c) || full ? "disabled" : ""}>${esc(c)}` +
+    (SCHEMA[lv.table]?.[c] ? `<small>${esc(t(SCHEMA[lv.table][c][0]))}</small>` : "") +
     `<small>${c === lv.partial?.key ? t("index only these rows: {n} of {rows}", {n:fmt(Math.round(lv.rows * lv.partial.sel)), rows:fmt(lv.rows)})
       : t("{d} distinct · ~{r} rows per value", {d:fmt(d), r:fmt(Math.max(1, Math.round(lv.rows/d)))})}</small></button>`).join("");
 }
@@ -3637,7 +3684,7 @@ function renderTabs(){
 function resetPlan(){
   animTok++;
   drawTree(); legend(cur());
-  $("plan").innerHTML = `<span class="c">-- ${easyOn ? t("Write the query, then press EXECUTE.") : t("Build an index, then press EXECUTE.")}</span>`;
+  $("plan").innerHTML = `<span class="c">-- ${easyOn ? t("Write the query, then press EXECUTE.") : t("Write the query and build an index, then press EXECUTE.")}</span>`;
   $("pages").textContent = "000000"; $("prog").style.width = "0"; $("lamp").classList.remove("on");
 }
 
@@ -3887,7 +3934,7 @@ function goCase(ci){
 
 async function execute(){
   const lv = cur();
-  if (easyOn){
+  {
     const key = draftKey(), res = drafts(lv).map((s, i) => checkSql(lv, i, s));
     (state.checks ??= {})[key] = res;
     if (res.some(r => r.errs)){
@@ -3896,7 +3943,8 @@ async function execute(){
       $("report").innerHTML = `<p class="hint">${t("Not yet. The notes under your query say what to fix.")}</p>`;
       return;
     }
-    state.pick = res.map(r => r.k); state.ixs = emptySlots(lv); renderMission(); renderWizard();
+    state.pick = res.map(r => r.k); if (easyOn) state.ixs = emptySlots(lv);
+    delete state.checks[key]; renderMission(); renderWizard();
   }
   const sc = judge(lv, state.ixs, state.pick, easyOn), {none, stars} = sc;
   state.result = {...sc, done:false};
@@ -3937,7 +3985,7 @@ document.addEventListener("click", e => {
     el.setRangeText((!pre || /[\s(,]$/.test(pre) ? "" : " ") + d.ins + " ", s, el.selectionEnd ?? s, "end");
     el.focus(); drafts(lv)[+el.dataset.sql] = el.value;
   }
-  else if (d.act === "answer"){ state.drafts[draftKey()] = lv.queries.map(q => sqlOf(lv, q.variants[0])); delete state.checks[draftKey()]; renderWizard(); }
+  else if (d.qhint != null){ const h = hintSteps(); h[+d.qhint] = (h[+d.qhint] ?? 0) + 1; renderWizard(); }
   else if (d.add){
     const slot = state.ixs[state.active];
     if (slot.length < lv.maxCols){
@@ -3953,7 +4001,6 @@ document.addEventListener("click", e => {
   else if (d.rm){ ix.splice(+d.rm, 1); changed(); }
   else if (d.mv){ const i = +d.mv, j = i + +d.d; [ix[i], ix[j]] = [ix[j], ix[i]]; changed(); }
   else if (d.slot){ state.active = +d.slot; renderWizard(); }
-  else if (d.pick){ state.pick[+d.pick] = +d.v; changed(); }
   else if (d.tab){ showQuery(+d.tab, true); $("run").disabled = false; renderReport(); renderResults(); }
   else if (b.id === "run") execute();
   else if (b.id === "clear"){ state.ixs = emptySlots(lv); state.active = 0; changed(); }
