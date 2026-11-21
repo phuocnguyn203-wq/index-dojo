@@ -501,7 +501,7 @@ const ON = (col, val, sel) => ({...eq(col, val), sel});
 const KAITO = ["Kaito Trading", "KAITO TRADING", "kaito trading", "Kaito trading"];
 
 const CASE1 = {
-  id:"case1", title:"The Last Train", scene:"case1",
+  id:"case1", title:"The Last Train", scene:"case1", music:"dark-piano.mp3",
   intro:[
     "A man is found dead at 06:10 on 20 November, in the level-3 stairwell of the Kanayama Station parking garage. Time of death: between 23:30 and 00:30.",
     "On him: a Kinjo Logistics staff badge, number 1180. No wallet. No phone.",
@@ -913,7 +913,7 @@ const CASE2 = {
 const KANEDA = "'090-2875-6614'";
 
 const CASE3 = {
-  id:"case3", title:"Rush Hour", scene:"case3",
+  id:"case3", title:"Rush Hour", scene:"case3", music:"dark-investigator.mp3",
   intro:[
     "08:12, Thursday 3 December. Fushimi crossing, morning rush. A white van hits a cyclist and drives on. The man dies at the scene.",
     "No wallet, no phone. The only number on him is the frame registration of his bicycle: NGY-B-48213.",
@@ -3457,6 +3457,13 @@ function setVolume(pct){
   try { localStorage.setItem(VOLUME_KEY, v); } catch {}
 }
 function startMusic(){ if (musicOn && $("bgm").paused) setMusic(true); }
+// Each case can bring its own track (case.music, a file in audio/); switching cases swaps it and keeps playing if it was.
+function caseMusic(){
+  const el = $("bgm"), src = "audio/" + (CASES[state.caseIx].music ?? "noir-midnight.mp3");
+  if (el.getAttribute("src") === src) return;
+  const playing = !el.paused; el.setAttribute("src", src);
+  if (playing) el.play().catch(() => {});
+}
 function readMusic(){ try { return localStorage.getItem(MUSIC_KEY) !== "off"; } catch { return true; } }
 function readVolume(){ try { const v = parseFloat(localStorage.getItem(VOLUME_KEY)); return Number.isFinite(v) ? v : 15; } catch { return 15; } }
 document.addEventListener("input", e => {
@@ -3494,7 +3501,7 @@ function goLevel(i){
   changed(); window.scrollTo({top:0, behavior: reduceMotion ? "auto" : "smooth"});
 }
 function goCase(ci){
-  state.caseIx = ci;
+  state.caseIx = ci; caseMusic();
   state.acc = {suspect:null, MOTIVE:"", OPPORTUNITY:"", LIE:""};   // an accusation belongs to one case
   const ms = missionsOf(ci);
   let i = 0; while (i + 1 < ms.length && unlocked(state.save.stars, ci, i + 1)) i++;   // furthest open mission
@@ -3608,6 +3615,7 @@ function boot(d){
   state.save = d.save ?? loadSave(readSave());
   state.caseIx = Math.min(Math.max(0, d.caseIx ?? 0), CASES.length - 1);
   if (!caseOpen(state.save, state.caseIx)) state.caseIx = 0;
+  caseMusic();
   if (d.lv == null){ goCase(state.caseIx); openStartMenu(); return; }   // start menu, then briefing (and the tour on a first visit)
   state.lv = Math.min(Math.max(0, d.lv), missionsOf(state.caseIx).length - 1);
   const lv = cur();
