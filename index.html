@@ -6,7 +6,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=M+PLUS+1+Code:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=M+PLUS+1+Code:wght@400;700&family=Patrick+Hand&display=swap">
 <style>
 /* Layout: PC-98 office desktop. Menu bar on top, two columns of windows: mission + index wizard | execution plan + report. Single dark look by design. */
 :root{
@@ -197,6 +197,10 @@ svg{display:block; width:100%; height:auto; max-width:100%}
 .rt th{color:var(--dim); font:400 12px var(--f-ui); letter-spacing:.06em}
 .cancel{color:var(--red); font-family:var(--f-ui)}
 .clue{border:2px solid var(--yellow); padding:8px 12px; display:grid; gap:4px}
+/* A handwritten note clipped to a clue (clue.note): paper, ruled lines, a slight tilt. Patrick Hand has Vietnamese glyphs. */
+.note{margin:6px 4px 4px; padding:10px 16px 12px; max-width:34ch; transform:rotate(-1.2deg); white-space:pre-line;
+  background:#efe6cf repeating-linear-gradient(transparent 0 25px, #b9c7d6 25px 26px); background-position:0 9px;
+  color:#1d2a5a; font-family:"Patrick Hand", var(--f-code); font-size:18px; line-height:26px; box-shadow:3px 3px 0 var(--shadow); border-top:6px solid #d9cba6}
 .clue b{font-family:var(--f-ui); font-weight:400; color:var(--yellow); letter-spacing:.08em}
 .clue.bonus{border-color:var(--magenta)} .clue.bonus b{color:var(--magenta)}
 .nb{display:grid; gap:6px}
@@ -554,7 +558,7 @@ const CASE1 = {
     lesson:"assignee_id matches 4 rows. status matches 50,000, which is more work than reading the whole table, so the optimizer ignores an index on it.",
     results:[{columns:["task_id","project","title","status","note"],
       rows:[[88213,"AUD-2611","Payments to Kaito Trading (req. SALES-07, appr. FIN-01)","OPEN","Board meeting Mon 23 Nov. Escalate."]]}],
-    clue:{id:"E2", title:"Mori's open audit", text:"AUD-2611: payments to Kaito Trading, requested by SALES-07 and approved by FIN-01. His note: “Board meeting Mon 23 Nov. Escalate.”"},
+    clue:{id:"E2", title:"Mori's open audit", text:"AUD-2611: payments to Kaito Trading, requested by SALES-07 and approved by FIN-01. Clipped to the file, a note in Mori's hand.", note:"AUD-2611\nKaito Trading: SALES-07 asks, FIN-01 signs.\nBoard meeting Mon 23 Nov.\nEscalate."},
   },{
     name:"The Numbers",
     table:"payments", rows:1000000, perPage:50, maxCols:1,
@@ -1620,8 +1624,10 @@ const VI = {
   "assignee_id matches 4 rows. status matches 50,000, which is more work than reading the whole table, so the optimizer ignores an index on it.":
     "assignee_id khớp 4 dòng. status khớp 50.000 dòng, tốn hơn cả đọc toàn bộ bảng, nên optimizer bỏ qua index trên cột đó.",
   "Mori's open audit": "Cuộc kiểm toán dở dang của Mori",
-  "AUD-2611: payments to Kaito Trading, requested by SALES-07 and approved by FIN-01. His note: “Board meeting Mon 23 Nov. Escalate.”":
-    "AUD-2611: các khoản chi cho Kaito Trading, do SALES-07 đề nghị và FIN-01 phê duyệt. Ghi chú của ông ấy: “Họp HĐQT thứ Hai 23/11. Báo lên cấp trên.”",
+  "AUD-2611: payments to Kaito Trading, requested by SALES-07 and approved by FIN-01. Clipped to the file, a note in Mori's hand.":
+    "AUD-2611: các khoản chi cho Kaito Trading, do SALES-07 đề nghị và FIN-01 phê duyệt. Kẹp trong hồ sơ là một tờ ghi chú viết tay của Mori.",
+  "AUD-2611\nKaito Trading: SALES-07 asks, FIN-01 signs.\nBoard meeting Mon 23 Nov.\nEscalate.":
+    "AUD-2611\nKaito Trading: SALES-07 đề nghị, FIN-01 ký duyệt.\nHọp HĐQT thứ Hai 23/11.\nBáo lên cấp trên.",
 
   // M03
   "The Numbers": "Những con số",
@@ -3382,7 +3388,7 @@ function renderResults(){
       `<p class="stats">${t("{n} row{s}", {n:res.rows.length, s:pl(res.rows.length)})}</p>`
     : `<p>${t("{n} row{s}.", {n:fmt(res.count), s:pl(res.count)})} ${esc(t(res.note))}</p>`;
   el.innerHTML = rows +
-    `<div class="clue">${lv.clue.face ? face(lv.clue.face, 48) : ""}<b>${t("EVIDENCE")} ${lv.clue.id} · ${esc(t(lv.clue.title))}</b><p>${esc(t(lv.clue.text))}</p>` +
+    `<div class="clue">${lv.clue.face ? face(lv.clue.face, 48) : ""}<b>${t("EVIDENCE")} ${lv.clue.id} · ${esc(t(lv.clue.title))}</b><p>${esc(t(lv.clue.text))}</p>${lv.clue.note ? `<p class="note">${esc(t(lv.clue.note))}</p>` : ""}` +
       (statementsFrom(c, lv.clue.id).length ? `<button class="go" data-act="stmts">${t("{n} new statements in your notebook ▸", {n:statementsFrom(c, lv.clue.id).length})}</button>` : "") +
     `</div>` +
     (r.stars === 3 && lv.bonus ? `<div class="clue bonus"><b>★ ${t("BONUS")} · ${esc(t(lv.bonus.title))}</b><p>${esc(t(lv.bonus.text))}</p></div>` : "");
@@ -3395,7 +3401,7 @@ function renderNotebook(){
   const got = state.save.clues[state.caseIx] ?? [];
   const items = evidenceOf(c).filter(e => got.includes(e.id));
   $("notebook").innerHTML = (items.length
-    ? `<div class="nb">` + items.map(e => `<details class="${e.bonus ? "bonus" : ""}"><summary>${e.face ? face(e.face, 32) : ""}<b>${e.bonus ? "★" : e.id}</b>${esc(t(e.title))}</summary><p>${esc(t(e.text))}</p></details>`).join("") + `</div>`
+    ? `<div class="nb">` + items.map(e => `<details class="${e.bonus ? "bonus" : ""}"><summary>${e.face ? face(e.face, 32) : ""}<b>${e.bonus ? "★" : e.id}</b>${esc(t(e.title))}</summary><p>${esc(t(e.text))}</p>${e.note ? `<p class="note">${esc(t(e.note))}</p>` : ""}</details>`).join("") + `</div>`
     : `<p class="empty">${t("No evidence yet. Clear a mission at ★★ and its clue lands here.")}</p>`) +
     (got.includes(c.statementsAfter) ? `<h4>${t("STATEMENTS")}</h4><div class="nb">` +
       c.statements.filter(s => !s.after || got.includes(s.after)).map(s => {
