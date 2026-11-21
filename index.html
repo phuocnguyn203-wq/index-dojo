@@ -862,10 +862,225 @@ const CASE2 = {
   }],
 };
 
+/* ---------- Case 3: Rush Hour ----------
+   The truth behind the case lives in the story bible (docs/superpowers/specs), never here:
+   this file ships inside the public build. */
+const KANEDA = "'090-2875-6614'";
+
+const CASE3 = {
+  id:"case3", title:"Rush Hour",
+  intro:[
+    "08:12, Thursday 3 December. Fushimi crossing, morning rush. A white van hits a cyclist and drives on. The man dies at the scene.",
+    "No wallet, no phone. The only number on him is the frame registration of his bicycle: NGY-B-48213.",
+  ],
+  witness:"A schoolteacher waiting at the light: “A white van. There was writing on the side, blue letters. It didn't even brake.”",
+  suspects:[
+    {id:"kaneda", name:"Yuji Kaneda", role:"Delivery driver, Hayate Express"},
+    {id:"ishii", name:"Kenta Ishii", role:"The victim's brother-in-law"},
+    {id:"takagi", name:"Ren Takagi", role:"Unlicensed ride-hail driver"},
+    {id:"hayashi", name:"Masao Hayashi", role:"Owner, Hayate Express"},
+  ],
+  statements:[
+    {who:"Yuji Kaneda", text:"Someone took my van from the depot overnight. I found out at half nine and reported it."},
+    {who:"Kenta Ishii", text:"I was on the 07:30 train to Gifu."},
+    {who:"Ren Takagi", text:"I was driving. I didn't see anything."},
+    {who:"Masao Hayashi", text:"The van keys stay in the office cabinet. Only a driver on shift can take them."},
+    {who:"Goro Fujimoto", after:"E9", text:"SYS_MAINT is a shared account. Half the building logs in with it."},
+    {who:"Aiko Nishida", after:"E9", text:"I work days. I gave Takeshi read access to the session log, that's all."},
+    {who:"Masaru Iida", after:"E9", text:"My backup jobs log in as SYS_MAINT at two every night. They have for years."},
+  ],
+  statementsAfter:"E5",
+  accusation:{culprit:"kaneda", MOTIVE:["E8"], OPPORTUNITY:["E6","E7"], LIE:["E6","E7"],
+    second:{culprit:"fujimoto", slots:{ACCESS:["E9"], PRESENCE:["E10","E8"]},
+      charged:"Yuji Kaneda is charged. He never knew the man's name. Someone else gave him the plate, the address and the time.",
+      lead:"SYS_MAINT read the calendar that put Nomura on your list. Name the person behind the account: where it logged in from, and proof they sat there.",
+      suspects:[
+        {id:"fujimoto", name:"Goro Fujimoto", role:"Night sysadmin · console NC-02"},
+        {id:"nishida", name:"Aiko Nishida", role:"Day-shift analyst · console DC-01"},
+        {id:"iida", name:"Masaru Iida", role:"Backup contractor · runs jobs on BK-01"},
+      ]}},
+  outro:[
+    "Thursday afternoon. Yuji Kaneda is arrested at a pachinko hall in Osu. The prepaid number is still in his phone.",
+    "23:40. Police walk into the city data center. Console NC-02 is halfway through a delete job: change history, session logs. Goro Fujimoto's chair is empty and his coat is gone.",
+    "One last message is waiting on your terminal: “I helped because helping is my job, and nobody suspects the man who helps. Your next query was always mine before it was yours. And Ono and Kubo were already dropped. You were good. That was the problem.”",
+  ],
+  outroQuote:"Aiko Nishida: “Takeshi set that history trigger and told no one. I'll take the night console from here. Send me your queries.”",
+  outroHook:"Fujimoto is gone, but his accounts aren't. Something on the night console is still deleting.",
+  outroInsider:"He read along with you from the first night. Every bonus you found was him.",
+  insiderBonuses:["B2","B9"],
+  grades:{
+    S:"Fujimoto never saw you coming.",
+    A:"He saw some of it. Not enough to stop you.",
+    B:"He knew who you would ask for next.",
+    C:"He was always a step ahead. He still got away.",
+  },
+  missions:[{
+    name:"The Frame Number",
+    table:"bike_registry", rows:3000000, perPage:50, maxCols:2, two:3.5,
+    cols:{reg_id:3000000, frame_no:250000, owner_id:2000000, registered_at:3000000, ward:16, color:12},
+    story:"The city's bicycle registry keeps a row for every registration and every yearly renewal. You only need the latest one for this frame.",
+    queries:[{label:"Q1", who:"Current owner of NGY-B-48213", where:[eq("frame_no","'NGY-B-48213'")], order:{col:"registered_at", dir:"DESC"}, fetch:1}],
+    hint:"Only one row is wanted, the newest. Can the index hand it over without sorting the rest?",
+    hint2:"Index (frame_no, registered_at). The database reads it from the newest end and stops after one row.",
+    lesson:"Put the ORDER BY column right after the column compared with =. The index then keeps each frame's rows in date order, so the database reads the newest one and stops: a top-N query that touches one row however many renewals there are.",
+    results:[{columns:["owner","born","address","phone","registered_at"], rows:[["NOMURA Takeshi","1988","Kamimaezu 2-14, Naka-ku","090-3318-5520","2026-04-02"]]}],
+    clue:{id:"E1", title:"The cyclist", text:"The bicycle belongs to Takeshi Nomura, 38, a database administrator at the city data center. He lives in Kamimaezu. Phone 090-3318-5520."},
+    bonus:{title:"Old owners", text:"The frame was registered to two other people before 2023. Both sold it years ago."},
+  },{
+    name:"His Calendar",
+    table:"calendar", rows:2000000, perPage:50, maxCols:2,
+    cols:{event_id:2000000, owner:4000, starts_at:2000000, room:300, created_by:4000, all_day:2},
+    story:"The data center shares one calendar system. What was Nomura due to do next? List his first five events from Thursday on.",
+    queries:[{label:"Q1", who:"Nomura's next five events", where:[eq("owner","'NOMURA'"),
+      range("starts_at","starts_at >= TIMESTAMP '2026-12-03 00:00:00'",0.08)], order:{col:"starts_at"}, fetch:5}],
+    hint:"The range and the ORDER BY are on the same column.",
+    hint2:"Index (owner, starts_at). It finds Thursday in Nomura's events and reads the next five in order.",
+    lesson:"Equality first, then the column that is both the range and the ORDER BY. The index already holds each owner's events in time order, so the database starts at Thursday, reads five entries and stops.",
+    results:[{columns:["starts_at","title","with"], rows:[
+      ["Thu 3 Dec 10:00","SYS_MAINT","Nagoya PD · Data Forensics"],
+      ["Thu 3 Dec 14:00","Backup window review","IIDA Masaru"],
+      ["Fri 4 Dec 09:30","Team standup","DC team"],
+      ["Sat 5 Dec 14:00","Kenta: loan, last talk","ISHII Kenta"],
+      ["Mon 7 Dec 10:00","Storage upgrade","DC team"]]}],
+    clue:{id:"E2", title:"The ten o'clock meeting", text:"At 10:00 on Thursday Nomura was due to meet Nagoya PD Data Forensics, your own unit, about SYS_MAINT. On Saturday he had a 'last talk' about a loan with his brother-in-law, Kenta Ishii."},
+    bonus:{title:"Someone opened the invitation", text:"Calendar log: the Thursday 10:00 invitation was opened by SYS_MAINT at 21:48 on Tuesday."},
+  },{
+    name:"Page Three",
+    table:"tickets", rows:1000000, perPage:50, maxCols:2,
+    cols:{ticket_id:1000000, author:2000, created_at:1000000, status:4, system:60, priority:4},
+    story:"Nomura's newest ticket, from Monday, says only: 'See my note of 21 Nov.' His ticket list shows 20 per page, newest first, and you have reached page 3.",
+    queries:[{label:"Q1", who:"Nomura's tickets, page 3", variants:[
+      {where:[eq("author","'NOMURA'")], order:{col:"created_at", dir:"DESC"}, offset:40, fetch:20},
+      {where:[eq("author","'NOMURA'"), range("created_at","created_at < :last_seen",0.9)], order:{col:"created_at", dir:"DESC"}, fetch:20},
+      {where:[eq("author","'NOMURA'"), range("created_at","created_at <= :last_seen",0.9)], order:{col:"created_at", dir:"DESC"}, fetch:20,
+       wrong:"<= also returns the ticket you last saw, so every page starts with a repeat of the one before."}]}],
+    hint:"OFFSET reads every ticket it skips. Where did page 2 end?",
+    hint2:"Ask for the 20 tickets older than the last one you saw (created_at < :last_seen) and index (author, created_at).",
+    lesson:"OFFSET finds, reads and throws away every row before the page, so each page costs more than the last. Remember where the previous page ended and ask for the rows after it. With (author, created_at) every page then costs the same few pages.",
+    results:[{count:20, note:"Page 3 reaches back to 21 November. Two tickets from that evening are about SYS_MAINT."}],
+    clue:{id:"E3", title:"Nomura's notes", text:"21 Nov: Nomura saw SYS_MAINT read police tables at night and quietly added a history trigger on door_events and three more tables, telling no one. 30 Nov: 'Found where SYS_MAINT logs in from. Bringing proof Thursday.'"},
+  },{
+    name:"Fushimi X3",
+    table:"anpr", rows:60000000, perPage:50, maxCols:2, two:30,
+    cols:{read_id:60000000, camera:4000, passed_at:60000000, plate:3000000, lane:4, speed_kmh:150},
+    grows:["read_id","passed_at"], growth:{factor:12, label:"a year from now"},
+    story:"The city's plate cameras write 2 million reads a day, and the table keeps growing. Pull the crossing camera from 08:05 to 08:20. Your index is scored on today's table and on the table a year from now.",
+    queries:[{label:"Q1", who:"Fushimi crossing, 08:05 to 08:20", where:[eq("camera","'FUSHIMI-X3'"),
+      range("passed_at","passed_at BETWEEN TIMESTAMP '2026-12-03 08:05:00' AND TIMESTAMP '2026-12-03 08:20:00'",15/43200)]}],
+    hint:"A year from now, each camera has twelve times more reads. Does your index read more of them?",
+    hint2:"Index (camera, passed_at). Fifteen minutes stay fifteen minutes however big the table gets.",
+    lesson:"An index on camera alone reads every read that camera has ever made, so it slows down as the table grows. (camera, passed_at) goes straight to the fifteen minutes you asked for. Its cost stays flat, apart from maybe one more tree level.",
+    results:[{columns:["passed_at","plate","lane","speed_kmh","note"], rows:[
+      ["08:09:31","NGY 200 A 50-11","1","38","city bus"],
+      ["08:11:02","NGY 300 SE 9-44","2","41","—"],
+      ["08:12:04","NGY 400 HA 18-07","2","61","white van, blue lettering"],
+      ["08:13:10","NGY 500 RE 33-90","1","4","stopped 40 s"],
+      ["08:16:47","NGY 300 TA 77-02","2","36","—"]]}],
+    clue:{id:"E4", title:"The crossing camera", text:"A white van, NGY 400 HA 18-07, crossed at 08:12 at 61 km/h. A minute later NGY 500 RE 33-90 stopped for 40 seconds, then drove on."},
+  },{
+    name:"The Van",
+    table:"fleet_log", rows:5000000, perPage:50, maxCols:2,
+    cols:{log_id:5000000, plate:20000, shift_date:1800, driver_id:3000, depot:40, status:6},
+    story:"Every company van logs who took it out each day. Q1 asks who had this van on Thursday. Q2 lists its last ten shifts. One index for both.",
+    queries:[
+      {label:"Q1", who:"The van on 3 Dec", where:[eq("plate","'NGY 400 HA 18-07'"), eq("shift_date","DATE '2026-12-03'")]},
+      {label:"Q2", who:"Its last ten shifts", where:[eq("plate","'NGY 400 HA 18-07'")], order:{col:"shift_date", dir:"DESC"}, fetch:10}],
+    hint:"Both queries start from the plate. Q2 also wants the dates in order.",
+    hint2:"Index (plate, shift_date): Q1 finds one day, Q2 reads the ten newest and stops.",
+    lesson:"One index can serve an exact lookup and a top-N list when they share the leading column. (plate, shift_date) finds Thursday directly and also hands Q2 the van's shifts newest first.",
+    results:[
+      {columns:["shift_date","owner","driver","keys_out","status"], rows:[["2026-12-03","Hayate Express","KANEDA Yuji","07:15","REPORTED STOLEN 09:40 by KANEDA Yuji: 'taken from the depot overnight'"]]},
+      {count:10, note:"Kaneda drove this van on every one of its last ten shifts."}],
+    clue:{id:"E5", title:"The van", text:"NGY 400 HA 18-07 belongs to Hayate Express. Its regular driver, Yuji Kaneda, took the keys at 07:15 on Thursday. At 09:40 he reported the van stolen 'from the depot overnight'."},
+  },{
+    name:"The Route",
+    table:"anpr", rows:60000000, perPage:50, maxCols:3, two:4.5,
+    cols:{read_id:60000000, plate:60000, passed_at:60000000, camera:4000, lane:4, speed_kmh:150},
+    story:"Kaneda says the van was gone overnight. Count where the cameras saw it on Thursday morning: one row per camera, with the first time.",
+    queries:[{label:"Q1", who:"The van's cameras, 06:00 to 09:00", select:["camera","COUNT(*)","MIN(passed_at)"],
+      where:[eq("plate","'NGY 400 HA 18-07'"), range("passed_at","passed_at BETWEEN TIMESTAMP '2026-12-03 06:00:00' AND TIMESTAMP '2026-12-03 09:00:00'",0.012)],
+      group:{col:"camera"}, groups:4}],
+    hint:"COUNT(*) needs no column, MIN(passed_at) needs passed_at, and the grouping needs camera.",
+    hint2:"Index (plate, passed_at, camera). Every value the query needs is in the index, so the table is never read.",
+    lesson:"Grouping costs nothing in pages. What counts is reading the rows. With (plate, passed_at, camera) the database finds the three hours, then counts cameras from the index alone. Putting camera second would hand over rows already grouped, but it reads all of the van's sightings to do it.",
+    results:[{columns:["camera","COUNT(*)","MIN(passed_at)"], rows:[
+      ["HAYATE-DEPOT-GATE","1","07:18"],["KAMIMAEZU-2","9","07:40"],["FUSHIMI-X3","1","08:12"],["SHIRAKAWA-RIVERSIDE","1","08:50"]]}],
+    clue:{id:"E6", title:"The van's morning", text:"The van left the Hayate depot gate at 07:18 on Thursday morning, not overnight. Between 07:40 and 08:05 the camera on Nomura's street in Kamimaezu saw it 9 times. Fushimi at 08:12, the riverside car park at 08:50."},
+  },{
+    name:"Phones All Day",
+    table:"cell_events", rows:60000000, perPage:50, maxCols:2, maxIdx:2, inserts:200000,
+    cols:{event_id:60000000, phone:200000, cell_id:8000, event_time:60000000, imei:220000, event_type:4},
+    story:"The phone company runs two searches all day: by phone number (5,000 times) and by cell tower (300 times), while 200,000 new events arrive. Two indexes at most. Score = pages read per day + index upkeep per day.",
+    queries:[
+      {label:"Q1", who:"One phone, a time window", freq:5000, where:[eq("phone",KANEDA),
+        range("event_time","event_time BETWEEN TIMESTAMP '2026-12-03 07:00:00' AND TIMESTAMP '2026-12-03 09:00:00'",0.02)]},
+      {label:"Q2", who:"One cell tower, a time window", freq:300, where:[eq("cell_id","'FUSHIMI-07'"),
+        range("event_time","event_time BETWEEN TIMESTAMP '2026-12-03 08:05:00' AND TIMESTAMP '2026-12-03 08:20:00'",0.0012)]}],
+    hint:"Each search has its own equality column. Every index also costs writes for each new row.",
+    hint2:"(phone, event_time) and (cell_id, event_time): each search gets its own index, and the time range comes second in both.",
+    lesson:"Two searches with different = columns need two indexes, each with the time range second. Every index you add is written for every new row, so stop at two good ones.",
+    results:[
+      {columns:["event_time","cell_id"], rows:[
+        ["07:18","HAYATE-DEPOT"],["07:41","KAMIMAEZU-03"],["08:05","KAMIMAEZU-03"],["08:12","FUSHIMI-07"],["08:16","FUSHIMI-07"],["08:50","SHIRAKAWA-02"]]},
+      {count:9, note:"Nine phones on the Fushimi tower in those fifteen minutes. Kaneda's at 08:12."}],
+    clue:{id:"E7", title:"Kaneda's phone", text:"Kaneda's phone travelled with the van all morning: depot 07:18, Kamimaezu 07:41 to 08:05, Fushimi 08:12, riverside 08:50. Kenta Ishii's phone, searched the same way, was on a Gifu tower from 08:05."},
+    bonus:{title:"The car that stopped", text:"Ren Takagi's phone was on the Fushimi tower at 08:13, the minute his car stopped at the crossing."},
+  },{
+    name:"Who Called",
+    table:"calls", rows:20000000, perPage:50, maxCols:2,
+    cols:{call_id:20000000, caller:1000000, callee:1000000, call_time:20000000, duration_s:3600, cell_id:8000},
+    story:"Who was talking to Kaneda? List the last ten calls to his phone, newest first.",
+    queries:[{label:"Q1", who:"Last ten calls to Kaneda", where:[eq("callee",KANEDA)], order:{col:"call_time", dir:"DESC"}, fetch:10}],
+    hint:"An index can be read from either end.",
+    hint2:"Index (callee, call_time). The database starts at Kaneda's newest call and reads backwards ten entries.",
+    lesson:"ORDER BY ... DESC doesn't need a descending index. The database reads an ascending index backwards (INDEX RANGE SCAN DESCENDING), so (callee, call_time) gives the newest calls first and stops after ten.",
+    results:[{columns:["call_time","caller","duration","caller's cell"], rows:[
+      ["Thu 10:05","052-881-2200 (Hayate office)","2 min","—"],
+      ["Thu 09:31","052-881-2200 (Hayate office)","1 min","—"],
+      ["Thu 08:16","080-6203-1958 (prepaid)","40 s","SANNOMARU-2"],
+      ["Thu 06:58","090-1180-4421 (mother)","3 min","—"],
+      ["Wed 23:10","080-6203-1958 (prepaid)","4 min","SANNOMARU-2"],
+      ["Wed 19:02","052-881-2200 (Hayate office)","1 min","—"],
+      ["Wed 12:40","090-7702-3315","2 min","—"],
+      ["Tue 21:15","090-1180-4421 (mother)","6 min","—"],
+      ["Tue 08:30","052-881-2200 (Hayate office)","1 min","—"],
+      ["Mon 18:47","090-5531-0090","3 min","—"]]}],
+    clue:{id:"E8", title:"The prepaid phone", text:"A prepaid number, 080-6203-1958, called Kaneda at 23:10 on Wednesday and again at 08:16 on Thursday, four minutes after the crash. Both calls came through tower SANNOMARU-2, beside the city data center."},
+    bonus:{title:"One number only", text:"The prepaid phone has called one number in its life: Kaneda's."},
+  },{
+    name:"Shared Account",
+    table:"sessions", rows:3000000, perPage:50, maxCols:3, two:20,
+    cols:{session_id:3000000, account:600, login_at:3000000, console:120, client_ip:5000, duration_s:3600},
+    story:"SYS_MAINT is a maintenance account several people can use. Count its sessions since 1 November by the console they came from.",
+    queries:[{label:"Q1", who:"SYS_MAINT sessions by console", select:["console","COUNT(*)"],
+      where:[eq("account","'SYS_MAINT'"), range("login_at","login_at >= DATE '2026-11-01'",0.0148)], group:{col:"console"}, groups:2}],
+    hint:"COUNT(*) needs no column. The grouping needs console.",
+    hint2:"Index (account, login_at, console): find November, count consoles from the index alone.",
+    lesson:"A GROUP BY query can be answered from the index alone when the index holds every column it groups or aggregates. Put the range before the grouping column here: rows already grouped are no use if the database must read the account's whole history to get them.",
+    results:[{columns:["console","COUNT(*)"], rows:[["BK-01","33"],["NC-02","41"]]}],
+    clue:{id:"E9", title:"Where SYS_MAINT logs in", text:"Since 1 November, SYS_MAINT logged in 33 times from BK-01, the backup server, every night at 02:00, and 41 times from NC-02, the night operations console. Not once from DC-01, the day console. Three people work those consoles."},
+    bonus:{title:"Three quiet nights", text:"There are no NC-02 sessions at all on 24, 25 and 26 November."},
+  },{
+    name:"The Night Console",
+    table:"duty_roster", rows:400000, perPage:50, maxCols:3, two:12,
+    cols:{roster_id:400000, console:120, shift_date:3300, staff_id:300, shift:3, site:4},
+    grows:["roster_id","shift_date"], growth:{factor:10, label:"ten years from now"},
+    story:"The data center's duty roster goes back nine years and grows every night. Who worked console NC-02 between 1 November and 3 December, and how many nights each?",
+    queries:[{label:"Q1", who:"NC-02, 1 Nov to 3 Dec", select:["staff_id","COUNT(*)","MIN(shift_date)"],
+      where:[eq("console","'NC-02'"), range("shift_date","shift_date BETWEEN DATE '2026-11-01' AND DATE '2026-12-03'",33/3300)],
+      group:{col:"staff_id"}, groups:2}],
+    hint:"One console, a date range, and a count per person. Which columns does the index need to answer alone?",
+    hint2:"Index (console, shift_date, staff_id).",
+    lesson:"Everything at once: the = column first, the range second, then the column the query groups by. The database reads one console's five weeks from the index alone, and that cost stays the same as the roster grows.",
+    results:[{columns:["staff","COUNT(*)","MIN(shift_date)"], rows:[["FUJIMOTO Goro","30","2026-11-01"],["SASAKI Mei","3","2026-11-24"]]}],
+    clue:{id:"E10", title:"The night console", text:"Goro Fujimoto worked console NC-02 on 30 of the 33 nights since 1 November. Mei Sasaki covered 24 to 26 November while he was on leave. Nishida works days on DC-01. Iida has no shifts; only his backup jobs run, on BK-01."},
+  }],
+};
+
 // The practice set is off for now: the story comes first. To bring it back, add PRACTICE_CASE to CASES.
 // (The tests still play it.)
 const PRACTICE_CASE = { id:"practice", title:"Practice", practice:true, missions:PRACTICE.slice(6) };
-const CASES = [CASE1, CASE2];
+const CASES = [CASE1, CASE2, CASE3];
 </script>
 <script>
 // Vietnamese text for Index Dojo. Each key is the English string exactly as the game shows it;
@@ -1529,6 +1744,227 @@ const VI = {
     "Lúc 03:12, hai mươi phút sau khi vụ cháy bắt đầu, SYS_MAINT sửa bản ghi cửa phòng lưu trữ lúc 02:31: thẻ 0003 thành 0702. Thẻ 0003 là thẻ chủ của Rie Kubo.",
   "Changes by SYS_MAINT on 28 Nov":
     "Các thay đổi của SYS_MAINT ngày 28/11",
+
+  /* ---------- case 3 engine: GROUP BY, growth, second accusation ---------- */
+  "The index returns the rows already grouped by {col}, so the database counts them as they pass: SORT GROUP BY NOSORT.":
+    "Index trả các dòng đã xếp theo nhóm {col}, nên database đếm luôn khi đọc qua: SORT GROUP BY NOSORT.",
+  "The rows don't come out in {col} order, so the database groups them in memory: HASH GROUP BY. Grouping reads no extra pages.":
+    "Các dòng không ra theo thứ tự {col}, nên database gom nhóm trong bộ nhớ: HASH GROUP BY. Việc gom nhóm không đọc thêm trang nào.",
+  "Scored twice: today, and {label}, when the table holds {rows} rows.":
+    "Chấm điểm hai lần: hôm nay, và {label}, khi bảng có {rows} dòng.",
+  "Pages read today": "Trang đọc hôm nay",
+  "Total": "Tổng",
+  "{label}: {n} pages.": "{label}: {n} trang.",
+  "ACCESS": "TRUY CẬP",
+  "where the account logged in from": "tài khoản đăng nhập từ đâu",
+  "PRESENCE": "CÓ MẶT",
+  "proof they sat there": "bằng chứng người đó ngồi ở đó",
+
+  /* ---------- case 3: Rush Hour ---------- */
+  "Rush Hour": "Giờ cao điểm",
+  "08:12, Thursday 3 December. Fushimi crossing, morning rush. A white van hits a cyclist and drives on. The man dies at the scene.":
+    "08:12, thứ Năm 3/12. Ngã tư Fushimi, giờ cao điểm buổi sáng. Một chiếc van trắng tông một người đi xe đạp rồi chạy luôn. Người đàn ông chết tại chỗ.",
+  "No wallet, no phone. The only number on him is the frame registration of his bicycle: NGY-B-48213.":
+    "Không ví, không điện thoại. Con số duy nhất trên người anh là số đăng ký khung xe đạp: NGY-B-48213.",
+  "A schoolteacher waiting at the light: “A white van. There was writing on the side, blue letters. It didn't even brake.”":
+    "Một cô giáo đang chờ đèn: “Một chiếc van trắng. Thành xe có chữ, chữ xanh. Nó còn chẳng phanh.”",
+  "Delivery driver, Hayate Express": "Tài xế giao hàng, Hayate Express",
+  "The victim's brother-in-law": "Anh rể nạn nhân",
+  "Unlicensed ride-hail driver": "Tài xế chở khách không phép",
+  "Owner, Hayate Express": "Chủ Hayate Express",
+  "Someone took my van from the depot overnight. I found out at half nine and reported it.":
+    "Có người lấy xe van của tôi khỏi kho trong đêm. Chín rưỡi tôi mới biết và đi báo.",
+  "I was on the 07:30 train to Gifu.": "Tôi đang trên chuyến tàu 07:30 đi Gifu.",
+  "I was driving. I didn't see anything.": "Tôi đang lái xe. Tôi không thấy gì cả.",
+  "The van keys stay in the office cabinet. Only a driver on shift can take them.":
+    "Chìa khóa van để trong tủ văn phòng. Chỉ tài xế đang trong ca mới lấy được.",
+  "SYS_MAINT is a shared account. Half the building logs in with it.":
+    "SYS_MAINT là tài khoản dùng chung. Nửa tòa nhà đăng nhập bằng nó.",
+  "I work days. I gave Takeshi read access to the session log, that's all.":
+    "Tôi làm ca ngày. Tôi chỉ cấp cho Takeshi quyền đọc nhật ký phiên, vậy thôi.",
+  "My backup jobs log in as SYS_MAINT at two every night. They have for years.":
+    "Tác vụ sao lưu của tôi đăng nhập bằng SYS_MAINT lúc hai giờ mỗi đêm. Từ nhiều năm nay rồi.",
+  "Yuji Kaneda is charged. He never knew the man's name. Someone else gave him the plate, the address and the time.":
+    "Yuji Kaneda bị buộc tội. Hắn chưa từng biết tên nạn nhân. Có người khác đưa cho hắn biển số, địa chỉ và giờ giấc.",
+  "SYS_MAINT read the calendar that put Nomura on your list. Name the person behind the account: where it logged in from, and proof they sat there.":
+    "SYS_MAINT đã đọc lịch hẹn đưa Nomura đến chỗ bạn. Hãy gọi tên người đứng sau tài khoản này: nó đăng nhập từ đâu, và bằng chứng người đó ngồi ở đó.",
+  "Night sysadmin · console NC-02": "Quản trị hệ thống ca đêm · console NC-02",
+  "Day-shift analyst · console DC-01": "Chuyên viên phân tích ca ngày · console DC-01",
+  "Backup contractor · runs jobs on BK-01": "Kỹ sư hãng sao lưu · chạy tác vụ trên BK-01",
+  "Thursday afternoon. Yuji Kaneda is arrested at a pachinko hall in Osu. The prepaid number is still in his phone.":
+    "Chiều thứ Năm. Yuji Kaneda bị bắt ở một tiệm pachinko ở Osu. Số trả trước vẫn còn trong điện thoại của hắn.",
+  "23:40. Police walk into the city data center. Console NC-02 is halfway through a delete job: change history, session logs. Goro Fujimoto's chair is empty and his coat is gone.":
+    "23:40. Cảnh sát bước vào trung tâm dữ liệu thành phố. Console NC-02 đang chạy dở một tác vụ xóa: lịch sử thay đổi, nhật ký phiên. Ghế của Goro Fujimoto trống, áo khoác cũng không còn.",
+  "One last message is waiting on your terminal: “I helped because helping is my job, and nobody suspects the man who helps. Your next query was always mine before it was yours. And Ono and Kubo were already dropped. You were good. That was the problem.”":
+    "Một tin nhắn cuối đang chờ trên terminal của bạn: “Tôi giúp vì giúp là việc của tôi, và chẳng ai nghi người hay giúp. Câu query tiếp theo của bạn luôn đến tay tôi trước. Còn Ono và Kubo thì đã bị bỏ rơi từ trước. Bạn giỏi. Đó mới là vấn đề.”",
+  "Aiko Nishida: “Takeshi set that history trigger and told no one. I'll take the night console from here. Send me your queries.”":
+    "Aiko Nishida: “Takeshi cài cái trigger lịch sử đó mà không nói với ai. Từ giờ tôi trực console đêm. Cứ gửi query cho tôi.”",
+  "Fujimoto is gone, but his accounts aren't. Something on the night console is still deleting.":
+    "Fujimoto đã đi, nhưng các tài khoản của ông ta thì chưa. Có thứ gì đó trên console đêm vẫn đang xóa.",
+  "He read along with you from the first night. Every bonus you found was him.":
+    "Ông ta đọc theo bạn từ đêm đầu tiên. Mọi bằng chứng phụ bạn tìm được đều là ông ta.",
+  "Fujimoto never saw you coming.": "Fujimoto không hề thấy bạn đến.",
+  "He saw some of it. Not enough to stop you.": "Ông ta thấy một phần. Không đủ để cản bạn.",
+  "He knew who you would ask for next.": "Ông ta biết bạn sẽ tra ai tiếp theo.",
+  "He was always a step ahead. He still got away.": "Ông ta luôn đi trước một bước. Và vẫn trốn được.",
+
+  "The Frame Number": "Số khung xe",
+  "The city's bicycle registry keeps a row for every registration and every yearly renewal. You only need the latest one for this frame.":
+    "Sổ đăng ký xe đạp của thành phố giữ một dòng cho mỗi lần đăng ký và mỗi lần gia hạn hằng năm. Bạn chỉ cần dòng mới nhất của khung xe này.",
+  "Current owner of NGY-B-48213": "Chủ hiện tại của NGY-B-48213",
+  "Only one row is wanted, the newest. Can the index hand it over without sorting the rest?":
+    "Chỉ cần một dòng, dòng mới nhất. Index có đưa ra được nó mà không phải sắp xếp phần còn lại không?",
+  "Index (frame_no, registered_at). The database reads it from the newest end and stops after one row.":
+    "Index (frame_no, registered_at). Database đọc từ đầu mới nhất và dừng sau một dòng.",
+  "Put the ORDER BY column right after the column compared with =. The index then keeps each frame's rows in date order, so the database reads the newest one and stops: a top-N query that touches one row however many renewals there are.":
+    "Đặt cột ORDER BY ngay sau cột so bằng =. Khi đó index giữ các dòng của mỗi khung xe theo thứ tự ngày, nên database đọc dòng mới nhất rồi dừng: một query top-N chỉ chạm một dòng dù có bao nhiêu lần gia hạn.",
+  "The cyclist": "Người đi xe đạp",
+  "The bicycle belongs to Takeshi Nomura, 38, a database administrator at the city data center. He lives in Kamimaezu. Phone 090-3318-5520.":
+    "Chiếc xe đạp của Takeshi Nomura, 38 tuổi, quản trị cơ sở dữ liệu ở trung tâm dữ liệu thành phố. Nhà ở Kamimaezu. SĐT 090-3318-5520.",
+  "Old owners": "Chủ cũ",
+  "The frame was registered to two other people before 2023. Both sold it years ago.":
+    "Trước năm 2023 khung xe này từng đứng tên hai người khác. Cả hai đã bán nó từ nhiều năm trước.",
+
+  "His Calendar": "Lịch của anh ấy",
+  "The data center shares one calendar system. What was Nomura due to do next? List his first five events from Thursday on.":
+    "Trung tâm dữ liệu dùng chung một hệ thống lịch. Nomura sắp làm gì? Liệt kê năm sự kiện đầu tiên của anh từ thứ Năm trở đi.",
+  "Nomura's next five events": "Năm sự kiện tiếp theo của Nomura",
+  "The range and the ORDER BY are on the same column.": "Khoảng và ORDER BY nằm trên cùng một cột.",
+  "Index (owner, starts_at). It finds Thursday in Nomura's events and reads the next five in order.":
+    "Index (owner, starts_at). Nó tìm tới thứ Năm trong các sự kiện của Nomura và đọc năm cái tiếp theo theo thứ tự.",
+  "Equality first, then the column that is both the range and the ORDER BY. The index already holds each owner's events in time order, so the database starts at Thursday, reads five entries and stops.":
+    "So bằng trước, rồi tới cột vừa là khoảng vừa là ORDER BY. Index đã giữ sự kiện của mỗi người theo thứ tự thời gian, nên database bắt đầu ở thứ Năm, đọc năm mục rồi dừng.",
+  "The ten o'clock meeting": "Cuộc hẹn mười giờ",
+  "At 10:00 on Thursday Nomura was due to meet Nagoya PD Data Forensics, your own unit, about SYS_MAINT. On Saturday he had a 'last talk' about a loan with his brother-in-law, Kenta Ishii.":
+    "10:00 thứ Năm, Nomura hẹn gặp Data Forensics của cảnh sát Nagoya, tức chính đơn vị của bạn, về SYS_MAINT. Thứ Bảy anh có một buổi 'nói chuyện lần cuối' về khoản vay với anh rể, Kenta Ishii.",
+  "Someone opened the invitation": "Có người đã mở lời mời",
+  "Calendar log: the Thursday 10:00 invitation was opened by SYS_MAINT at 21:48 on Tuesday.":
+    "Nhật ký lịch: lời mời họp 10:00 thứ Năm đã được SYS_MAINT mở lúc 21:48 thứ Ba.",
+
+  "Page Three": "Trang ba",
+  "Nomura's newest ticket, from Monday, says only: 'See my note of 21 Nov.' His ticket list shows 20 per page, newest first, and you have reached page 3.":
+    "Ticket mới nhất của Nomura, từ thứ Hai, chỉ ghi: 'Xem ghi chú ngày 21/11.' Danh sách ticket hiện 20 cái mỗi trang, mới nhất trước, và bạn đã tới trang 3.",
+  "Nomura's tickets, page 3": "Ticket của Nomura, trang 3",
+  "<= also returns the ticket you last saw, so every page starts with a repeat of the one before.":
+    "<= trả lại cả ticket bạn vừa xem, nên trang nào cũng bắt đầu bằng một dòng lặp của trang trước.",
+  "OFFSET reads every ticket it skips. Where did page 2 end?": "OFFSET đọc mọi ticket mà nó bỏ qua. Trang 2 kết thúc ở đâu?",
+  "Ask for the 20 tickets older than the last one you saw (created_at < :last_seen) and index (author, created_at).":
+    "Hỏi 20 ticket cũ hơn ticket cuối bạn đã xem (created_at < :last_seen) và index (author, created_at).",
+  "OFFSET finds, reads and throws away every row before the page, so each page costs more than the last. Remember where the previous page ended and ask for the rows after it. With (author, created_at) every page then costs the same few pages.":
+    "OFFSET tìm, đọc rồi vứt bỏ mọi dòng trước trang cần lấy, nên trang sau tốn hơn trang trước. Hãy nhớ trang trước kết thúc ở đâu và hỏi các dòng sau đó. Với (author, created_at), trang nào cũng chỉ tốn vài trang như nhau.",
+  "Page 3 reaches back to 21 November. Two tickets from that evening are about SYS_MAINT.":
+    "Trang 3 lùi về tới ngày 21/11. Hai ticket tối hôm đó nói về SYS_MAINT.",
+  "Nomura's notes": "Ghi chú của Nomura",
+  "21 Nov: Nomura saw SYS_MAINT read police tables at night and quietly added a history trigger on door_events and three more tables, telling no one. 30 Nov: 'Found where SYS_MAINT logs in from. Bringing proof Thursday.'":
+    "21/11: Nomura thấy SYS_MAINT đọc bảng của cảnh sát lúc nửa đêm, nên lặng lẽ cài trigger ghi lịch sử lên door_events và ba bảng khác, không nói với ai. 30/11: 'Đã tìm ra SYS_MAINT đăng nhập từ đâu. Thứ Năm mang bằng chứng tới.'",
+
+  "Fushimi X3": "Fushimi X3",
+  "a year from now": "một năm sau",
+  "The city's plate cameras write 2 million reads a day, and the table keeps growing. Pull the crossing camera from 08:05 to 08:20. Your index is scored on today's table and on the table a year from now.":
+    "Camera biển số của thành phố ghi 2 triệu lượt mỗi ngày, và bảng cứ lớn dần. Lấy dữ liệu camera ngã tư từ 08:05 đến 08:20. Index của bạn được chấm trên bảng hôm nay và trên bảng một năm sau.",
+  "Fushimi crossing, 08:05 to 08:20": "Ngã tư Fushimi, 08:05 đến 08:20",
+  "A year from now, each camera has twelve times more reads. Does your index read more of them?":
+    "Một năm sau, mỗi camera có gấp mười hai lần số lượt ghi. Index của bạn có phải đọc nhiều hơn không?",
+  "Index (camera, passed_at). Fifteen minutes stay fifteen minutes however big the table gets.":
+    "Index (camera, passed_at). Mười lăm phút vẫn là mười lăm phút, bảng lớn đến đâu cũng vậy.",
+  "An index on camera alone reads every read that camera has ever made, so it slows down as the table grows. (camera, passed_at) goes straight to the fifteen minutes you asked for. Its cost stays flat, apart from maybe one more tree level.":
+    "Index chỉ có camera phải đọc mọi lượt ghi camera đó từng có, nên chậm dần khi bảng lớn lên. (camera, passed_at) đi thẳng tới mười lăm phút bạn cần. Chi phí của nó gần như không đổi, có chăng thêm một tầng cây.",
+  "The crossing camera": "Camera ngã tư",
+  "A white van, NGY 400 HA 18-07, crossed at 08:12 at 61 km/h. A minute later NGY 500 RE 33-90 stopped for 40 seconds, then drove on.":
+    "Một chiếc van trắng, NGY 400 HA 18-07, qua ngã tư lúc 08:12 với tốc độ 61 km/h. Một phút sau NGY 500 RE 33-90 dừng 40 giây rồi chạy tiếp.",
+
+  "The Van": "Chiếc van",
+  "Every company van logs who took it out each day. Q1 asks who had this van on Thursday. Q2 lists its last ten shifts. One index for both.":
+    "Mỗi chiếc van của công ty ghi lại ai lái nó mỗi ngày. Q1 hỏi ai giữ chiếc van này hôm thứ Năm. Q2 liệt kê mười ca gần nhất của nó. Một index cho cả hai.",
+  "The van on 3 Dec": "Chiếc van ngày 3/12",
+  "Its last ten shifts": "Mười ca gần nhất",
+  "Both queries start from the plate. Q2 also wants the dates in order.": "Cả hai query đều bắt đầu từ biển số. Q2 còn cần ngày theo thứ tự.",
+  "Index (plate, shift_date): Q1 finds one day, Q2 reads the ten newest and stops.":
+    "Index (plate, shift_date): Q1 tìm đúng một ngày, Q2 đọc mười ca mới nhất rồi dừng.",
+  "One index can serve an exact lookup and a top-N list when they share the leading column. (plate, shift_date) finds Thursday directly and also hands Q2 the van's shifts newest first.":
+    "Một index phục vụ được cả tra cứu chính xác lẫn danh sách top-N khi chúng chung cột đầu. (plate, shift_date) tìm thẳng tới thứ Năm, và cũng đưa cho Q2 các ca của chiếc van, mới nhất trước.",
+  "Kaneda drove this van on every one of its last ten shifts.": "Kaneda lái chiếc van này trong cả mười ca gần nhất.",
+  "The van": "Chiếc van",
+  "NGY 400 HA 18-07 belongs to Hayate Express. Its regular driver, Yuji Kaneda, took the keys at 07:15 on Thursday. At 09:40 he reported the van stolen 'from the depot overnight'.":
+    "NGY 400 HA 18-07 thuộc Hayate Express. Tài xế quen của nó, Yuji Kaneda, lấy chìa khóa lúc 07:15 thứ Năm. 09:40 hắn báo chiếc van bị trộm 'khỏi kho trong đêm'.",
+
+  "The Route": "Lộ trình",
+  "Kaneda says the van was gone overnight. Count where the cameras saw it on Thursday morning: one row per camera, with the first time.":
+    "Kaneda nói chiếc van đã mất từ đêm. Đếm xem các camera thấy nó ở đâu sáng thứ Năm: mỗi camera một dòng, kèm lần thấy đầu tiên.",
+  "The van's cameras, 06:00 to 09:00": "Các camera thấy chiếc van, 06:00 đến 09:00",
+  "COUNT(*) needs no column, MIN(passed_at) needs passed_at, and the grouping needs camera.":
+    "COUNT(*) không cần cột nào, MIN(passed_at) cần passed_at, còn gom nhóm cần camera.",
+  "Index (plate, passed_at, camera). Every value the query needs is in the index, so the table is never read.":
+    "Index (plate, passed_at, camera). Mọi giá trị query cần đều nằm trong index, nên không phải đọc bảng.",
+  "Grouping costs nothing in pages. What counts is reading the rows. With (plate, passed_at, camera) the database finds the three hours, then counts cameras from the index alone. Putting camera second would hand over rows already grouped, but it reads all of the van's sightings to do it.":
+    "Gom nhóm không tốn trang nào. Cái tốn là đọc các dòng. Với (plate, passed_at, camera), database tìm tới ba tiếng đó rồi đếm camera ngay trong index. Đặt camera ở vị trí thứ hai thì các dòng ra sẵn theo nhóm, nhưng phải đọc mọi lần chiếc van bị ghi hình.",
+  "The van's morning": "Buổi sáng của chiếc van",
+  "The van left the Hayate depot gate at 07:18 on Thursday morning, not overnight. Between 07:40 and 08:05 the camera on Nomura's street in Kamimaezu saw it 9 times. Fushimi at 08:12, the riverside car park at 08:50.":
+    "Chiếc van ra cổng kho Hayate lúc 07:18 sáng thứ Năm, không phải trong đêm. Từ 07:40 đến 08:05, camera trên phố nhà Nomura ở Kamimaezu thấy nó 9 lần. Fushimi lúc 08:12, bãi xe bờ sông lúc 08:50.",
+
+  "Phones All Day": "Điện thoại cả ngày",
+  "The phone company runs two searches all day: by phone number (5,000 times) and by cell tower (300 times), while 200,000 new events arrive. Two indexes at most. Score = pages read per day + index upkeep per day.":
+    "Nhà mạng chạy hai kiểu tìm kiếm cả ngày: theo số điện thoại (5.000 lần) và theo trạm phát sóng (300 lần), trong khi có 200.000 sự kiện mới đổ về. Tối đa hai index. Điểm = số trang đọc mỗi ngày + công cập nhật index mỗi ngày.",
+  "One phone, a time window": "Một số điện thoại, một khung giờ",
+  "One cell tower, a time window": "Một trạm phát sóng, một khung giờ",
+  "Each search has its own equality column. Every index also costs writes for each new row.":
+    "Mỗi kiểu tìm kiếm có cột so bằng riêng. Index nào cũng tốn công ghi cho mỗi dòng mới.",
+  "(phone, event_time) and (cell_id, event_time): each search gets its own index, and the time range comes second in both.":
+    "(phone, event_time) và (cell_id, event_time): mỗi kiểu tìm kiếm một index, và khoảng thời gian đứng thứ hai ở cả hai.",
+  "Two searches with different = columns need two indexes, each with the time range second. Every index you add is written for every new row, so stop at two good ones.":
+    "Hai kiểu tìm kiếm với hai cột so bằng khác nhau cần hai index, mỗi index đặt khoảng thời gian thứ hai. Thêm index nào là phải ghi vào nó cho mọi dòng mới, nên dừng ở hai index tốt.",
+  "Nine phones on the Fushimi tower in those fifteen minutes. Kaneda's at 08:12.":
+    "Chín điện thoại bắt sóng trạm Fushimi trong mười lăm phút đó. Của Kaneda lúc 08:12.",
+  "Kaneda's phone": "Điện thoại của Kaneda",
+  "Kaneda's phone travelled with the van all morning: depot 07:18, Kamimaezu 07:41 to 08:05, Fushimi 08:12, riverside 08:50. Kenta Ishii's phone, searched the same way, was on a Gifu tower from 08:05.":
+    "Điện thoại của Kaneda đi cùng chiếc van suốt buổi sáng: kho 07:18, Kamimaezu 07:41 đến 08:05, Fushimi 08:12, bờ sông 08:50. Điện thoại của Kenta Ishii, tra cùng cách, bắt sóng trạm ở Gifu từ 08:05.",
+  "The car that stopped": "Chiếc xe đã dừng lại",
+  "Ren Takagi's phone was on the Fushimi tower at 08:13, the minute his car stopped at the crossing.":
+    "Điện thoại của Ren Takagi bắt sóng trạm Fushimi lúc 08:13, đúng phút xe anh dừng ở ngã tư.",
+
+  "Who Called": "Ai đã gọi",
+  "Who was talking to Kaneda? List the last ten calls to his phone, newest first.":
+    "Ai đã nói chuyện với Kaneda? Liệt kê mười cuộc gọi gần nhất đến số của hắn, mới nhất trước.",
+  "Last ten calls to Kaneda": "Mười cuộc gọi gần nhất đến Kaneda",
+  "An index can be read from either end.": "Index đọc được từ cả hai đầu.",
+  "Index (callee, call_time). The database starts at Kaneda's newest call and reads backwards ten entries.":
+    "Index (callee, call_time). Database bắt đầu từ cuộc gọi mới nhất đến Kaneda và đọc ngược mười mục.",
+  "ORDER BY ... DESC doesn't need a descending index. The database reads an ascending index backwards (INDEX RANGE SCAN DESCENDING), so (callee, call_time) gives the newest calls first and stops after ten.":
+    "ORDER BY ... DESC không cần index giảm dần. Database đọc ngược một index tăng dần (INDEX RANGE SCAN DESCENDING), nên (callee, call_time) cho các cuộc gọi mới nhất trước và dừng sau mười cuộc.",
+  "The prepaid phone": "Điện thoại trả trước",
+  "A prepaid number, 080-6203-1958, called Kaneda at 23:10 on Wednesday and again at 08:16 on Thursday, four minutes after the crash. Both calls came through tower SANNOMARU-2, beside the city data center.":
+    "Một số trả trước, 080-6203-1958, gọi Kaneda lúc 23:10 thứ Tư và lần nữa lúc 08:16 thứ Năm, bốn phút sau vụ tông xe. Cả hai cuộc đều qua trạm SANNOMARU-2, ngay cạnh trung tâm dữ liệu thành phố.",
+  "One number only": "Chỉ một số",
+  "The prepaid phone has called one number in its life: Kaneda's.": "Chiếc điện thoại trả trước này chỉ từng gọi đúng một số: số của Kaneda.",
+
+  "Shared Account": "Tài khoản dùng chung",
+  "SYS_MAINT is a maintenance account several people can use. Count its sessions since 1 November by the console they came from.":
+    "SYS_MAINT là tài khoản bảo trì mà nhiều người dùng được. Đếm các phiên của nó từ 1/11 theo console mà chúng xuất phát.",
+  "SYS_MAINT sessions by console": "Phiên SYS_MAINT theo console",
+  "COUNT(*) needs no column. The grouping needs console.": "COUNT(*) không cần cột nào. Gom nhóm cần console.",
+  "Index (account, login_at, console): find November, count consoles from the index alone.":
+    "Index (account, login_at, console): tìm tháng 11, rồi đếm console ngay trong index.",
+  "A GROUP BY query can be answered from the index alone when the index holds every column it groups or aggregates. Put the range before the grouping column here: rows already grouped are no use if the database must read the account's whole history to get them.":
+    "Query GROUP BY trả lời được chỉ từ index khi index chứa mọi cột mà nó gom nhóm hoặc tính gộp. Ở đây hãy đặt khoảng trước cột gom nhóm: dòng ra sẵn theo nhóm chẳng ích gì nếu database phải đọc cả lịch sử của tài khoản mới có được chúng.",
+  "Where SYS_MAINT logs in": "SYS_MAINT đăng nhập từ đâu",
+  "Since 1 November, SYS_MAINT logged in 33 times from BK-01, the backup server, every night at 02:00, and 41 times from NC-02, the night operations console. Not once from DC-01, the day console. Three people work those consoles.":
+    "Từ 1/11, SYS_MAINT đăng nhập 33 lần từ BK-01, máy chủ sao lưu, đều đặn 02:00 mỗi đêm, và 41 lần từ NC-02, console vận hành ca đêm. Không lần nào từ DC-01, console ca ngày. Có ba người làm việc ở các console đó.",
+  "Three quiet nights": "Ba đêm yên ắng",
+  "There are no NC-02 sessions at all on 24, 25 and 26 November.": "Không có phiên NC-02 nào trong các ngày 24, 25 và 26/11.",
+
+  "The Night Console": "Console ca đêm",
+  "ten years from now": "mười năm sau",
+  "The data center's duty roster goes back nine years and grows every night. Who worked console NC-02 between 1 November and 3 December, and how many nights each?":
+    "Lịch trực của trung tâm dữ liệu kéo dài chín năm và dài thêm mỗi đêm. Ai đã trực console NC-02 từ 1/11 đến 3/12, và mỗi người bao nhiêu đêm?",
+  "NC-02, 1 Nov to 3 Dec": "NC-02, 1/11 đến 3/12",
+  "One console, a date range, and a count per person. Which columns does the index need to answer alone?":
+    "Một console, một khoảng ngày, và số đêm của mỗi người. Index cần những cột nào để tự trả lời?",
+  "Index (console, shift_date, staff_id).": "Index (console, shift_date, staff_id).",
+  "Everything at once: the = column first, the range second, then the column the query groups by. The database reads one console's five weeks from the index alone, and that cost stays the same as the roster grows.":
+    "Tất cả cùng lúc: cột so bằng trước, khoảng thứ hai, rồi tới cột query gom nhóm. Database đọc năm tuần của một console chỉ từ index, và chi phí đó giữ nguyên khi lịch trực dài thêm.",
+  "The night console": "Console ca đêm",
+  "Goro Fujimoto worked console NC-02 on 30 of the 33 nights since 1 November. Mei Sasaki covered 24 to 26 November while he was on leave. Nishida works days on DC-01. Iida has no shifts; only his backup jobs run, on BK-01.":
+    "Goro Fujimoto trực console NC-02 30 trong 33 đêm kể từ 1/11. Mei Sasaki trực thay từ 24 đến 26/11 khi ông ta nghỉ phép. Nishida làm ca ngày ở DC-01. Iida không có ca trực, chỉ có tác vụ sao lưu chạy trên BK-01.",
 };
 </script>
 <script>
@@ -1538,7 +1974,7 @@ const LEAF_BOXES = 40, CELLS = 240;     // how many boxes the diagram draws
 const tier = i => [t("BASIC"), t("INTERMEDIATE"), t("ADVANCED")][i];
 
 CASES.forEach(c => c.missions.forEach(lv => lv.queries.forEach(q => {
-  q.variants ??= [{where:q.where, select:q.select, order:q.order, fetch:q.fetch, offset:q.offset}];
+  q.variants ??= [{where:q.where, select:q.select, order:q.order, fetch:q.fetch, offset:q.offset, group:q.group, groups:q.groups}];
 })));
 const missionsOf = caseIx => CASES[caseIx].missions;
 
@@ -1577,7 +2013,7 @@ function caseOpen(save, i){ return DEBUG || i === 0 || !!save.solved?.[i - 1]; }
 /* ---------- save and evidence ---------- */
 const SAVE_KEY = "index-dojo-v2";
 const CANCEL_LINE = "ORA-01013: user requested cancel of current operation";
-const emptySave = () => ({stars:{}, clues:{}, scans:{}, fails:{}, solved:{}});
+const emptySave = () => ({stars:{}, clues:{}, scans:{}, fails:{}, solved:{}, stage:{}});   // stage 1 = first accusation step done
 function loadSave(raw){
   try { const s = JSON.parse(raw); if (s && typeof s === "object" && !Array.isArray(s)) return {...emptySave(), ...s}; } catch {}
   return emptySave();
@@ -1617,16 +2053,27 @@ function accuse(c, suspect, slots){
   const a = c.accusation;
   return suspect === a.culprit && SLOTS.every(k => a[k].includes(slots[k])) ? "right" : "wrong";
 }
+// Case 3 adds a second step (who SYS_MAINT is) with its own suspects and slots.
+function accuseSecond(c, suspect, slots){
+  const a = c.accusation.second, keys = Object.keys(a.slots);
+  if (!suspect || keys.some(k => !slots[k])) return "incomplete";
+  return suspect === a.culprit && keys.every(k => a.slots[k].includes(slots[k])) ? "right" : "wrong";
+}
+const onSecondStep = (save, caseIx) => !!CASES[caseIx].accusation?.second && save.stage[caseIx] === 1;
+// "next" = the first step of a two-step accusation was right; the case is solved only after the second.
 function fileAccusation(save, caseIx, suspect, slots){
-  const c = CASES[caseIx], verdict = accuse(c, suspect, slots);
+  const c = CASES[caseIx], second = onSecondStep(save, caseIx);
+  const verdict = second ? accuseSecond(c, suspect, slots) : accuse(c, suspect, slots);
   if (verdict === "wrong") save.scans[caseIx] = (save.scans[caseIx] ?? 0) + 0.25 * NOTICED;
-  if (verdict === "right") save.solved[caseIx] = true;
+  if (verdict !== "right") return verdict;
+  if (c.accusation.second && !second){ save.stage[caseIx] = 1; return "next"; }
+  save.solved[caseIx] = true;
   return verdict;
 }
 
 // Restart one case: its stars, evidence, suspicion, fails and verdict go; other cases and settings stay.
 function resetCase(save, caseIx){
-  for (const k of ["stars", "clues", "scans", "fails", "solved"]) delete save[k][caseIx];
+  for (const k of ["stars", "clues", "scans", "fails", "solved", "stage"]) delete save[k][caseIx];
   return save;
 }
 
@@ -1637,6 +2084,8 @@ const evidenceOf = c => c.missions.flatMap((m, i) => [
 const emptySlots = lv => Array.from({length: lv.maxIdx ?? 1}, () => []);
 
 /* ---------- cost model ---------- */
+// The column an aggregate needs: COUNT(*) none, MIN(x) / MAX(x) x. Plain columns stay as they are.
+const aggCol = c => !c || c === "COUNT(*)" ? null : c.match(/^(?:MIN|MAX)\((.+)\)$/)?.[1] ?? c;
 const selOf = (lv, p) => p.sel ?? 1 / lv.cols[p.col];
 const rowsFor = (lv, preds) => Math.max(1, Math.round(lv.rows * preds.reduce((s,p) => s * selOf(lv, p), 1)));
 const tablePages = lv => Math.ceil(lv.rows / lv.perPage);
@@ -1666,9 +2115,11 @@ function planIndex(lv, cols, v){
   const upper = Math.max(1, Math.ceil(Math.log(L) / Math.log(FANOUT)));   // root + branch levels
   const m = rowsFor(lv, access);                                          // index entries in the range
   const ixRows = rowsFor(lv, [...access, ...ixFilter]);                   // entries left after leaf filter
-  const needCols = [...(v.select ?? []), ...(v.order ? [v.order.col] : [])];
+  const needCols = [...(v.select ?? []), v.order?.col, v.group?.col].map(aggCol).filter(Boolean);
   const covering = !!v.select && needCols.every(c => idx.includes(c)) && !tFilter.length;
-  const pipelined = !v.order || idx[eqCount] === v.order.col;            // index already yields ORDER BY order
+  // Rows arrive in the order GROUP BY / ORDER BY want when that column comes right after the = columns.
+  // ORDER BY COUNT(*) never does: the counts exist only after every group is read.
+  const pipelined = [v.group?.col, v.order?.col].filter(Boolean).every(c => idx[eqCount] === c);
   const stop = !!v.fetch && pipelined;
   const frac = stop ? Math.min(1, ((v.offset ?? 0) + v.fetch) / out) : 1;  // share of the range actually walked
   const part = n => Math.max(1, Math.ceil(n * frac - 1e-9));             // epsilon: 5000 * (2020/5000) must stay 2020
@@ -1677,13 +2128,14 @@ function planIndex(lv, cols, v){
   const leaf = Math.ceil(scanned / LEAF_ROWS);
   const cost = upper + leaf + lookups;
   return {kind:"index", cost, T, out, W, upper, leaf, lookups, lookRows, m, ixRows, access, ixFilter, tFilter,
-    covering, pipelined, sort: !!v.order && !pipelined, stop, rowsOut: part(out), L, idx, partial: isPartial};
+    covering, pipelined, sort: !!v.order && !pipelined, stop, rowsOut: part(out), L, idx, partial: isPartial,
+    grouped: !v.group ? null : idx[eqCount] === v.group.col ? "nosort" : "hash"};
 }
 
 // The optimizer: cheapest of the full scan and every usable index.
 function plan(lv, ixs, v){
   const T = tablePages(lv), out = rowsFor(lv, v.where);
-  const full = {kind:"full", cost:T, T, out, W:v.where, sort:!!v.order};
+  const full = {kind:"full", cost:T, T, out, W:v.where, sort:!!v.order, grouped: v.group ? "hash" : null};
   const real = ixs.filter(ix => ix.length);
   if (!real.length) return {...full, why:"none"};
   const tries = real.map(ix => planIndex(lv, ix, v));
@@ -1693,13 +2145,28 @@ function plan(lv, ixs, v){
   return usable[0];
 }
 
+// The same mission after the table has grown (lv.growth.factor times the rows). Columns in lv.grows (times, ids)
+// gain distinct values and keep their rows per value, so a time window still matches as many rows; every other
+// column keeps its distinct values, so each value now matches factor times more rows.
+function grown(lv){
+  const f = lv.growth.factor, gw = c => lv.grows?.includes(c);
+  return {...lv, growth:null, rows: lv.rows * f, _best:null, _none:null,
+    cols: Object.fromEntries(Object.entries(lv.cols).map(([c, d]) => [c, gw(c) ? d * f : d]))};
+}
+const grownVariant = (lv, v) => ({...v, where: v.where.map(p => p.sel != null && lv.grows?.includes(p.col) ? {...p, sel: p.sel / lv.growth.factor} : p)});
+
 function score(lv, ixs, picks){
   const plans = lv.queries.map((q,i) => plan(lv, ixs, variantOf(lv, i, picks)));
-  const reads = plans.reduce((s,p,i) => s + p.cost * (lv.queries[i].freq ?? 1), 0);
+  const readsOf = (ps) => ps.reduce((s,p,i) => s + p.cost * (lv.queries[i].freq ?? 1), 0);
+  let reads = readsOf(plans), later = null;
+  if (lv.growth){
+    const big = grown(lv), lp = lv.queries.map((q,i) => plan(big, ixs, grownVariant(lv, variantOf(lv, i, picks))));
+    later = {plans: lp, reads: readsOf(lp)};
+  }
   const share = ix => lv.partial && ix.includes(lv.partial.key) ? lv.partial.sel : 1;   // a partial index skips most INSERTs
   const writes = (lv.inserts ?? 0) * INSERT_PAGES * ixs.filter(ix => ix.length).reduce((s, ix) => s + share(ix), 0);
   const wrong = lv.queries.map((q, i) => variantOf(lv, i, picks).wrong ? i : -1).filter(i => i >= 0);
-  return {plans, reads, writes, total: reads + writes, wrong};
+  return {plans, reads, writes, later, total: reads + (later?.reads ?? 0) + writes, wrong};
 }
 // A rewrite that returns different rows earns nothing, however fast it is.
 function judge(lv, ixs, picks){
@@ -1736,12 +2203,13 @@ function starsFor(lv, t){
 
 /* ---------- text ---------- */
 function hl(s){
-  return esc(s).replace(/(--[^\n]*)|('[^']*')|\b(SELECT|FROM|WHERE|AND|OR|IS|NULL|CREATE|INDEX|ON|UPPER|TRUNC|LIKE|BETWEEN|DATE|SYSDATE|INTERVAL|HOUR|ORDER|BY|DESC|OFFSET|FETCH|FIRST|NEXT|ROWS|ONLY)\b|\b(\d+)\b/g,
+  return esc(s).replace(/(--[^\n]*)|('[^']*')|\b(SELECT|FROM|WHERE|AND|OR|IS|NULL|CREATE|INDEX|ON|UPPER|TRUNC|LIKE|BETWEEN|DATE|SYSDATE|INTERVAL|HOUR|ORDER|BY|DESC|OFFSET|FETCH|FIRST|NEXT|ROWS|ONLY|GROUP|COUNT|MIN|MAX)\b|\b(\d+)\b/g,
     (m, cm, str, kw, num) => cm ? `<span class="c">${cm}</span>` : str ? `<span class="s">${str}</span>` : kw ? `<span class="k">${kw}</span>` : `<span class="n">${num}</span>`);
 }
 function sqlOf(lv, v){
   let s = (v.binds ? `-- ${v.binds}\n` : "") +
     `SELECT ${v.select ? v.select.join(", ") : "*"}\n  FROM ${lv.table}\n WHERE ` + v.where.map(p => p.sql).join("\n   AND ");
+  if (v.group) s += `\n GROUP BY ${v.group.col}`;
   if (v.order) s += `\n ORDER BY ${v.order.col}${v.order.dir === "DESC" ? " DESC" : ""}`;
   if (v.offset) s += `\nOFFSET ${v.offset} ROWS`;
   if (v.fetch) s += `\n FETCH ${v.offset ? "NEXT" : "FIRST"} ${v.fetch} ROWS ONLY`;
@@ -1760,10 +2228,11 @@ const scanLabel = (lv, p, v) => p.kind === "full" ? "TABLE ACCESS FULL" : p.cove
 function planText(lv, p, v){
   const TB = lv.table.toUpperCase();
   const pr = (ps, cls) => ps.map(w => `<span class="${cls}">${esc(w.sql.toUpperCase())}</span>`).join(" AND ");
-  const ret = v.fetch ? Math.min(p.out, v.fetch) : p.out;
+  const rowsBack = v.group ? v.groups : p.out, ret = v.fetch ? Math.min(rowsBack, v.fetch) : rowsBack;
   const ops = [{op:"SELECT STATEMENT", rows:ret, cost:p.cost}];
   if (p.sort) ops.push({op: v.fetch ? "SORT ORDER BY STOPKEY" : "SORT ORDER BY", rows:ret, cost:p.cost});
   else if (v.fetch) ops.push({op:"COUNT STOPKEY", rows:ret, cost:p.cost});
+  if (p.grouped) ops.push({op: p.grouped === "nosort" ? "SORT GROUP BY NOSORT" : "HASH GROUP BY", rows:v.groups, cost:p.cost});
   if (p.kind === "full") ops.push({op:"TABLE ACCESS FULL", name:TB, rows:p.out, cost:p.T, filter:p.W});
   else {
     if (!p.covering) ops.push({op:"TABLE ACCESS BY INDEX ROWID", name:TB, rows:p.rowsOut, cost:p.cost, filter:p.tFilter});
@@ -1810,6 +2279,9 @@ function explain(lv, p, v){
   if (p.sort) s.push(v.fetch
     ? t("The index doesn't return rows in {col} order, so the database reads all {n} matching rows and sorts them before returning the first {k}.", {col:v.order.col, n:fmt(p.out), k:v.fetch})
     : t("The index doesn't return rows in {col} order, so the database reads all {n} matching rows and sorts them before returning any.", {col:v.order.col, n:fmt(p.out)}));
+  if (p.grouped) s.push(p.grouped === "nosort"
+    ? t("The index returns the rows already grouped by {col}, so the database counts them as they pass: SORT GROUP BY NOSORT.", {col:v.group.col})
+    : t("The rows don't come out in {col} order, so the database groups them in memory: HASH GROUP BY. Grouping reads no extra pages.", {col:v.group.col}));
   if (p.partial) s.push(t("The index holds only the rows where {cond}, so it stays small and most new rows never touch it.", {cond:lv.partial.sql}));
   if (p.ixFilter.length) s.push(t("{cols} can't narrow the search, but it is checked in the leaf pages, so non-matching rows never cost a table read.", {cols:cols(p.ixFilter)}));
   if (p.tFilter.length) s.push(t("{cols} is not in the index, so it is checked after each table read.", {cols:cols(p.tFilter)}));
@@ -1908,31 +2380,38 @@ function accuseButton(c){
 }
 
 const slotText = k => ({MOTIVE:[t("MOTIVE"), t("why they did it")], OPPORTUNITY:[t("OPPORTUNITY"), t("proof they were there")],
-  LIE:[t("LIE"), t("evidence that breaks their statement")]})[k];
-function openAccusation(msg = ""){
-  const c = CASES[state.caseIx], a = state.acc, got = state.save.clues[state.caseIx] ?? [];
+  LIE:[t("LIE"), t("evidence that breaks their statement")], ACCESS:[t("ACCESS"), t("where the account logged in from")],
+  PRESENCE:[t("PRESENCE"), t("proof they sat there")]})[k];
+// The step the accusation dialog is on: its suspects, slots and checker.
+function accStep(){
+  const c = CASES[state.caseIx], sec = onSecondStep(state.save, state.caseIx) ? c.accusation.second : null;
+  return sec ? {suspects:sec.suspects, keys:Object.keys(sec.slots), check:accuseSecond, lead:sec.lead}
+             : {suspects:c.suspects, keys:SLOTS, check:accuse, lead:null};
+}
+function openAccusation(msg = "", good = false){
+  const c = CASES[state.caseIx], a = state.acc, got = state.save.clues[state.caseIx] ?? [], st = accStep();
   const ev = evidenceOf(c).filter(e => DEBUG || got.includes(e.id));
   openDialog(t("ACCUSATION"),
-    `<p>${t("Name the culprit, then back each charge with one piece of evidence from your notebook.")}</p>` +
+    (msg ? `<p class="${good ? "hint" : "cancel"}">${esc(msg)}</p>` : "") +
+    `<p>${st.lead ? esc(t(st.lead)) : t("Name the culprit, then back each charge with one piece of evidence from your notebook.")}</p>` +
     `<fieldset class="sus-cards"><legend class="eyebrow">${t("SUSPECT")}</legend>` +
-      c.suspects.map(s => `<label><input type="radio" name="suspect" value="${s.id}" ${a.suspect === s.id ? "checked" : ""}><b>${esc(s.name)}</b><small>${esc(t(s.role))}</small></label>`).join("") +
+      st.suspects.map(s => `<label><input type="radio" name="suspect" value="${s.id}" ${a.suspect === s.id ? "checked" : ""}><b>${esc(s.name)}</b><small>${esc(t(s.role))}</small></label>`).join("") +
     `</fieldset>` +
-    SLOTS.map(k => `<label class="slot-sel"><span><b>${slotText(k)[0]}</b> · ${slotText(k)[1]}</span><select data-slotsel="${k}">` +
+    st.keys.map(k => `<label class="slot-sel"><span><b>${slotText(k)[0]}</b> · ${slotText(k)[1]}</span><select data-slotsel="${k}">` +
       `<option value="">${t("Choose evidence")}</option>` +
       ev.map(e => `<option value="${e.id}" ${a[k] === e.id ? "selected" : ""}>${e.bonus ? "★" : e.id} · ${esc(t(e.title))}</option>`).join("") +
       `</select></label>`).join("") +
-    (msg ? `<p class="cancel">${esc(msg)}</p>` : "") +
     `<div class="row"><button class="go" id="accuse-go">${t("ACCUSE ▶")}</button><button data-close="1">${t("NOT YET")}</button></div>`);
   syncAccusation();
 }
 // Keep the form honest: no evidence in two slots, no ACCUSE until it's complete.
 function syncAccusation(){
-  const a = state.acc;
+  const a = state.acc, st = accStep();
   document.querySelectorAll("[data-slotsel]").forEach(sel => {
-    const others = SLOTS.filter(k => k !== sel.dataset.slotsel).map(k => a[k]);
+    const others = st.keys.filter(k => k !== sel.dataset.slotsel).map(k => a[k]);
     [...sel.options].forEach(o => { o.disabled = !!o.value && others.includes(o.value); });
   });
-  $("accuse-go").disabled = accuse(CASES[state.caseIx], a.suspect, a) === "incomplete";
+  $("accuse-go").disabled = st.check(CASES[state.caseIx], a.suspect, a) === "incomplete";
 }
 function openEnding(){
   const c = CASES[state.caseIx], got = state.save.clues[state.caseIx] ?? [], pct = suspicion(state.save, state.caseIx), g = rating(pct);
@@ -2103,6 +2582,7 @@ function renderMission(){
       return `<div class="qlabel"><b>${q.label}</b> · ${esc(t(q.who))}${q.freq ? ` · <em>${t("runs {n}×/day", {n:fmt(q.freq)})}</em>` : ""}</div>${seg}<pre>${hl(sqlOf(lv, v))}</pre>`;
     }).join("") +
     `<div class="stats">${t("{table}: {rows} rows · {pages} table pages · {leaf} index entries per leaf page", {table:lv.table, rows:fmt(lv.rows), pages:fmt(tablePages(lv)), leaf:LEAF_ROWS})}</div>` +
+    (lv.growth ? `<div class="stats"><b>${t("Scored twice: today, and {label}, when the table holds {rows} rows.", {label:t(lv.growth.label), rows:fmt(lv.rows * lv.growth.factor)})}</b></div>` : "") +
     (lv.inserts ? `<div class="stats"><b>${t("{n} new rows/day.", {n:fmt(lv.inserts)})}</b> ${t("Each index costs {p} page writes per new row = {total} pages/day.", {p:INSERT_PAGES, total:fmt(lv.inserts * INSERT_PAGES)})}</div>` : "");
 }
 
@@ -2182,7 +2662,8 @@ function renderReport(){
     `<div class="stars" aria-label="${t("{n} of 3 stars", {n:r.stars})}">${"★".repeat(r.stars)}<span class="off">${"★".repeat(3-r.stars)}</span></div>` +
     `<dl class="score">` +
       (lv.inserts ? `<dt>${perDay ? t("Pages read per day") : t("Pages read")}</dt><dd>${fmt(r.reads)}</dd><dt>${t("Index upkeep per day")}</dt><dd>${fmt(r.writes)}</dd>` : "") +
-      `<dt>${lv.inserts ? t("Total per day") : t("Pages read")}</dt><dd>${fmt(r.total)}</dd>` +
+      (r.later ? `<dt>${t("Pages read today")}</dt><dd>${fmt(r.reads)}</dd><dt>${esc(t(lv.growth.label))}</dt><dd>${fmt(r.later.reads)}</dd>` : "") +
+      `<dt>${lv.inserts ? t("Total per day") : r.later ? t("Total") : t("Pages read")}</dt><dd>${fmt(r.total)}</dd>` +
       `<dt>${t("Best possible")}</dt><dd>${r.stars===3 ? fmt(r.best) : "?"}</dd><dt>${t("Without an index")}</dt><dd>${fmt(r.none)}</dd>` +
       `</dl>` +
     (r.sus == null || CASES[state.caseIx].practice ? ""
@@ -2191,7 +2672,8 @@ function renderReport(){
     r.plans.map((p,i) => {
       const q = lv.queries[i], v = variantOf(lv, i);
       if (v.wrong) return `<div class="qres bad"><div><b>${q.label}</b> <span class="tag">${t("WRONG ROWS")}</span></div><p>${esc(t(v.wrong))}</p></div>`;
-      return `<div class="qres ${p.kind==="index"?"good":"bad"}"><div><b>${q.label}</b> <span class="tag">${scanLabel(lv, p, variantOf(lv, i))}</span> ${t("{n} pages", {n:fmt(p.cost)})}${q.freq ? ` × ${t("{n}/day", {n:fmt(q.freq)})}` : ""}</div><p>${esc(explain(lv, p, variantOf(lv, i)))}</p></div>`;
+      return `<div class="qres ${p.kind==="index"?"good":"bad"}"><div><b>${q.label}</b> <span class="tag">${scanLabel(lv, p, variantOf(lv, i))}</span> ${t("{n} pages", {n:fmt(p.cost)})}${q.freq ? ` × ${t("{n}/day", {n:fmt(q.freq)})}` : ""}</div><p>${esc(explain(lv, p, variantOf(lv, i)))}` +
+        (r.later ? ` <b>${esc(t("{label}: {n} pages.", {label:t(lv.growth.label), n:fmt(r.later.plans[i].cost)}))}</b>` : "") + `</p></div>`;
     }).join("") +
     (r.stars < 3 ? hintBlock(lv, r.stars) : "") +
     (r.stars === 3 ? `<div class="lesson"><b>${t("LESSON")}</b><p>${esc(t(lv.lesson))}</p></div>`
@@ -2231,7 +2713,8 @@ function renderNotebook(){
     ? `<div class="nb">` + items.map(e => `<details class="${e.bonus ? "bonus" : ""}"><summary><b>${e.bonus ? "★" : e.id}</b>${esc(t(e.title))}</summary><p>${esc(t(e.text))}</p></details>`).join("") + `</div>`
     : `<p class="empty">${t("No evidence yet. Clear a mission at ★★ and its clue lands here.")}</p>`) +
     (got.includes(c.statementsAfter) ? `<h4>${t("STATEMENTS")}</h4><div class="nb">` +
-      c.statements.map(s => { const role = c.suspects.find(x => x.name === s.who)?.role;   // who they are, next to the name
+      c.statements.filter(s => !s.after || got.includes(s.after)).map(s => {
+        const role = [...c.suspects, ...(c.accusation.second?.suspects ?? [])].find(x => x.name === s.who)?.role;   // who they are, next to the name
         return `<details><summary><b>${esc(s.who)}</b>${role ? ` <small class="role">${esc(t(role))}</small>` : ""}</summary><p>“${esc(t(s.text))}”</p></details>`; }).join("") + `</div>` : "");
 }
 
@@ -2380,7 +2863,8 @@ document.addEventListener("click", e => {
   else if (b.id === "accuse-go"){
     const verdict = fileAccusation(state.save, state.caseIx, state.acc.suspect, state.acc);
     storeSave(); renderBar();
-    verdict === "right" ? openEnding() : openAccusation(t("The prosecutor isn't convinced. The evidence doesn't hold up."));
+    if (verdict === "next"){ state.acc = {suspect:null}; openAccusation(t(CASES[state.caseIx].accusation.second.charged), true); }
+    else verdict === "right" ? openEnding() : openAccusation(t("The prosecutor isn't convinced. The evidence doesn't hold up."));
   }
   else if (b.id === "guide") startTour();
   else if (d.tour) d.tour === "next" ? tourNext() : endTour();
