@@ -930,7 +930,7 @@ const CASE3 = {
     "One last message is waiting on your terminal: “I helped because helping is my job, and nobody suspects the man who helps. Your next query was always mine before it was yours. And Ono and Kubo were already dropped. You were good. That was the problem.”",
   ],
   outroQuote:"Aiko Nishida: “Takeshi set that history trigger and told no one. I'll take the night console from here. Send me your queries.”",
-  outroHook:"Fujimoto is gone, but his accounts aren't. Something on the night console is still deleting.",
+  outroHook:"Fujimoto is gone. Both his phones went dark at 23:20.",
   outroInsider:"He read along with you from the first night. You saw his traces in the bonus evidence all along.",
   insiderBonuses:["B2","B9"],
   grades:{
@@ -1125,200 +1125,203 @@ const CASE3 = {
 
 // Case 4. The truth of the case lives in the story bible (docs), never here: this file ships in the public build.
 // Index writes matter from here on: UPDATE / DELETE statements (op) and clustered tables (clustered).
-const KARAI = "'K.ARAI'";
+const PREPAID = "'080-6203-1958'", PICKUP = "'080-4417-2290'", SHOPCAR = "'NGY 300 SE 51-12'", TAKAGI_CAR = "'NGY 500 RE 33-90'";
 const CASE4 = {
-  id:"case4", title:"Erasure", hinter:"NISHIDA (night console) >", watcher:"K.ARAI",
+  id:"case4", title:"Night Ferry", hinter:"NISHIDA (night console) >",
+  watchLine:"Not the best plan: SUSPICION +{n}%. Slow searches keep the phone company and the traffic desk busy, people talk, and talk reaches Kitamura Credit. Later missions are watched more closely.",
+  cleanLine:"Best plan. Nobody outside your team noticed the search.",
   intro:[
-    "07:40, Friday 4 December. Your team walked into the city data center at 23:40 last night and locked Goro Fujimoto's accounts at 23:45. His delete job on console NC-02 stopped.",
-    "By morning it had run again. Change history and session logs were wiped overnight, and nobody knows where Fujimoto is.",
+    "07:40, Friday 4 December. Goro Fujimoto walked out of the city data center at 23:20 last night, twenty minutes before your team arrived. Both his phones have been off since: his own, and the prepaid number Kaneda had in his contacts.",
+    "He knows what the police can see. With no phone, and his bank cards frozen this morning, he can't get far on his own. Someone is helping him.",
   ],
-  witness:"Aiko Nishida, on the night console since Fujimoto left: “I stopped the job at 07:33. I didn't lock whatever started it. If it's still open, it can tell us where he is.”",
+  witness:"Aiko Nishida, on the night console since Fujimoto left: “The phone company sent the prepaid's records an hour ago. He was careful, but he had to call someone.”",
   suspects:[
-    {id:"sasaki", name:"Mei Sasaki", role:"Night sysadmin · covered NC-02"},
-    {id:"kondo", name:"Rie Kondo", role:"Helpdesk · console HD-03"},
-    {id:"kuroda", name:"Daisuke Kuroda", role:"Nagoya PD IT liaison · set up your terminal"},
-    {id:"mori", name:"Kazuo Mori", role:"Data center manager"},
-    {id:"iida", name:"Masaru Iida", role:"Backup contractor · BK-01"},
+    {id:"mizuno", name:"Shota Mizuno", role:"Owner · Mizuno Auto, used cars, Funami"},
+    {id:"ota", name:"Daiki Ota", role:"Mechanic at Mizuno Auto · insured driver of the shop car"},
+    {id:"ueda", name:"Haruko Ueda", role:"Fujimoto's sister · lives in Funami"},
+    {id:"takagi", name:"Ren Takagi", role:"Unlicensed taxi driver · his car stopped at the Fushimi crash"},
   ],
   statements:[
-    {who:"Mei Sasaki", text:"I got in at half eleven and didn't leave the NC-02 room until morning."},
-    {who:"Rie Kondo", text:"I left at six. I never log out of HD-03; the night team uses my session. That's how Mr Mori wants it."},
-    {who:"Daisuke Kuroda", text:"I stayed with your team in the NC-02 room from 23:40 until we all left at twenty past twelve."},
-    {who:"Kazuo Mori", text:"Every console in this building locks after five minutes. I made sure of that after the October audit."},
-    {who:"Masaru Iida", text:"I patched BK-01 from home between one and two, then the backup ran at two like every night."},
+    {who:"Shota Mizuno", text:"I was at home in Kanie with my wife all night. The shop car never left the yard."},
+    {who:"Daiki Ota", text:"I parked the shop car in the yard at seven and took the train home to Kasugai."},
+    {who:"Haruko Ueda", text:"Goro hasn't called me since the summer. I was at home all night."},
+    {who:"Ren Takagi", text:"I wasn't driving last night. I've given all that up."},
   ],
   statementsAfter:"E5",
-  accusation:{culprit:"kuroda", MOTIVE:["E9"], OPPORTUNITY:["E6","E7","E8"], LIE:["E6","E8"]},
+  accusation:{culprit:"mizuno", MOTIVE:["E9"], OPPORTUNITY:["E6"], LIE:["E3","E4","E6"]},
   outro:[
-    "18:40, Kinjo pier. Goro Fujimoto is arrested at the foot of the ferry gangway with a ticket in someone else's name. He has not said a word since.",
-    "Daisuke Kuroda admits to his part and nothing more: a phone call at 23:20, a debt he could never pay, ten minutes at a console he had seen left open in November, when he installed your terminal next door.",
-    "Kazuo Mori hands over the October audit report from his desk drawer. Mei Sasaki tells personnel about her second job at a bar in Sakae before anyone asks.",
+    "18:40, Kinjo pier. Goro Fujimoto is arrested at the foot of the ferry gangway with a ticket for K. SATO in his pocket. He has not said a word since.",
+    "Shota Mizuno is picked up in the terminal car park, the prepaid phone on the seat beside him. A Kitamura Credit collector gave it to him a week ago: answer when it rings, drive where you're told, and the debt is gone.",
+    "Ren Takagi admits he was driving fares again. Haruko Ueda asks to see her brother. He won't see her.",
   ],
-  outroQuote:"Aiko Nishida: “He won't talk. Fine. Everything he touched left a row somewhere.”",
+  outroQuote:"Aiko Nishida: “He planned for every screen we have. He didn't plan for the people he needed.”",
   outroHook:"The ferry ticket was paid for by a company that owns nothing but a bank account. The same account paid Kitamura Credit.",
-  outroInsider:"K.ARAI read along with you all day. Nishida left it open for that reason: every read meant he was still in Nagoya.",
-  insiderBonuses:["B1","B6"],
   grades:{
-    S:"K.ARAI read along and never saw it coming.",
-    A:"Fujimoto saw some of it and kept moving.",
-    B:"Fujimoto knew you were close. He nearly made the ferry.",
-    C:"Fujimoto deleted what you were about to read.",
+    S:"Kitamura Credit never heard you coming.",
+    A:"Word reached Kitamura Credit, too late to matter.",
+    B:"Kitamura Credit heard. Mizuno moved early, and Fujimoto nearly sailed.",
+    C:"Kitamura Credit heard it all. Fujimoto was on the gangway when you got there.",
   },
   missions:[{
-    name:"The Job That Came Back",
-    table:"job_log", rows:2000000, perPage:50, maxCols:2,
-    cols:{job_id:2000000, console:120, started_at:2000000, account:600, job_name:400, status:4},
-    story:"Console NC-02 runs the data center's night jobs. List every job it started from 23:00 last night, in order.",
-    queries:[{label:"Q1", who:"NC-02 jobs since 23:00", where:[eq("console","'NC-02'"),
-      range("started_at","started_at >= TIMESTAMP '2026-12-03 23:00:00'",0.00036)], order:{col:"started_at"}}],
-    hint:"One console, a time range, and the rows wanted in time order.",
-    hint2:"Index (console, started_at): the = column first, the range second, and the rows come out already sorted.",
-    lesson:"With (console, started_at) the database jumps to NC-02, starts at 23:00 and reads forward. The rows arrive in started_at order, so there is nothing to sort. Swap the columns and it reads every console's jobs since 23:00 to find NC-02's.",
-    results:[{columns:["started_at","job","account","via","status"], rows:[
-      ["Thu 23:02","PURGE_HIST","G.FUJIMOTO","NC-02","KILLED 23:45 (account locked)"],
-      ["Fri 00:40","PURGE_HIST","K.ARAI","VPN","DONE 03:10"],
-      ["Fri 01:15","ADHOC_SQL","K.ARAI","VPN","DONE (door_events, 2 statements)"],
-      ["Fri 03:20","ADHOC_SQL","K.ARAI","VPN","DONE (sessions, 1 statement)"],
-      ["Fri 06:00","STATS_GATHER","SCHEDULER","NC-02","DONE"],
-      ["Fri 07:31","PURGE_HIST","K.ARAI","VPN","STOPPED 07:33 (A.NISHIDA)"]]}],
-    clue:{id:"E1", title:"The job that came back", text:"Fujimoto's delete job died at 23:45 when his account was locked. At 00:40 it started again under another account, K.ARAI, over VPN, and ran until 03:10. At 01:15 K.ARAI also typed two statements against door_events by hand. K.ARAI started the job once more at 07:31; Nishida stopped it at 07:33 and left the account open."},
-    bonus:{title:"Reading along", text:"Query log: K.ARAI read job_log two minutes after you did."},
+    name:"The Last Call",
+    table:"calls", rows:20000000, perPage:50, maxCols:2,
+    cols:{call_id:20000000, caller:1000000, callee:1000000, call_time:20000000, duration_s:3600, cell_id:8000},
+    story:"The prepaid number in Kaneda's phone is Fujimoto's. List every call it made since Wednesday, in order.",
+    queries:[{label:"Q1", who:"The prepaid's calls since Wednesday", where:[eq("caller",PREPAID),
+      range("call_time","call_time >= DATE '2026-12-02'",0.15)], order:{col:"call_time"}}],
+    hint:"One number, a time range, and the rows wanted in time order.",
+    hint2:"Index (caller, call_time): the = column first, the range second, and the calls come out already sorted.",
+    lesson:"With (caller, call_time) the database jumps to the prepaid number, starts at Wednesday and reads forward. The calls arrive in call_time order, so there is nothing to sort. Swap the columns and it reads every call made in the city since Wednesday to find three.",
+    results:[{columns:["call_time","callee","duration","caller's cell"], rows:[
+      ["Wed 23:10","090-2875-6614 (Kaneda)","4 min","SANNOMARU-2"],
+      ["Thu 08:16","090-2875-6614 (Kaneda)","40 s","SANNOMARU-2"],
+      ["Thu 23:16","080-4417-2290 (prepaid)","38 s","SANNOMARU-2"]]}],
+    clue:{id:"E1", title:"The last call", text:"At 23:16 on Thursday, four minutes before he walked out, Fujimoto's prepaid called another prepaid number, 080-4417-2290, for 38 seconds. Then it went dark, and it has not come back."},
+    bonus:{title:"Bought together", text:"Both prepaid SIMs were sold on 27 November by the same phone shop in Osu, for cash."},
   },{
-    name:"A Retired Name",
-    table:"account_audit", rows:5000000, perPage:50, maxCols:2,
-    cols:{audit_id:5000000, user_id:40000, action:12, at:5000000, console:300, done_by:2000},
-    story:"Whose account is K.ARAI, and what has happened to it lately? The audit table keeps every change to every account. Show its last five events, newest first. The audit screen upper-cases whatever you type.",
-    queries:[{label:"Q1", who:"K.ARAI, last five events", variants:[
-      {where:[{col:"UPPER(user_id)", sql:"UPPER(user_id) = 'K.ARAI'", kind:"eq", sel:1/40000}], order:{col:"at", dir:"DESC"}, fetch:5},
-      {where:[eq("user_id","'k.arai'")], order:{col:"at", dir:"DESC"}, fetch:5, wrong:"User ids are stored in capitals. 'k.arai' matches nothing."},
-      {where:[eq("user_id",KARAI)], order:{col:"at", dir:"DESC"}, fetch:5}]}],
-    hint:"UPPER(user_id) is not user_id. How are the ids stored?",
-    hint2:"Ids are stored in capitals: compare user_id = 'K.ARAI' (B), then index (user_id, at).",
-    lesson:"UPPER(user_id) hides the column from an index on user_id, and here it does nothing useful: ids are stored in capitals. Compare the column as stored, and (user_id, at) reads K.ARAI's newest five entries backwards and stops.",
-    results:[{columns:["at","action","console","done_by"], rows:[
-      ["Fri 00:38","LOGIN","VPN","K.ARAI"],
-      ["Thu 23:52","PASSWORD_RESET","HD-03","R.KONDO"],
-      ["Thu 23:52","ENABLE","HD-03","R.KONDO"],
-      ["2024-03-29","DISABLE","HR-SYNC","SYSTEM"],
-      ["2024-03-28","LOGIN","NC-02","K.ARAI"]]}],
-    clue:{id:"E2", title:"A retired name", text:"K.ARAI belonged to Kenzo Arai, a night administrator who retired in March 2024. The account had been disabled since. At 23:52 on Thursday it was switched back on and given a new password from helpdesk console HD-03, inside a session signed in as R.KONDO."},
-    bonus:{title:"On the list", text:"The October security audit listed K.ARAI among 41 dormant accounts to delete. Nobody deleted them."},
+    name:"The Other Prepaid",
+    table:"cell_events", rows:60000000, perPage:50, maxCols:2, clustered:"event_time",
+    cols:{event_id:60000000, phone:200000, cell_id:8000, event_time:60000000, imei:220000, event_type:4},
+    story:"Where was 080-4417-2290 when it took that call, and where did it go after? List its events since Thursday. The phone company's report tool cuts every time down to the day first.",
+    queries:[{label:"Q1", who:"The second prepaid since Thursday", variants:[
+      {select:["event_time","cell_id","event_type"], where:[eq("phone",PICKUP), expr("TRUNC(event_time)","TRUNC(event_time) >= DATE '2026-12-03'",0.02)]},
+      {select:["event_time","cell_id","event_type"], where:[eq("phone",PICKUP), range("event_time","event_time BETWEEN DATE '2026-12-03' AND DATE '2026-12-04'",0.02)],
+       wrong:"This stops at midnight on Thursday and loses Friday's events."},
+      {select:["event_time","cell_id","event_type"], where:[eq("phone",PICKUP), range("event_time","event_time >= DATE '2026-12-03'",0.02)]}]}],
+    hint:"TRUNC(event_time) is computed for every row. Does 'since Thursday' need it?",
+    hint2:"event_time >= Thursday keeps the same rows (B). Index (phone, event_time).",
+    lesson:"For 'from a day on', TRUNC adds nothing: event_time >= DATE '2026-12-03' keeps exactly the same rows and leaves event_time visible to the index. Then the = column first, the range second: the prepaid's events since Thursday sit next to each other in (phone, event_time).",
+    results:[{columns:["event_time","cell_id","event"], rows:[
+      ["Thu 22:40","MINATO-FUNAMI-2","switched on"],
+      ["Thu 23:16","MINATO-FUNAMI-2","call in, 38 s"],
+      ["Thu 23:34","SANNOMARU-1","location update"],
+      ["Thu 23:38","SANNOMARU-1","location update"],
+      ["Fri 00:05","MINATO-FUNAMI-2","location update"],
+      ["Fri 00:07","MINATO-FUNAMI-2","switched off"]]}],
+    clue:{id:"E2", title:"The other prepaid", text:"080-4417-2290 was switched on at 22:40 in Funami, Minato-ku, and took Fujimoto's call there. From 23:34 to 23:38 it was on SANNOMARU-1, the tower by the city hall, a few minutes' walk from the data center. By 00:05 it was back in Funami, and at 00:07 it was switched off. Someone came from Funami to fetch him and took him back."},
   },{
-    name:"Heartbeat",
-    table:"vpn_sessions", rows:3000000, perPage:50, maxCols:2, maxIdx:2, two:2,
-    cols:{session_id:3000000, user_id:30000, started_at:3000000, last_seen:3000000, client_ip:200000, device:4000},
-    story:"Nishida wants to know the moment K.ARAI connects, so Q1 checks every minute. Meanwhile the VPN server moves last_seen forward on every open session every 30 seconds: Q2, two million times a day. Two indexes. Score = pages read per day + index upkeep per day.",
-    queries:[
-      {label:"Q1", who:"Is K.ARAI online?", freq:1440, where:[eq("user_id",KARAI),
-        range("last_seen","last_seen >= SYSTIMESTAMP - INTERVAL '5' MINUTE",0.00025)]},
-      {label:"Q2", who:"VPN heartbeat, every open session", freq:2000000, op:"update",
-        set:[{col:"last_seen", sql:"last_seen = SYSTIMESTAMP"}], where:[eq("session_id",":id")]}],
-    hint:"Q2 changes last_seen two million times a day. Which of your indexes has to change with it?",
-    hint2:"(session_id) for Q2 and (user_id) for Q1. Keep last_seen out of every index.",
-    lesson:"An UPDATE writes only to the indexes that hold the column it changes, and there it moves the entry: delete the old one, insert the new. (user_id, last_seen) makes Nishida's check about a hundred pages cheaper, but every heartbeat rewrites it. (user_id) alone reads K.ARAI's past sessions and never has to change.",
-    results:[
-      {columns:["session_id","user_id","started_at","last_seen","client_ip","device"], rows:[
-        ["88213307","K.ARAI","Fri 00:38","Fri 08:14","203.0.113.47 (NTX Mobile)","Android phone"]]},
-      {count:1, note:"One session's last_seen moved forward."}],
-    clue:{id:"E3", title:"Still connected", text:"K.ARAI has been connected since 00:38 from a phone on the NTX Mobile network. NTX matched the address to a prepaid SIM, 44010-7781-2290, activated on Thursday night."},
-    bonus:{title:"The backup engineer", text:"Masaru Iida's own VPN session ran from 01:02 to 01:41, from his home line in Tempaku."},
+    name:"City Hall Camera",
+    table:"anpr", rows:60000000, perPage:50, maxCols:1, clustered:"passed_at",
+    cols:{read_id:60000000, plate:60000, passed_at:60000000, camera:4000, lane:4, speed_kmh:150},
+    story:"Which cars passed the camera outside the city hall between 23:25 and 23:45? The plate readers write to this table in time order, and you may index one column.",
+    queries:[{label:"Q1", who:"City hall camera, 23:25 to 23:45", where:[eq("camera","'SHIYAKUSHO-E'"),
+      range("passed_at","passed_at BETWEEN TIMESTAMP '2026-12-03 23:25:00' AND TIMESTAMP '2026-12-03 23:45:00'",1/2160)]}],
+    hint:"camera matches fewer rows than twenty minutes of the whole city. But where in the table do those rows sit?",
+    hint2:"Index passed_at. The table is stored in passed_at order, so twenty minutes of reads sit on a few hundred neighbouring pages.",
+    lesson:"Rows found through an index still have to be read from the table, one page each, unless they sit together. anpr is written in time order, so twenty minutes of the whole city fill about 550 neighbouring pages. One camera's 15,000 reads are spread over a month: 15,000 separate pages. Here the column that matches more rows wins, because its rows are stored together.",
+    results:[{columns:["passed_at","plate","lane"], rows:[
+      ["23:26","NGY 230 SA 11-02","2"],
+      ["23:29","NGY 500 TA 77-31","1"],
+      ["23:33","NGY 500 RE 33-90","1"],
+      ["23:34","NGY 300 SE 51-12","1"],
+      ["23:36","NGY 330 MO 90-71","2"],
+      ["23:38","NGY 300 SE 51-12","1"],
+      ["23:41","NGY 500 TA 02-88","2"]]}],
+    clue:{id:"E3", title:"Twice past the city hall", text:"Seven cars passed the city hall camera between 23:25 and 23:45. One passed twice, at 23:34 and again at 23:38, the same four minutes the prepaid spent on the city hall tower: NGY 300 SE 51-12. Ren Takagi's car, NGY 500 RE 33-90, the one that stopped at the Fushimi crash, passed once, at 23:33."},
   },{
-    name:"Door HD-03",
-    table:"door_events", rows:20000000, perPage:50, maxCols:1, clustered:"event_at",
-    cols:{event_id:20000000, event_at:20000000, door:4000, badge:6000, area:150, result:3},
-    story:"The account was switched on at HD-03. Who opened that room's door since Thursday morning? door_events is written in time order, and you may index one column.",
-    queries:[{label:"Q1", who:"HD-03 since Thursday 08:00", where:[eq("door","'HD-03'"),
-      range("event_at","event_at >= TIMESTAMP '2026-12-03 08:00:00'",1/730)]}],
-    hint:"door matches fewer rows than a whole day of events. But where in the table do those rows sit?",
-    hint2:"Index event_at. The table is stored in event_at order, so a day of events sits on a few hundred neighbouring pages.",
-    lesson:"Rows found through an index still have to be read from the table, one page each, unless they sit together. door_events is written in time order, so a day of events fills about 550 neighbouring pages. HD-03's 5,000 events are spread over two years: 5,000 separate pages. Here the column that matches more rows wins, because its rows are stored together.",
-    results:[{columns:["event_at","badge","holder","door"], rows:[
-      ["Thu 08:55","S-1187","KONDO Rie","HD-03"],
-      ["Thu 12:58","S-1187","KONDO Rie","HD-03"],
-      ["Thu 13:10","S-1187","KONDO Rie","HD-03"],
-      ["Thu 17:40","S-1187","KONDO Rie","HD-03"],
-      ["Thu 23:51","S-2231","SASAKI Mei","HD-03"],
-      ["Fri 07:35","S-0904","NISHIDA Aiko","HD-03"],
-      ["Fri 07:52","S-0012","MORI Kazuo","HD-03"]]}],
-    clue:{id:"E4", title:"Door HD-03", text:"Since Thursday 08:00 the HD-03 door opened seven times. Rie Kondo during the day, last at 17:40. Then Mei Sasaki's badge at 23:51, one minute before the K.ARAI account was switched back on at 23:52. Nobody else until Nishida at 07:35 this morning."},
+    name:"Back to Funami",
+    table:"anpr", rows:60000000, perPage:50, maxCols:2,
+    cols:{read_id:60000000, plate:60000, passed_at:60000000, camera:4000, lane:4, speed_kmh:150},
+    story:"The prepaid was back in Funami at 00:05. Which cars came in on the road into Funami just before? Find the last three reads of that camera before 00:05.",
+    queries:[{label:"Q1", who:"Funami road, last three before 00:05", where:[eq("camera","'FUNAMI-ENTRY'"),
+      range("passed_at","passed_at <= TIMESTAMP '2026-12-04 00:05:00'",0.99)], order:{col:"passed_at", dir:"DESC"}, fetch:3}],
+    hint:"The newest reads before 00:05, three rows.",
+    hint2:"(camera, passed_at): the database starts just before 00:05 and reads back three entries.",
+    lesson:"A range and ORDER BY on the same column still make a pipelined top-N. With (camera, passed_at) the database jumps to the Funami camera at 00:05 and reads three entries backwards: the range ends where the reading starts.",
+    results:[{columns:["passed_at","plate","lane"], rows:[
+      ["00:03","NGY 300 SE 51-12","1"],
+      ["23:58","NGY 100 HI 40-55","1"],
+      ["23:51","NGY 500 TA 41-09","1"]]}],
+    clue:{id:"E4", title:"Back to Funami", text:"The last three cars into Funami before the prepaid got back: NGY 300 SE 51-12 at 00:03, a lorry at 23:58 and a taxi at 23:51. Only NGY 300 SE 51-12 had also been at the city hall."},
   },{
-    name:"Never Locked",
-    table:"console_sessions", rows:1000000, perPage:50, maxCols:2,
-    cols:{session_id:1000000, console:300, user_id:3000, login_at:1000000, logout_at:1000000, screen_locks:40},
-    story:"HD-03 is the helpdesk console. List its sessions since Thursday: who signed in, when, when the session ended, and how often the screen locked. console_sessions lives on the building's access server, out of the delete job's reach. Its report cuts every login down to the day first.",
-    queries:[{label:"Q1", who:"HD-03 sessions since Thursday", variants:[
-      {select:["user_id","login_at","logout_at","screen_locks"], where:[eq("console","'HD-03'"), expr("TRUNC(login_at)","TRUNC(login_at) >= DATE '2026-12-03'",0.0009)]},
-      {select:["user_id","login_at","logout_at","screen_locks"], where:[eq("console","'HD-03'"), range("login_at","login_at BETWEEN DATE '2026-12-03' AND DATE '2026-12-04'",0.0009)],
-       wrong:"This stops at midnight on Thursday and loses Friday's session."},
-      {select:["user_id","login_at","logout_at","screen_locks"], where:[eq("console","'HD-03'"), range("login_at","login_at >= DATE '2026-12-03'",0.0009)]}]}],
-    hint:"TRUNC(login_at) is computed for every row. Does 'since Thursday' need it?",
-    hint2:"login_at >= Thursday keeps the same rows (B). Index (console, login_at).",
-    lesson:"For 'from a day on', TRUNC adds nothing: login_at >= DATE '2026-12-03' keeps exactly the same rows and leaves login_at visible to the index. Then the = column first, the range second: HD-03's sessions since Thursday sit next to each other in (console, login_at).",
-    results:[{columns:["user_id","login_at","logout_at","screen_locks"], rows:[
-      ["R.KONDO","Thu 08:58","Thu 12:30","2"],
-      ["R.KONDO","Thu 13:12","Fri 00:05 (forced by K.MORI)","0"],
-      ["A.NISHIDA","Fri 07:36","—","0"]]}],
-    clue:{id:"E5", title:"The open session", text:"Rie Kondo signed in to HD-03 at 13:12 on Thursday. The screen never locked, though the activity log shows nothing typed between 17:44 and 23:52, and the session stayed open until Kazuo Mori forced it closed at 00:05, when your team asked him to lock the building down. K.ARAI was switched on inside it at 23:52."},
+    name:"The Shop Car",
+    table:"registrations", rows:2000000, perPage:50, maxCols:2,
+    cols:{reg_id:2000000, plate:200000, changed_at:2000000, event:12, owner_id:150000, office:40},
+    story:"Whose car is NGY 300 SE 51-12? The registry keeps every change to every car. Show the last three, newest first. The registry screen upper-cases whatever you type.",
+    queries:[{label:"Q1", who:"NGY 300 SE 51-12, last three changes", variants:[
+      {where:[{col:"UPPER(plate)", sql:"UPPER(plate) = 'NGY 300 SE 51-12'", kind:"eq", sel:1/200000}], order:{col:"changed_at", dir:"DESC"}, fetch:3},
+      {where:[eq("plate","'ngy 300 se 51-12'")], order:{col:"changed_at", dir:"DESC"}, fetch:3, wrong:"Plates are stored in capitals. 'ngy 300 se 51-12' matches nothing."},
+      {where:[eq("plate",SHOPCAR)], order:{col:"changed_at", dir:"DESC"}, fetch:3}]}],
+    hint:"UPPER(plate) is not plate. How are the plates stored?",
+    hint2:"Plates are stored in capitals: compare plate = 'NGY 300 SE 51-12' (B), then index (plate, changed_at).",
+    lesson:"UPPER(plate) hides the column from an index on plate, and here it does nothing useful: plates are stored in capitals. Compare the column as stored, and (plate, changed_at) reads the car's newest three changes backwards and stops.",
+    results:[{columns:["changed_at","event","detail"], rows:[
+      ["2026-11-20","INSURED DRIVER","OTA Daiki"],
+      ["2026-06-14","OWNER","MIZUNO AUTO, Funami 3-chome, Minato-ku"],
+      ["2026-06-14","INSPECTION","passed"]]}],
+    clue:{id:"E5", title:"The shop car", text:"NGY 300 SE 51-12 belongs to Mizuno Auto, a used-car dealer in Funami run by Shota Mizuno. Since November its insured driver has been the shop's mechanic, Daiki Ota. Fujimoto's sister, Haruko Ueda, lives two streets from the shop."},
+    bonus:{title:"The other car", text:"Shota Mizuno's own car has not moved from his house in Kanie since Thursday evening."},
   },{
-    name:"The Two O'Clock Copy",
-    table:"door_events_history", rows:540000, perPage:50, maxCols:2, maxIdx:2, two:3, clustered:"changed_at",
-    cols:{change_id:540000, changed_at:540000, changed_by:500, op:3, row_id:540000, door:4000},
-    story:"Nomura's history trigger copied every change to door_events into door_events_history. The delete job wiped that table at 02:30, but the 02:00 backup kept it: BK-01 was being patched that night, and the patch finished at 01:41, in time for the backup to run. What did K.ARAI change between 01:00 and 01:30? changed_by is a fixed-width CHAR column, so the restore script trims it. Two indexes.",
-    queries:[{label:"Q1", who:"K.ARAI's changes, 01:00 to 01:30", variants:[
-      {where:[{col:"TRIM(changed_by)", sql:"TRIM(changed_by) = 'K.ARAI'", kind:"eq", sel:1/500},
-        range("changed_at","changed_at BETWEEN TIMESTAMP '2026-12-04 01:00:00' AND TIMESTAMP '2026-12-04 01:30:00'",0.00185)]},
-      {where:[{col:"changed_by", sql:"changed_by LIKE 'K.ARAI%'", kind:"range", sel:2/500},
-        range("changed_at","changed_at BETWEEN TIMESTAMP '2026-12-04 01:00:00' AND TIMESTAMP '2026-12-04 01:30:00'",0.00185)],
-       wrong:"'K.ARAI%' also matches K.ARAIKAWA, a clerk on the day shift."},
-      {where:[eq("changed_by",KARAI),
-        range("changed_at","changed_at BETWEEN TIMESTAMP '2026-12-04 01:00:00' AND TIMESTAMP '2026-12-04 01:30:00'",0.00185)]}]}],
+    name:"Two Phones",
+    table:"cell_events", rows:60000000, perPage:50, maxCols:2, maxIdx:2, two:3, clustered:"event_time",
+    cols:{event_id:60000000, phone:200000, cell_id:8000, event_time:60000000, imei:220000, event_type:4},
+    story:"Who was in that car? List every phone on the city hall tower, SANNOMARU-1, between 23:30 and 23:40. The tower ids are stored as fixed-width CHAR, so the phone company's script trims them. Two indexes.",
+    queries:[{label:"Q1", who:"SANNOMARU-1, 23:30 to 23:40", variants:[
+      {where:[{col:"TRIM(cell_id)", sql:"TRIM(cell_id) = 'SANNOMARU-1'", kind:"eq", sel:1/2000},
+        range("event_time","event_time BETWEEN TIMESTAMP '2026-12-03 23:30:00' AND TIMESTAMP '2026-12-03 23:40:00'",1/4320)]},
+      {where:[{col:"cell_id", sql:"cell_id LIKE 'SANNOMARU-1%'", kind:"range", sel:11/2000},
+        range("event_time","event_time BETWEEN TIMESTAMP '2026-12-03 23:30:00' AND TIMESTAMP '2026-12-03 23:40:00'",1/4320)],
+       wrong:"'SANNOMARU-1%' also matches SANNOMARU-10 to SANNOMARU-19, ten other towers."},
+      {where:[{...eq("cell_id","'SANNOMARU-1'"), sel:1/2000},
+        range("event_time","event_time BETWEEN TIMESTAMP '2026-12-03 23:30:00' AND TIMESTAMP '2026-12-03 23:40:00'",1/4320)]}]}],
     hint:"A CHAR column already compares equal to the text without its padding. And two one-column indexes are not one two-column index.",
-    hint2:"changed_by = 'K.ARAI' (B), then index (changed_by, changed_at).",
-    lesson:"TRIM(changed_by) hides the column, and a CHAR column already equals 'K.ARAI' without the padding, so drop it. Then, with two indexes allowed, (changed_by) and (changed_at) side by side help no more than the better of the two. Some databases can combine two indexes, but they still read both ranges in full before matching them up. One index on (changed_by, changed_at) goes straight to K.ARAI's half hour.",
-    results:[{columns:["changed_at","op","changed_by","badge","door","event_at"], rows:[
-      ["01:15:08","DELETE","K.ARAI","V-4","HD-03","Thu 23:50:12"],
-      ["01:15:31","INSERT","K.ARAI","S-2231","HD-03","Thu 23:51:40"]]}],
-    clue:{id:"E6", title:"Edited at 01:15", text:"At 01:15:08 K.ARAI deleted a swipe from door_events: visitor badge V-4 at HD-03, 23:50:12. At 01:15:31 it inserted one: Mei Sasaki's badge S-2231 at HD-03, 23:51:40. The 23:51 swipe was written nearly an hour and a half after the time it claims."},
-    bonus:{title:"Just in time", text:"Query log: K.ARAI read this history table at 02:28, two minutes before the delete job wiped it."},
+    hint2:"cell_id = 'SANNOMARU-1' (B), then index (cell_id, event_time).",
+    lesson:"TRIM(cell_id) hides the column, and a CHAR column already equals 'SANNOMARU-1' without the padding, so drop it. Then, with two indexes allowed, (cell_id) and (event_time) side by side help no more than the better of the two. Some databases can combine two indexes, but they still read both ranges in full before matching them up. One index on (cell_id, event_time) goes straight to the tower's ten minutes.",
+    results:[{columns:["event_time","phone","event"], rows:[
+      ["23:31","090-6612-0045","call"],
+      ["23:34","080-4417-2290 (prepaid)","location update"],
+      ["23:34","090-5126-3384","location update"],
+      ["23:36","070-3381-2207","data"],
+      ["23:38","080-4417-2290 (prepaid)","location update"],
+      ["23:38","090-5126-3384","location update"],
+      ["23:39","090-1170-8832","data"]]}],
+    clue:{id:"E6", title:"Two phones", text:"The prepaid did not travel alone. 090-5126-3384, Shota Mizuno's own phone, came onto the city hall tower with it at 23:34 and left with it at 23:38. Neither Daiki Ota's phone nor Haruko Ueda's was there."},
+    bonus:{title:"Kasugai", text:"Daiki Ota's phone was on the tower by his flat in Kasugai from 19:40 until 07:10 this morning."},
   },{
-    name:"Visitor Four",
-    table:"visitor_badges", rows:400000, perPage:50, maxCols:2,
-    cols:{issue_id:400000, badge:600, issued_at:400000, holder:200000, organisation:5000, returned_at:400000},
-    story:"The data center hands out the same visitor badges again and again. Who held V-4 at 23:50 on Thursday? Find the last time it was issued before then.",
-    queries:[{label:"Q1", who:"V-4, last issue before 23:50", where:[eq("badge","'V-4'"),
-      range("issued_at","issued_at <= TIMESTAMP '2026-12-03 23:50:12'",0.99)], order:{col:"issued_at", dir:"DESC"}, fetch:1}],
-    hint:"The newest issue before 23:50, one row.",
-    hint2:"(badge, issued_at): the database starts just before 23:50 and reads back one entry.",
-    lesson:"A range and ORDER BY on the same column still make a pipelined top-N. With (badge, issued_at) the database jumps to V-4 at 23:50:12 and reads one entry backwards: the range ends where the reading starts.",
-    results:[{columns:["badge","issued_at","holder","organisation","access","returned_at"], rows:[
-      ["V-4","Thu 23:38","KURODA Daisuke","Nagoya PD, IT liaison","ALL AREAS","Fri 00:20"]]}],
-    clue:{id:"E7", title:"Visitor four", text:"Visitor badge V-4 was issued at 23:38 on Thursday to Daisuke Kuroda, the police IT liaison who came in with your team, with access to all areas for the search. He gave it back at 00:20."},
-    bonus:{title:"Six badges", text:"V-1 to V-6 went to the six people on your team. Only V-4 opened a door outside the NC-02 room."},
-  },{
-    name:"Putting It Back",
-    table:"door_events", rows:20000000, perPage:50, maxCols:2, maxIdx:3, inserts:30000, clustered:"event_at",
-    cols:{event_id:20000000, event_at:20000000, door:4000, badge:6000, inserted_by:50, result:3},
-    story:"Delete the fake swipe and restore the real one. door_events is also the security desk's live table: 30,000 new swipes a day, a badge search 4,000 times a day, a door search 1,000 times a day. The DELETE (Q3) runs once. Three indexes at most.",
+    name:"Standing Still",
+    table:"vehicle_status", rows:3000000, perPage:50, maxCols:3, maxIdx:2, two:2,
+    cols:{plate:3000000, owner_id:2000000, last_camera:4000, last_seen:3000000, colour:20, model:3000},
+    story:"Nishida won't have the shop searched yet: if Fujimoto isn't there, Kitamura Credit will hear about it within the hour. The traffic desk watches the car instead. Q1 asks every minute where it was last seen; every camera read in the city moves that car's row forward (Q2, two million times a day). Two indexes. Score = pages read per day + index upkeep per day.",
     queries:[
-      {label:"Q1", who:"Security desk: one badge since 23:00", freq:4000, where:[eq("badge","'V-4'"),
-        range("event_at","event_at >= TIMESTAMP '2026-12-03 23:00:00'",0.0009)]},
-      {label:"Q2", who:"Security desk: one door, 23:00 to 00:30", freq:1000, where:[eq("door","'HD-03'"),
-        range("event_at","event_at BETWEEN TIMESTAMP '2026-12-03 23:00:00' AND TIMESTAMP '2026-12-04 00:30:00'",0.0000856)]},
-      {label:"Q3", who:"Delete the planted swipe", freq:1, variants:[
-        {op:"delete", where:[{...eq("inserted_by",KARAI), sel:1/20000000}]},
-        {op:"delete", where:[eq("badge","'S-2231'"), eq("event_at","TIMESTAMP '2026-12-03 23:51:40'")]},
-        {op:"delete", where:[eq("badge","'S-2231'"), {col:"TRUNC(event_at)", sql:"TRUNC(event_at) = DATE '2026-12-03'", kind:"eq", sel:1/730}],
-         wrong:"This deletes every swipe of Sasaki's badge on 3 December, the real ones too."},
-        {op:"delete", where:[eq("door","'HD-03'"), eq("event_at","TIMESTAMP '2026-12-03 23:51:40'")]}]}],
-    hint:"Every index is written for every new swipe. Does a DELETE that runs once deserve an index of its own?",
-    hint2:"Two indexes, (badge, event_at) and (door, event_at), and write the DELETE so one of them can find the row.",
-    lesson:"Each index costs writes for every new row, every day. An index built for one DELETE costs 90,000 pages a day to save a single search. Write the DELETE with columns an existing index already holds, the badge and the exact time, and it finds its row in a few pages. Every index still pays when the row goes: each one loses its entry.",
+      {label:"Q1", who:"Where is the shop car?", freq:1440, select:["last_camera","last_seen"], where:[eq("plate",SHOPCAR)]},
+      {label:"Q2", who:"Every camera read in the city", freq:2000000, op:"update",
+        set:[{col:"last_camera", sql:"last_camera = :camera"}, {col:"last_seen", sql:"last_seen = SYSTIMESTAMP"}], where:[eq("plate",":plate")]}],
+    hint:"Q2 changes last_camera and last_seen two million times a day. Which of your indexes has to change with it?",
+    hint2:"One index on (plate). It serves both queries; keep the updated columns out of it.",
+    lesson:"An UPDATE writes only to the indexes that hold the columns it changes, and there it moves the entry: delete the old one, insert the new. (plate, last_camera, last_seen) would answer the traffic desk from the index alone, one page cheaper each minute, but every camera read in the city rewrites it. (plate) finds the row for both queries and never has to change.",
     results:[
-      {columns:["event_at","badge","door"], rows:[["Thu 23:40","V-4","NC-02 ROOM"],["Thu 23:50","V-4","HD-03"],["Fri 00:03","V-4","NC-02 ROOM"]]},
-      {columns:["event_at","badge","door"], rows:[["Thu 23:50","V-4","HD-03"]]},
-      {count:1, note:"The swipe K.ARAI planted at 01:15 is gone."}],
-    clue:{id:"E8", title:"Put back", text:"With the fake swipe deleted and the real one restored from the backup, visitor badge V-4 entered the NC-02 room at 23:40, opened HD-03 at 23:50 and came back into the NC-02 room at 00:03."},
-    bonus:{title:"Sasaki's quarter hour", text:"Mei Sasaki's badge: the NC-02 room at 23:36, the yard door at 23:44, the NC-02 room again at 23:59. She did leave the room, to phone the bar in Sakae where she works nights, which city staff are not allowed to do. She never went near HD-03."},
+      {columns:["plate","last_camera","last_seen"], rows:[["NGY 300 SE 51-12","FUNAMI-ENTRY","Fri 00:03"]]},
+      {count:1, note:"One car's row moved forward."}],
+    clue:{id:"E7", title:"Standing still", text:"Mizuno Auto's car was last read on the road into Funami at 00:03. No camera has seen it since: it is still in Funami."},
+  },{
+    name:"The Misread",
+    table:"anpr_alerts", rows:20000000, perPage:50, maxCols:2, maxIdx:3, inserts:30000, clustered:"read_at",
+    cols:{alert_id:20000000, read_at:20000000, camera:4000, plate:6000, watch_reason:20, status:3},
+    story:"Takagi's car is still on the watch list from the crash case, so every camera that reads it raises an alert. anpr_alerts is the traffic desk's live table: 30,000 new alerts a day, a search by plate 4,000 times a day, a search by camera 1,000 times a day. Q3 runs once: at 23:36 the city hall camera read NGY 330 MO 90-17 as NGY 330 MO 90-71, a stolen car, and a patrol stopped the wrong driver. Delete that alert. Three indexes at most.",
+    queries:[
+      {label:"Q1", who:"Traffic desk: one plate since 23:00", freq:4000, where:[eq("plate",TAKAGI_CAR),
+        range("read_at","read_at >= TIMESTAMP '2026-12-03 23:00:00'",0.0009)]},
+      {label:"Q2", who:"Traffic desk: one camera, 23:00 to 00:30", freq:1000, where:[eq("camera","'SHIYAKUSHO-E'"),
+        range("read_at","read_at BETWEEN TIMESTAMP '2026-12-03 23:00:00' AND TIMESTAMP '2026-12-04 00:30:00'",0.0004)]},
+      {label:"Q3", who:"Delete the false alert", freq:1, variants:[
+        {op:"delete", where:[eq("alert_id","88213307")]},
+        {op:"delete", where:[eq("plate","'NGY 330 MO 90-71'"), eq("read_at","TIMESTAMP '2026-12-03 23:36:12'")]},
+        {op:"delete", where:[eq("plate","'NGY 330 MO 90-71'"), {col:"TRUNC(read_at)", sql:"TRUNC(read_at) = DATE '2026-12-03'", kind:"eq", sel:1/730}],
+         wrong:"This deletes every alert on the stolen car's plate on 3 December, the real sightings too."},
+        {op:"delete", where:[eq("camera","'SHIYAKUSHO-E'"), eq("read_at","TIMESTAMP '2026-12-03 23:36:12'")]}]}],
+    hint:"Every index is written for every new alert. Does a DELETE that runs once deserve an index of its own?",
+    hint2:"Two indexes, (plate, read_at) and (camera, read_at), and write the DELETE so one of them can find the row.",
+    lesson:"Each index costs writes for every new row, every day. An index built for one DELETE costs 90,000 pages a day to save a single search. Write the DELETE with columns an existing index already holds, the plate and the exact time, and it finds its row in a few pages. Every index still pays when the row goes: each one loses its entry.",
+    results:[
+      {columns:["read_at","camera","plate","watch_reason"], rows:[
+        ["Thu 23:33","SHIYAKUSHO-E","NGY 500 RE 33-90","Fushimi crash"],
+        ["Thu 23:47","SAKAE-3","NGY 500 RE 33-90","Fushimi crash"],
+        ["Fri 00:20","SAKAE-3","NGY 500 RE 33-90","Fushimi crash"]]},
+      {columns:["read_at","camera","plate","watch_reason"], rows:[
+        ["Thu 23:33","SHIYAKUSHO-E","NGY 500 RE 33-90","Fushimi crash"],
+        ["Thu 23:36","SHIYAKUSHO-E","NGY 330 MO 90-71","stolen"]]},
+      {count:1, note:"The false alert is gone."}],
+    clue:{id:"E8", title:"Takagi's night", text:"Ren Takagi's car tonight: the city hall at 23:33, then Sakae at 23:47 and again at 00:20. It never went towards Funami. And he was driving, whatever he says."},
   },{
     name:"Written Off",
     table:"loans", rows:300000, perPage:50, maxCols:2, maxIdx:2, two:1.1,
@@ -1334,30 +1337,30 @@ const CASE4 = {
     lesson:"With a bind parameter the database picks one plan for every value. An index on agent is quick for a small collector and terrible for HQ, whose 120,000 loans it would fetch one table read at a time: on average slower than reading the whole table. Q1 still wants (status, changed_at), equality before range. Q2 is better off with no index at all.",
     results:[{columns:["borrower","amount","status","changed_at"], rows:[
       ["KANEDA Yuji","¥2,100,000","WRITTEN_OFF","Wed 23:31"],
-      ["KURODA Daisuke","¥8,400,000","WRITTEN_OFF","Fri 00:31"]]},
+      ["MIZUNO Shota","¥3,600,000","WRITTEN_OFF","Fri 00:40"]]},
       {count:5000, note:"One collector's loan book. HQ's holds 120,000."}],
-    clue:{id:"E9", title:"Written off", text:"Kitamura Credit wrote off two debts this week with no payment. Yuji Kaneda's ¥2,100,000 at 23:31 on Wednesday, twenty minutes after the prepaid phone first called him. Daisuke Kuroda's ¥8,400,000 at 00:31 on Friday, thirty-nine minutes after K.ARAI was switched on."},
+    clue:{id:"E9", title:"Written off", text:"Kitamura Credit wrote off two debts this week with no payment. Yuji Kaneda's ¥2,100,000 at 23:31 on Wednesday, twenty minutes after the prepaid phone first called him. Shota Mizuno's ¥3,600,000 at 00:40 on Friday, thirty-five minutes after the second prepaid got back to Funami."},
   },{
     name:"Kinjo Pier",
     table:"cell_events", rows:60000000, perPage:50, maxCols:2, maxIdx:3, inserts:2000000, clustered:"event_time",
-    cols:{event_id:60000000, sim:200000, cell_id:8000, event_time:60000000, imei:220000, event_type:4},
-    story:"Your indexes go on NTX Mobile's live table. It keeps 30 days, takes 2 million new rows a day, and every night deletes the oldest day (Q3). Q1 follows one SIM, Q2 one tower. Three indexes at most.",
+    cols:{event_id:60000000, phone:200000, cell_id:8000, event_time:60000000, imei:220000, event_type:4},
+    story:"Your indexes go on the phone company's live table. It keeps 30 days, takes 2 million new rows a day, and every night deletes the oldest day (Q3). Q1 follows one phone, Q2 one tower. Three indexes at most.",
     queries:[
-      {label:"Q1", who:"The SIM behind K.ARAI, since 08:00", freq:20000, where:[eq("sim","'44010-7781-2290'"),
+      {label:"Q1", who:"The second prepaid, since 08:00", freq:20000, where:[eq("phone",PICKUP),
         range("event_time","event_time >= TIMESTAMP '2026-12-04 08:00:00'",0.0134)]},
       {label:"Q2", who:"One tower, one hour", freq:2000, where:[eq("cell_id","'KINJO-FUTO-1'"),
         range("event_time","event_time BETWEEN TIMESTAMP '2026-12-04 16:00:00' AND TIMESTAMP '2026-12-04 17:00:00'",1/720)]},
       {label:"Q3", who:"Nightly purge: the oldest day", freq:1, op:"delete",
         where:[range("event_time","event_time < SYSTIMESTAMP - INTERVAL '30' DAY",1/30)]}],
     hint:"Each index is written when a row arrives and again when the purge deletes it.",
-    hint2:"(sim, event_time) and (cell_id, event_time). Let the purge scan the table once a night instead of keeping a third index all day.",
+    hint2:"(phone, event_time) and (cell_id, event_time). Let the purge scan the table once a night instead of keeping a third index all day.",
     lesson:"On a table that takes 2 million rows a day and deletes 2 million a night, each index costs 12 million page writes a day. An index on event_time would make the purge cheap, but the full scan it saves is only 1.2 million pages, once a night, so keep two indexes, one per search, and none for the purge.",
     results:[
       {columns:["event_time","cell_id","event"], rows:[
-        ["08:12","MEIEKI-04","data"],["11:40","KANAYAMA-02","data"],["16:05","KINJO-FUTO-1","attach"],["17:30","KINJO-FUTO-1","data"]]},
-      {count:10, note:"Ten events on the Kinjo-futo tower between 16:00 and 17:00. One of them is the SIM behind K.ARAI, attaching at 16:05."},
+        ["09:12","MINATO-FUNAMI-2","call out, 3 min"],["15:42","MINATO-FUNAMI-2","switched on"],["16:05","KINJO-FUTO-1","location update"],["17:30","KINJO-FUTO-1","data"]]},
+      {count:10, note:"Ten events on the Kinjo-futo tower between 16:00 and 17:00. One of them is the second prepaid, arriving at 16:05."},
       {count:2000000, note:"The oldest day, 4 November, is gone."}],
-    clue:{id:"E10", title:"Kinjo pier", text:"The phone behind K.ARAI has been on the Kinjo-futo tower since 16:05. The tower stands beside the ferry terminal, and the night ferry to Sendai leaves at 19:00."},
+    clue:{id:"E10", title:"Kinjo pier", text:"At 09:12 the second prepaid made one call, to the ferry company: a cabin on tonight's 19:00 sailing to Sendai for 'K. SATO', with this number as the contact. It came on again in Funami at 15:42, and since 16:05 it has been on the Kinjo-futo tower beside the ferry terminal."},
   }],
 };
 
@@ -2077,8 +2080,6 @@ const VI = {
     "Một tin nhắn cuối đang chờ trên terminal của bạn: “Tôi giúp vì giúp là việc của tôi, và chẳng ai nghi người hay giúp. Câu query tiếp theo của bạn luôn đến tay tôi trước. Còn Ono và Kubo thì đã bị bỏ rơi từ trước. Bạn giỏi. Đó mới là vấn đề.”",
   "Aiko Nishida: “Takeshi set that history trigger and told no one. I'll take the night console from here. Send me your queries.”":
     "Aiko Nishida: “Takeshi cài cái trigger lịch sử đó mà không nói với ai. Từ giờ tôi trực console đêm. Cứ gửi query cho tôi.”",
-  "Fujimoto is gone, but his accounts aren't. Something on the night console is still deleting.":
-    "Fujimoto đã đi, nhưng các tài khoản của ông ta thì chưa. Có thứ gì đó trên console đêm vẫn đang xóa.",
   "He read along with you from the first night. You saw his traces in the bonus evidence all along.":
     "Ông ta đọc theo bạn từ đêm đầu tiên. Dấu vết của ông ta nằm trong các bằng chứng phụ từ lâu rồi.",
   "Fujimoto never saw you coming.": "Fujimoto không hề thấy bạn đến.",
@@ -2202,225 +2203,29 @@ const VI = {
   "Goro Fujimoto worked console NC-02 on 30 of the 33 nights since 1 November. Mei Sasaki covered 24 to 26 November while he was on leave. Nishida works days on DC-01. Iida has no shifts; only his backup jobs run, on BK-01.":
     "Goro Fujimoto trực console NC-02 30 trong 33 đêm kể từ 1/11. Mei Sasaki trực thay từ 24 đến 26/11 khi ông ta nghỉ phép. Nishida làm ca ngày ở DC-01. Iida không có ca trực, chỉ có tác vụ sao lưu chạy trên BK-01.",
 
-  /* ---------- case 4: Erasure ---------- */
-  "Erasure":
-    "Xóa dấu",
+  /* ---------- case 4: lines kept from the first draft ---------- */
   "NISHIDA (night console) >":
     "NISHIDA (console ca đêm) >",
-  "Aiko Nishida, on the night console since Fujimoto left: “I stopped the job at 07:33. I didn't lock whatever started it. If it's still open, it can tell us where he is.”":
-    "Aiko Nishida, trực console ca đêm từ khi Fujimoto bỏ đi: “Tôi đã dừng tác vụ lúc 07:33. Còn thứ đã khởi động nó thì tôi chưa khóa. Nếu nó vẫn mở, nó có thể cho ta biết ông ta đang ở đâu.”",
-  "Aiko Nishida: “He won't talk. Fine. Everything he touched left a row somewhere.”":
-    "Aiko Nishida: “Ông ta không chịu nói. Cũng được. Thứ gì ông ta chạm vào cũng để lại một dòng ở đâu đó.”",
   "The ferry ticket was paid for by a company that owns nothing but a bank account. The same account paid Kitamura Credit.":
     "Vé phà được trả bằng tiền của một công ty chẳng có gì ngoài một tài khoản ngân hàng. Chính tài khoản đó đã trả tiền cho Kitamura Credit.",
-  "K.ARAI read along with you all day. Nishida left it open for that reason: every read meant he was still in Nagoya.":
-    "K.ARAI đã đọc theo bạn suốt cả ngày. Nishida để ngỏ tài khoản chính vì thế: mỗi lần nó đọc là thêm một dấu hiệu ông ta vẫn còn ở Nagoya.",
-  "07:40, Friday 4 December. Your team walked into the city data center at 23:40 last night and locked Goro Fujimoto's accounts at 23:45. His delete job on console NC-02 stopped.":
-    "07:40, thứ Sáu 4/12. Tối qua lúc 23:40 đội của bạn vào trung tâm dữ liệu thành phố và khóa các tài khoản của Goro Fujimoto lúc 23:45. Tác vụ xóa của ông ta trên console NC-02 dừng lại.",
-  "By morning it had run again. Change history and session logs were wiped overnight, and nobody knows where Fujimoto is.":
-    "Đến sáng thì nó đã chạy lại. Lịch sử thay đổi và nhật ký phiên bị xóa sạch trong đêm, và không ai biết Fujimoto đang ở đâu.",
-  "18:40, Kinjo pier. Goro Fujimoto is arrested at the foot of the ferry gangway with a ticket in someone else's name. He has not said a word since.":
-    "18:40, bến Kinjo. Goro Fujimoto bị bắt ở chân cầu lên phà, cầm vé mang tên người khác. Từ lúc đó ông ta chưa nói một lời.",
-  "Daisuke Kuroda admits to his part and nothing more: a phone call at 23:20, a debt he could never pay, ten minutes at a console he had seen left open in November, when he installed your terminal next door.":
-    "Daisuke Kuroda nhận đúng phần của mình, không hơn: một cuộc gọi lúc 23:20, một khoản nợ không bao giờ trả nổi, mười phút ở một console mà ông ta đã thấy bị bỏ mở từ tháng 11, khi lắp terminal của bạn ở phòng bên cạnh.",
-  "Kazuo Mori hands over the October audit report from his desk drawer. Mei Sasaki tells personnel about her second job at a bar in Sakae before anyone asks.":
-    "Kazuo Mori nộp bản báo cáo kiểm toán tháng 10 cất trong ngăn bàn. Mei Sasaki tự khai với phòng nhân sự về việc làm thêm ở một quán bar ở Sakae trước khi có ai hỏi.",
-  "K.ARAI read along and never saw it coming.":
-    "K.ARAI đọc theo bạn mà không hề thấy trước điều gì.",
-  "Fujimoto saw some of it and kept moving.":
-    "Fujimoto thấy được một phần và vẫn tiếp tục trốn.",
-  "Fujimoto knew you were close. He nearly made the ferry.":
-    "Fujimoto biết bạn đã tới gần. Ông ta suýt lên được phà.",
-  "Fujimoto deleted what you were about to read.":
-    "Fujimoto đã xóa những gì bạn sắp đọc.",
-  "Night sysadmin · covered NC-02":
-    "Quản trị hệ thống ca đêm · trực thay NC-02",
-  "Helpdesk · console HD-03":
-    "Helpdesk · console HD-03",
-  "Nagoya PD IT liaison · set up your terminal":
-    "Liên lạc IT của cảnh sát Nagoya · người lắp terminal của bạn",
-  "Data center manager":
-    "Giám đốc trung tâm dữ liệu",
-  "Backup contractor · BK-01":
-    "Kỹ sư sao lưu hãng ngoài · BK-01",
-  "I got in at half eleven and didn't leave the NC-02 room until morning.":
-    "Tôi đến lúc mười một rưỡi và không rời phòng NC-02 cho tới sáng.",
-  "I left at six. I never log out of HD-03; the night team uses my session. That's how Mr Mori wants it.":
-    "Tôi về lúc sáu giờ. Tôi không bao giờ đăng xuất khỏi HD-03; đội trực đêm dùng phiên của tôi. Ông Mori muốn vậy.",
-  "I stayed with your team in the NC-02 room from 23:40 until we all left at twenty past twelve.":
-    "Tôi ở cùng đội của bạn trong phòng NC-02 từ 23:40 cho tới khi cả đội rời đi lúc mười hai giờ hai mươi.",
-  "Every console in this building locks after five minutes. I made sure of that after the October audit.":
-    "Mọi console trong tòa nhà này đều tự khóa sau năm phút. Tôi đã đảm bảo việc đó sau đợt kiểm toán tháng 10.",
-  "I patched BK-01 from home between one and two, then the backup ran at two like every night.":
-    "Từ một tới hai giờ tôi vá BK-01 từ nhà, rồi tác vụ sao lưu chạy lúc hai giờ như mọi đêm.",
-  "The Job That Came Back":
-    "Tác vụ quay lại",
-  "Console NC-02 runs the data center's night jobs. List every job it started from 23:00 last night, in order.":
-    "Console NC-02 chạy các tác vụ đêm của trung tâm dữ liệu. Liệt kê mọi tác vụ nó khởi động từ 23:00 tối qua, theo thứ tự thời gian.",
-  "One console, a time range, and the rows wanted in time order.":
-    "Một console, một khoảng thời gian, và cần các dòng theo thứ tự thời gian.",
-  "Index (console, started_at): the = column first, the range second, and the rows come out already sorted.":
-    "Index (console, started_at): cột so bằng trước, khoảng thứ hai, và các dòng ra sẵn theo thứ tự.",
-  "With (console, started_at) the database jumps to NC-02, starts at 23:00 and reads forward. The rows arrive in started_at order, so there is nothing to sort. Swap the columns and it reads every console's jobs since 23:00 to find NC-02's.":
-    "Với (console, started_at), database nhảy tới NC-02, bắt đầu từ 23:00 rồi đọc tới. Các dòng ra theo thứ tự started_at nên không phải sắp xếp gì. Đảo hai cột thì nó phải đọc tác vụ của mọi console từ 23:00 để tìm ra của NC-02.",
-  "The job that came back":
-    "Tác vụ quay lại",
-  "Fujimoto's delete job died at 23:45 when his account was locked. At 00:40 it started again under another account, K.ARAI, over VPN, and ran until 03:10. At 01:15 K.ARAI also typed two statements against door_events by hand. K.ARAI started the job once more at 07:31; Nishida stopped it at 07:33 and left the account open.":
-    "Tác vụ xóa của Fujimoto chết lúc 23:45 khi tài khoản của ông ta bị khóa. Lúc 00:40 nó chạy lại dưới một tài khoản khác, K.ARAI, qua VPN, cho tới 03:10. Lúc 01:15 K.ARAI còn gõ tay hai lệnh trên door_events. Lúc 07:31 K.ARAI lại khởi động tác vụ; Nishida dừng nó lúc 07:33 và để ngỏ tài khoản.",
-  "Reading along":
-    "Đọc theo",
-  "Query log: K.ARAI read job_log two minutes after you did.":
-    "Nhật ký truy vấn: K.ARAI đọc job_log hai phút sau bạn.",
-  "NC-02 jobs since 23:00":
-    "Tác vụ của NC-02 từ 23:00",
-  "A Retired Name":
-    "Một cái tên đã nghỉ hưu",
-  "A retired name":
-    "Một cái tên đã nghỉ hưu",
-  "K.ARAI belonged to Kenzo Arai, a night administrator who retired in March 2024. The account had been disabled since. At 23:52 on Thursday it was switched back on and given a new password from helpdesk console HD-03, inside a session signed in as R.KONDO.":
-    "K.ARAI là tài khoản của Kenzo Arai, quản trị viên ca đêm đã nghỉ hưu từ tháng 3/2024. Tài khoản bị vô hiệu hóa từ đó. Lúc 23:52 thứ Năm nó được bật lại và đặt mật khẩu mới từ console helpdesk HD-03, trong một phiên đăng nhập bằng R.KONDO.",
-  "On the list":
-    "Có trong danh sách",
-  "The October security audit listed K.ARAI among 41 dormant accounts to delete. Nobody deleted them.":
-    "Đợt kiểm toán bảo mật tháng 10 đã liệt kê K.ARAI trong 41 tài khoản ngủ đông cần xóa. Không ai xóa cả.",
-  "K.ARAI, last five events":
-    "K.ARAI, năm sự kiện gần nhất",
-  "Heartbeat":
-    "Nhịp tim",
-  "Nishida wants to know the moment K.ARAI connects, so Q1 checks every minute. Meanwhile the VPN server moves last_seen forward on every open session every 30 seconds: Q2, two million times a day. Two indexes. Score = pages read per day + index upkeep per day.":
-    "Nishida muốn biết ngay khi K.ARAI kết nối, nên Q1 kiểm tra mỗi phút. Trong khi đó máy chủ VPN cứ 30 giây lại dời last_seen của mọi phiên đang mở: Q2, hai triệu lần mỗi ngày. Hai index. Điểm = số trang đọc mỗi ngày + bảo trì index mỗi ngày.",
-  "Q2 changes last_seen two million times a day. Which of your indexes has to change with it?":
-    "Q2 đổi last_seen hai triệu lần mỗi ngày. Index nào của bạn phải đổi theo?",
-  "(session_id) for Q2 and (user_id) for Q1. Keep last_seen out of every index.":
-    "(session_id) cho Q2 và (user_id) cho Q1. Đừng để last_seen trong index nào cả.",
-  "An UPDATE writes only to the indexes that hold the column it changes, and there it moves the entry: delete the old one, insert the new. (user_id, last_seen) makes Nishida's check about a hundred pages cheaper, but every heartbeat rewrites it. (user_id) alone reads K.ARAI's past sessions and never has to change.":
-    "UPDATE chỉ ghi vào những index chứa cột nó thay đổi, và ở đó nó phải dời mục: xóa mục cũ, chèn mục mới. (user_id, last_seen) giúp lần kiểm tra của Nishida rẻ hơn khoảng một trăm trang, nhưng nhịp tim nào cũng ghi lại nó. Chỉ (user_id) thì đọc các phiên cũ của K.ARAI và không bao giờ phải đổi.",
-  "Still connected":
-    "Vẫn đang kết nối",
-  "K.ARAI has been connected since 00:38 from a phone on the NTX Mobile network. NTX matched the address to a prepaid SIM, 44010-7781-2290, activated on Thursday night.":
-    "K.ARAI đã kết nối từ 00:38 bằng một điện thoại trên mạng NTX Mobile. NTX đã khớp địa chỉ đó với một SIM trả trước, 44010-7781-2290, kích hoạt tối thứ Năm.",
-  "The backup engineer":
-    "Kỹ sư sao lưu",
-  "Masaru Iida's own VPN session ran from 01:02 to 01:41, from his home line in Tempaku.":
-    "Phiên VPN của chính Masaru Iida chạy từ 01:02 tới 01:41, từ đường dây nhà anh ở Tempaku.",
-  "Is K.ARAI online?":
-    "K.ARAI có đang kết nối không?",
-  "VPN heartbeat, every open session":
-    "Nhịp tim VPN, mọi phiên đang mở",
-  "One session's last_seen moved forward.":
-    "last_seen của một phiên được dời lên.",
-  "Door HD-03":
-    "Cửa HD-03",
-  "The account was switched on at HD-03. Who opened that room's door since Thursday morning? door_events is written in time order, and you may index one column.":
-    "Tài khoản được bật ở HD-03. Ai đã mở cửa phòng đó từ sáng thứ Năm? door_events được ghi theo thứ tự thời gian, và bạn được index một cột.",
-  "door matches fewer rows than a whole day of events. But where in the table do those rows sit?":
-    "door khớp ít dòng hơn cả một ngày sự kiện. Nhưng những dòng đó nằm ở đâu trong bảng?",
-  "Index event_at. The table is stored in event_at order, so a day of events sits on a few hundred neighbouring pages.":
-    "Index event_at. Bảng được lưu theo thứ tự event_at, nên sự kiện của một ngày nằm trên vài trăm trang liền nhau.",
-  "Rows found through an index still have to be read from the table, one page each, unless they sit together. door_events is written in time order, so a day of events fills about 550 neighbouring pages. HD-03's 5,000 events are spread over two years: 5,000 separate pages. Here the column that matches more rows wins, because its rows are stored together.":
-    "Dòng tìm qua index vẫn phải đọc từ bảng, mỗi dòng một trang, trừ khi chúng nằm cạnh nhau. door_events được ghi theo thời gian, nên sự kiện của một ngày nằm gọn trong khoảng 550 trang liền nhau. 5.000 sự kiện của HD-03 rải trên hai năm: 5.000 trang khác nhau. Ở đây cột khớp nhiều dòng hơn lại thắng, vì các dòng của nó nằm cạnh nhau.",
-  "Since Thursday 08:00 the HD-03 door opened seven times. Rie Kondo during the day, last at 17:40. Then Mei Sasaki's badge at 23:51, one minute before the K.ARAI account was switched back on at 23:52. Nobody else until Nishida at 07:35 this morning.":
-    "Từ 08:00 thứ Năm cửa HD-03 mở bảy lần. Rie Kondo trong ngày, lần cuối lúc 17:40. Rồi thẻ của Mei Sasaki lúc 23:51, một phút trước khi tài khoản K.ARAI được bật lại lúc 23:52. Không ai khác cho tới Nishida lúc 07:35 sáng nay.",
-  "HD-03 since Thursday 08:00":
-    "HD-03 từ 08:00 thứ Năm",
-  "Never Locked":
-    "Không bao giờ khóa",
-  "The open session":
-    "Phiên để mở",
-  "Rie Kondo signed in to HD-03 at 13:12 on Thursday. The screen never locked, though the activity log shows nothing typed between 17:44 and 23:52, and the session stayed open until Kazuo Mori forced it closed at 00:05, when your team asked him to lock the building down. K.ARAI was switched on inside it at 23:52.":
-    "Rie Kondo đăng nhập HD-03 lúc 13:12 thứ Năm. Màn hình không hề khóa, dù nhật ký thao tác không ghi phím nào từ 17:44 tới 23:52, và phiên vẫn mở cho tới khi Kazuo Mori buộc đóng lúc 00:05, khi đội của bạn yêu cầu ông khóa cả tòa nhà. K.ARAI được bật trong chính phiên đó lúc 23:52.",
-  "HD-03 sessions since Thursday":
-    "Các phiên của HD-03 từ thứ Năm",
-  "The Two O'Clock Copy":
-    "Bản sao lúc hai giờ",
-  "Edited at 01:15":
-    "Sửa lúc 01:15",
-  "At 01:15:08 K.ARAI deleted a swipe from door_events: visitor badge V-4 at HD-03, 23:50:12. At 01:15:31 it inserted one: Mei Sasaki's badge S-2231 at HD-03, 23:51:40. The 23:51 swipe was written nearly an hour and a half after the time it claims.":
-    "Lúc 01:15:08 K.ARAI xóa một lần quẹt thẻ khỏi door_events: thẻ khách V-4 ở HD-03, 23:50:12. Lúc 01:15:31 nó chèn vào một lần quẹt: thẻ S-2231 của Mei Sasaki ở HD-03, 23:51:40. Lần quẹt 23:51 được ghi vào gần một tiếng rưỡi sau giờ nó tự nhận.",
-  "Just in time":
-    "Vừa kịp",
-  "Query log: K.ARAI read this history table at 02:28, two minutes before the delete job wiped it.":
-    "Nhật ký truy vấn: K.ARAI đọc bảng lịch sử này lúc 02:28, hai phút trước khi tác vụ xóa nó.",
-  "K.ARAI's changes, 01:00 to 01:30":
-    "Thay đổi của K.ARAI, 01:00 tới 01:30",
-  "Visitor Four":
-    "Thẻ khách số bốn",
-  "The data center hands out the same visitor badges again and again. Who held V-4 at 23:50 on Thursday? Find the last time it was issued before then.":
-    "Trung tâm dữ liệu phát đi phát lại cùng những thẻ khách. Ai cầm V-4 lúc 23:50 thứ Năm? Tìm lần cấp gần nhất trước giờ đó.",
-  "The newest issue before 23:50, one row.":
-    "Lần cấp mới nhất trước 23:50, một dòng.",
-  "(badge, issued_at): the database starts just before 23:50 and reads back one entry.":
-    "(badge, issued_at): database bắt đầu ngay trước 23:50 và đọc lùi một mục.",
-  "A range and ORDER BY on the same column still make a pipelined top-N. With (badge, issued_at) the database jumps to V-4 at 23:50:12 and reads one entry backwards: the range ends where the reading starts.":
-    "Khoảng và ORDER BY trên cùng một cột vẫn tạo được top-N pipelined. Với (badge, issued_at), database nhảy tới V-4 lúc 23:50:12 và đọc lùi một mục: khoảng kết thúc đúng chỗ việc đọc bắt đầu.",
-  "Visitor four":
-    "Thẻ khách số bốn",
-  "Visitor badge V-4 was issued at 23:38 on Thursday to Daisuke Kuroda, the police IT liaison who came in with your team, with access to all areas for the search. He gave it back at 00:20.":
-    "Thẻ khách V-4 được cấp lúc 23:38 thứ Năm cho Daisuke Kuroda, liên lạc IT của cảnh sát, người vào cùng đội của bạn, với quyền vào mọi khu vực để khám xét. Ông ta trả thẻ lúc 00:20.",
-  "Six badges":
-    "Sáu thẻ",
-  "V-1 to V-6 went to the six people on your team. Only V-4 opened a door outside the NC-02 room.":
-    "V-1 tới V-6 được cấp cho sáu người trong đội của bạn. Chỉ có thẻ V-4 từng mở cửa ở ngoài phòng NC-02.",
-  "V-4, last issue before 23:50":
-    "V-4, lần cấp cuối trước 23:50",
-  "Putting It Back":
-    "Trả lại chỗ cũ",
-  "Delete the fake swipe and restore the real one. door_events is also the security desk's live table: 30,000 new swipes a day, a badge search 4,000 times a day, a door search 1,000 times a day. The DELETE (Q3) runs once. Three indexes at most.":
-    "Xóa lần quẹt giả và khôi phục lần quẹt thật. door_events cũng là bảng đang chạy của bàn bảo vệ: 30.000 lần quẹt mới mỗi ngày, tìm theo thẻ 4.000 lần mỗi ngày, tìm theo cửa 1.000 lần mỗi ngày. Lệnh DELETE (Q3) chạy một lần. Tối đa ba index.",
-  "Every index is written for every new swipe. Does a DELETE that runs once deserve an index of its own?":
-    "Mỗi index đều phải ghi cho mỗi lần quẹt mới. Một lệnh DELETE chạy một lần có đáng một index riêng không?",
-  "Two indexes, (badge, event_at) and (door, event_at), and write the DELETE so one of them can find the row.":
-    "Hai index, (badge, event_at) và (door, event_at), và viết DELETE sao cho một trong hai tìm được dòng đó.",
-  "Each index costs writes for every new row, every day. An index built for one DELETE costs 90,000 pages a day to save a single search. Write the DELETE with columns an existing index already holds, the badge and the exact time, and it finds its row in a few pages. Every index still pays when the row goes: each one loses its entry.":
-    "Mỗi index tốn công ghi cho mỗi dòng mới, mỗi ngày. Một index xây cho một lệnh DELETE tốn 90.000 trang mỗi ngày để tiết kiệm một lần tìm. Viết DELETE bằng những cột mà một index sẵn có đã chứa, số thẻ và đúng thời điểm, thì nó tìm ra dòng trong vài trang. Khi dòng bị xóa, mọi index vẫn phải trả: mỗi cái mất một mục.",
-  "Put back":
-    "Trả lại chỗ cũ",
-  "With the fake swipe deleted and the real one restored from the backup, visitor badge V-4 entered the NC-02 room at 23:40, opened HD-03 at 23:50 and came back into the NC-02 room at 00:03.":
-    "Khi đã xóa lần quẹt giả và khôi phục lần quẹt thật từ bản sao lưu: thẻ khách V-4 vào phòng NC-02 lúc 23:40, mở HD-03 lúc 23:50 và quay lại phòng NC-02 lúc 00:03.",
-  "Sasaki's quarter hour":
-    "Mười lăm phút của Sasaki",
-  "Mei Sasaki's badge: the NC-02 room at 23:36, the yard door at 23:44, the NC-02 room again at 23:59. She did leave the room, to phone the bar in Sakae where she works nights, which city staff are not allowed to do. She never went near HD-03.":
-    "Thẻ của Mei Sasaki: phòng NC-02 lúc 23:36, cửa ra sân sau lúc 23:44, lại vào phòng NC-02 lúc 23:59. Chị có rời phòng, để gọi cho quán bar ở Sakae nơi chị làm thêm ban đêm, việc nhân viên thành phố không được phép làm. Chị không hề tới gần HD-03.",
-  "Security desk: one badge since 23:00":
-    "Bàn bảo vệ: một thẻ từ 23:00",
-  "Security desk: one door, 23:00 to 00:30":
-    "Bàn bảo vệ: một cửa, 23:00 tới 00:30",
-  "Delete the planted swipe":
-    "Xóa lần quẹt bị cài vào",
-  "This deletes every swipe of Sasaki's badge on 3 December, the real ones too.":
-    "Lệnh này xóa mọi lần quẹt của thẻ Sasaki ngày 3/12, cả những lần thật.",
-  "The swipe K.ARAI planted at 01:15 is gone.":
-    "Lần quẹt K.ARAI cài vào lúc 01:15 đã bị xóa.",
   "Written Off":
     "Xóa nợ",
   "Written off":
     "Xóa nợ",
-  "Kitamura Credit wrote off two debts this week with no payment. Yuji Kaneda's ¥2,100,000 at 23:31 on Wednesday, twenty minutes after the prepaid phone first called him. Daisuke Kuroda's ¥8,400,000 at 00:31 on Friday, thirty-nine minutes after K.ARAI was switched on.":
-    "Tuần này Kitamura Credit xóa hai khoản nợ không có khoản trả nào. ¥2.100.000 của Yuji Kaneda lúc 23:31 thứ Tư, hai mươi phút sau khi điện thoại trả trước gọi hắn lần đầu. ¥8.400.000 của Daisuke Kuroda lúc 00:31 thứ Sáu, ba mươi chín phút sau khi K.ARAI được bật.",
   "Debts written off since Tuesday":
     "Các khoản nợ bị xóa từ thứ Ba",
   "Kinjo Pier":
     "Bến Kinjo",
-  "Your indexes go on NTX Mobile's live table. It keeps 30 days, takes 2 million new rows a day, and every night deletes the oldest day (Q3). Q1 follows one SIM, Q2 one tower. Three indexes at most.":
-    "Index của bạn đặt trên bảng đang chạy của NTX Mobile. Bảng giữ 30 ngày, nhận 2 triệu dòng mới mỗi ngày, và mỗi đêm xóa ngày cũ nhất (Q3). Q1 theo một SIM, Q2 theo một trạm. Tối đa ba index.",
   "Each index is written when a row arrives and again when the purge deletes it.":
     "Mỗi index phải ghi khi một dòng tới và ghi lần nữa khi lệnh dọn đêm xóa nó.",
-  "(sim, event_time) and (cell_id, event_time). Let the purge scan the table once a night instead of keeping a third index all day.":
-    "(sim, event_time) và (cell_id, event_time). Để lệnh dọn đêm quét cả bảng mỗi đêm một lần còn hơn giữ index thứ ba suốt ngày.",
   "On a table that takes 2 million rows a day and deletes 2 million a night, each index costs 12 million page writes a day. An index on event_time would make the purge cheap, but the full scan it saves is only 1.2 million pages, once a night, so keep two indexes, one per search, and none for the purge.":
     "Trên một bảng nhận 2 triệu dòng mỗi ngày và xóa 2 triệu dòng mỗi đêm, mỗi index tốn 12 triệu trang ghi mỗi ngày. Một index trên event_time sẽ làm lệnh dọn đêm rẻ, nhưng lần quét toàn bảng nó tiết kiệm chỉ là 1,2 triệu trang, mỗi đêm một lần, nên hãy giữ hai index, mỗi cái cho một kiểu tìm, và không cái nào cho lệnh dọn đêm.",
   "Kinjo pier":
     "Bến Kinjo",
-  "The phone behind K.ARAI has been on the Kinjo-futo tower since 16:05. The tower stands beside the ferry terminal, and the night ferry to Sendai leaves at 19:00.":
-    "Điện thoại đứng sau K.ARAI bắt sóng trạm Kinjo-futo từ 16:05. Trạm nằm cạnh bến phà, và phà đêm đi Sendai rời bến lúc 19:00.",
-  "The SIM behind K.ARAI, since 08:00":
-    "SIM đứng sau K.ARAI, từ 08:00",
   "One tower, one hour":
     "Một trạm, một giờ",
   "Nightly purge: the oldest day":
     "Dọn đêm: ngày cũ nhất",
-  "Ten events on the Kinjo-futo tower between 16:00 and 17:00. One of them is the SIM behind K.ARAI, attaching at 16:05.":
-    "Mười sự kiện trên trạm Kinjo-futo từ 16:00 tới 17:00. Một trong số đó là SIM đứng sau K.ARAI, bắt sóng lúc 16:05.",
   "The oldest day, 4 November, is gone.":
     "Ngày cũ nhất, 4/11, đã bị xóa.",
 
@@ -2505,36 +2310,8 @@ const VI = {
     "Phép tính nên nằm ở phía hằng số. ADD_MONTHS(shift_date, 1) che shift_date khỏi index; shift_date từ 1/11 tới 3/12 hỏi đúng điều đó. Rồi cột so bằng trước, khoảng thứ hai, cột gom nhóm cuối cùng: năm tuần của một console chỉ từ index, với cùng chi phí khi lịch trực dài thêm.",
   "The month went the wrong way: this asks for December, not November.":
     "Tháng bị dời sai chiều: lệnh này hỏi tháng 12, không phải tháng 11.",
-  "Whose account is K.ARAI, and what has happened to it lately? The audit table keeps every change to every account. Show its last five events, newest first. The audit screen upper-cases whatever you type.":
-    "K.ARAI là tài khoản của ai, và gần đây nó đã gặp chuyện gì? Bảng kiểm toán giữ mọi thay đổi của mọi tài khoản. Hiện năm sự kiện gần nhất, mới nhất trước. Màn hình kiểm toán viết hoa mọi thứ bạn gõ.",
-  "UPPER(user_id) is not user_id. How are the ids stored?":
-    "UPPER(user_id) không phải user_id. Các id được lưu thế nào?",
-  "Ids are stored in capitals: compare user_id = 'K.ARAI' (B), then index (user_id, at).":
-    "Id được lưu bằng chữ hoa: so user_id = 'K.ARAI' (B), rồi index (user_id, at).",
-  "UPPER(user_id) hides the column from an index on user_id, and here it does nothing useful: ids are stored in capitals. Compare the column as stored, and (user_id, at) reads K.ARAI's newest five entries backwards and stops.":
-    "UPPER(user_id) che cột khỏi index trên user_id, mà ở đây nó chẳng làm gì có ích: id được lưu bằng chữ hoa. So sánh cột như được lưu, và (user_id, at) đọc ngược năm mục mới nhất của K.ARAI rồi dừng.",
-  "User ids are stored in capitals. 'k.arai' matches nothing.":
-    "Id người dùng được lưu bằng chữ hoa. 'k.arai' không khớp dòng nào.",
-  "HD-03 is the helpdesk console. List its sessions since Thursday: who signed in, when, when the session ended, and how often the screen locked. console_sessions lives on the building's access server, out of the delete job's reach. Its report cuts every login down to the day first.":
-    "HD-03 là console của helpdesk. Liệt kê các phiên của nó từ thứ Năm: ai đăng nhập, lúc nào, phiên kết thúc lúc nào, và màn hình đã khóa mấy lần. console_sessions nằm trên máy chủ kiểm soát ra vào của tòa nhà, ngoài tầm với của tác vụ xóa. Báo cáo của nó cắt mọi lần đăng nhập về ngày trước.",
-  "TRUNC(login_at) is computed for every row. Does 'since Thursday' need it?":
-    "TRUNC(login_at) được tính cho mọi dòng. 'Từ thứ Năm' có cần nó không?",
-  "login_at >= Thursday keeps the same rows (B). Index (console, login_at).":
-    "login_at >= thứ Năm giữ đúng những dòng đó (B). Index (console, login_at).",
-  "For 'from a day on', TRUNC adds nothing: login_at >= DATE '2026-12-03' keeps exactly the same rows and leaves login_at visible to the index. Then the = column first, the range second: HD-03's sessions since Thursday sit next to each other in (console, login_at).":
-    "Với 'từ một ngày trở đi', TRUNC không thêm gì: login_at >= DATE '2026-12-03' giữ đúng những dòng đó và để login_at lộ ra cho index. Rồi cột so bằng trước, khoảng thứ hai: các phiên của HD-03 từ thứ Năm nằm cạnh nhau trong (console, login_at).",
-  "This stops at midnight on Thursday and loses Friday's session.":
-    "Lệnh này dừng ở nửa đêm thứ Năm và mất phiên của ngày thứ Sáu.",
-  "Nomura's history trigger copied every change to door_events into door_events_history. The delete job wiped that table at 02:30, but the 02:00 backup kept it: BK-01 was being patched that night, and the patch finished at 01:41, in time for the backup to run. What did K.ARAI change between 01:00 and 01:30? changed_by is a fixed-width CHAR column, so the restore script trims it. Two indexes.":
-    "Trigger lịch sử của Nomura đã chép mọi thay đổi của door_events vào door_events_history. Tác vụ xóa đã xóa sạch bảng đó lúc 02:30, nhưng bản sao lưu 02:00 vẫn giữ nó: đêm đó BK-01 đang được vá, và bản vá xong lúc 01:41, kịp cho tác vụ sao lưu chạy. K.ARAI đã đổi gì từ 01:00 tới 01:30? changed_by là cột CHAR độ dài cố định, nên script khôi phục cắt bỏ khoảng trắng. Hai index.",
   "A CHAR column already compares equal to the text without its padding. And two one-column indexes are not one two-column index.":
     "Một cột CHAR vốn đã bằng chuỗi không có khoảng trắng đệm. Và hai index một cột không phải là một index hai cột.",
-  "changed_by = 'K.ARAI' (B), then index (changed_by, changed_at).":
-    "changed_by = 'K.ARAI' (B), rồi index (changed_by, changed_at).",
-  "TRIM(changed_by) hides the column, and a CHAR column already equals 'K.ARAI' without the padding, so drop it. Then, with two indexes allowed, (changed_by) and (changed_at) side by side help no more than the better of the two. Some databases can combine two indexes, but they still read both ranges in full before matching them up. One index on (changed_by, changed_at) goes straight to K.ARAI's half hour.":
-    "TRIM(changed_by) che cột đi, mà một cột CHAR vốn đã bằng 'K.ARAI' khi không có khoảng trắng đệm, nên bỏ nó đi. Rồi, khi được hai index, (changed_by) và (changed_at) đặt cạnh nhau cũng chỉ giúp được bằng cái tốt hơn trong hai. Vài hệ quản trị gộp được hai index, nhưng vẫn phải đọc trọn cả hai khoảng rồi mới ghép lại. Một index (changed_by, changed_at) đi thẳng tới nửa giờ của K.ARAI.",
-  "'K.ARAI%' also matches K.ARAIKAWA, a clerk on the day shift.":
-    "'K.ARAI%' còn khớp cả K.ARAIKAWA, một nhân viên văn phòng ca ngày.",
   "Kaneda's phone led police to his lender, Kitamura Credit. They searched its office at 09:00 and brought you the server. Which debts did they write off this week, with no payment at all? Q2 lists one collector's loans; you will run it for each of the three collectors questioned today. One of them is head office, HQ, which booked 40% of all loans. Two indexes at most.":
     "Điện thoại của Kaneda dẫn cảnh sát tới chỗ cho hắn vay tiền, Kitamura Credit. Họ khám văn phòng lúc 09:00 và mang máy chủ về cho bạn. Tuần này họ đã xóa những khoản nợ nào mà không nhận một đồng trả nợ? Q2 liệt kê các khoản vay của một người thu nợ; bạn sẽ chạy nó cho từng người trong ba người thu nợ được hỏi cung hôm nay. Một trong số đó là trụ sở, HQ, nơi ghi 40% tổng số khoản vay. Tối đa hai index.",
   "Q2 runs with a different collector each time, but the database picks one plan for all of them. What does that plan cost when the collector is HQ?":
@@ -2547,6 +2324,220 @@ const VI = {
     "Các khoản vay của một người thu nợ",
   "One collector's loan book. HQ's holds 120,000.":
     "Sổ cho vay của một người thu nợ. Sổ của HQ có 120.000 khoản.",
+
+  /* ---------- case 4: Night Ferry ---------- */
+  "Fujimoto is gone. Both his phones went dark at 23:20.":
+    "Fujimoto đã biến mất. Cả hai điện thoại của ông ta tắt lúc 23:20.",
+  "Night Ferry":
+    "Chuyến phà đêm",
+  "Aiko Nishida, on the night console since Fujimoto left: “The phone company sent the prepaid's records an hour ago. He was careful, but he had to call someone.”":
+    "Aiko Nishida, trực console ca đêm từ khi Fujimoto bỏ đi: “Nhà mạng vừa gửi dữ liệu của số trả trước cách đây một tiếng. Ông ta cẩn thận, nhưng ông ta buộc phải gọi cho ai đó.”",
+  "Not the best plan: SUSPICION +{n}%. Slow searches keep the phone company and the traffic desk busy, people talk, and talk reaches Kitamura Credit. Later missions are watched more closely.":
+    "Chưa phải cách tối ưu: NGHI NGỜ +{n}%. Truy vấn chậm làm nhân viên nhà mạng và bàn giao thông phải bận rộn, người ta bàn tán, và lời bàn tán tới tai Kitamura Credit. Càng về các nhiệm vụ sau càng bị soi kỹ.",
+  "Best plan. Nobody outside your team noticed the search.":
+    "Cách tối ưu. Không ai ngoài đội của bạn để ý tới cuộc tra cứu.",
+  "Aiko Nishida: “He planned for every screen we have. He didn't plan for the people he needed.”":
+    "Aiko Nishida: “Ông ta tính trước mọi màn hình mà cảnh sát có. Ông ta không tính tới những con người mà ông ta cần.”",
+  "07:40, Friday 4 December. Goro Fujimoto walked out of the city data center at 23:20 last night, twenty minutes before your team arrived. Both his phones have been off since: his own, and the prepaid number Kaneda had in his contacts.":
+    "07:40, thứ Sáu 4 tháng 12. Goro Fujimoto rời trung tâm dữ liệu thành phố lúc 23:20 tối qua, hai mươi phút trước khi đội của bạn tới. Từ đó cả hai điện thoại của ông ta đều tắt: máy riêng, và số trả trước có trong danh bạ của Kaneda.",
+  "He knows what the police can see. With no phone, and his bank cards frozen this morning, he can't get far on his own. Someone is helping him.":
+    "Ông ta biết cảnh sát nhìn thấy được những gì. Không điện thoại, thẻ ngân hàng bị phong tỏa từ sáng nay, một mình ông ta không đi xa được. Có người đang giúp ông ta.",
+  "18:40, Kinjo pier. Goro Fujimoto is arrested at the foot of the ferry gangway with a ticket for K. SATO in his pocket. He has not said a word since.":
+    "18:40, bến Kinjo. Goro Fujimoto bị bắt ở chân cầu lên phà, trong túi là vé mang tên K. SATO. Từ đó tới giờ ông ta không nói một lời.",
+  "Shota Mizuno is picked up in the terminal car park, the prepaid phone on the seat beside him. A Kitamura Credit collector gave it to him a week ago: answer when it rings, drive where you're told, and the debt is gone.":
+    "Shota Mizuno bị bắt ở bãi đỗ xe của bến, chiếc điện thoại trả trước nằm trên ghế bên cạnh. Một người thu nợ của Kitamura Credit đưa nó cho ông ta một tuần trước: máy reo thì nghe, bảo lái đi đâu thì lái, và khoản nợ sẽ được xóa.",
+  "Ren Takagi admits he was driving fares again. Haruko Ueda asks to see her brother. He won't see her.":
+    "Ren Takagi thừa nhận anh ta lại chạy xe chở khách. Haruko Ueda xin được gặp em trai. Ông ta không muốn gặp chị.",
+  "Kitamura Credit never heard you coming.":
+    "Kitamura Credit không hề nghe thấy bạn tới.",
+  "Word reached Kitamura Credit, too late to matter.":
+    "Tin có tới tai Kitamura Credit, nhưng đã quá muộn.",
+  "Kitamura Credit heard. Mizuno moved early, and Fujimoto nearly sailed.":
+    "Kitamura Credit đã nghe tin. Mizuno ra tay sớm, và Fujimoto suýt nữa thì lên được phà.",
+  "Kitamura Credit heard it all. Fujimoto was on the gangway when you got there.":
+    "Kitamura Credit nghe hết mọi chuyện. Lúc bạn tới, Fujimoto đã đứng trên cầu lên phà.",
+  "Owner · Mizuno Auto, used cars, Funami":
+    "Chủ cửa hàng · Mizuno Auto, xe cũ, Funami",
+  "Mechanic at Mizuno Auto · insured driver of the shop car":
+    "Thợ máy ở Mizuno Auto · tài xế đứng tên bảo hiểm của xe cửa hàng",
+  "Fujimoto's sister · lives in Funami":
+    "Chị gái của Fujimoto · sống ở Funami",
+  "Unlicensed taxi driver · his car stopped at the Fushimi crash":
+    "Tài xế chở khách không phép · xe anh ta đã dừng ở vụ tông xe Fushimi",
+  "I was at home in Kanie with my wife all night. The shop car never left the yard.":
+    "Cả đêm tôi ở nhà tại Kanie với vợ. Xe của cửa hàng không hề rời khỏi bãi.",
+  "I parked the shop car in the yard at seven and took the train home to Kasugai.":
+    "Bảy giờ tôi đỗ xe của cửa hàng vào bãi rồi đi tàu về nhà ở Kasugai.",
+  "Goro hasn't called me since the summer. I was at home all night.":
+    "Từ mùa hè tới giờ Goro không gọi cho tôi. Cả đêm tôi ở nhà.",
+  "I wasn't driving last night. I've given all that up.":
+    "Tối qua tôi không chạy xe. Tôi bỏ hẳn chuyện đó rồi.",
+  "The Last Call":
+    "Cuộc gọi cuối cùng",
+  "The prepaid number in Kaneda's phone is Fujimoto's. List every call it made since Wednesday, in order.":
+    "Số trả trước trong điện thoại của Kaneda là của Fujimoto. Liệt kê mọi cuộc gọi đi từ số đó kể từ thứ Tư, theo thứ tự thời gian.",
+  "One number, a time range, and the rows wanted in time order.":
+    "Một số điện thoại, một khoảng thời gian, và các dòng cần trả theo thứ tự thời gian.",
+  "Index (caller, call_time): the = column first, the range second, and the calls come out already sorted.":
+    "Index (caller, call_time): cột so bằng trước, cột khoảng sau, và các cuộc gọi ra sẵn theo thứ tự.",
+  "With (caller, call_time) the database jumps to the prepaid number, starts at Wednesday and reads forward. The calls arrive in call_time order, so there is nothing to sort. Swap the columns and it reads every call made in the city since Wednesday to find three.":
+    "Với (caller, call_time), database nhảy tới số trả trước, bắt đầu từ thứ Tư và đọc tới. Các cuộc gọi ra theo thứ tự call_time nên không phải sắp xếp gì. Đảo thứ tự hai cột thì nó phải đọc mọi cuộc gọi trong thành phố từ thứ Tư để tìm ra ba cuộc.",
+  "The last call":
+    "Cuộc gọi cuối cùng",
+  "At 23:16 on Thursday, four minutes before he walked out, Fujimoto's prepaid called another prepaid number, 080-4417-2290, for 38 seconds. Then it went dark, and it has not come back.":
+    "Lúc 23:16 thứ Năm, bốn phút trước khi rời đi, số trả trước của Fujimoto gọi tới một số trả trước khác, 080-4417-2290, trong 38 giây. Rồi nó tắt, và từ đó không bật lại.",
+  "Bought together":
+    "Mua cùng nhau",
+  "Both prepaid SIMs were sold on 27 November by the same phone shop in Osu, for cash.":
+    "Cả hai SIM trả trước được bán ngày 27 tháng 11 ở cùng một cửa hàng điện thoại tại Osu, trả bằng tiền mặt.",
+  "The prepaid's calls since Wednesday":
+    "Các cuộc gọi của số trả trước từ thứ Tư",
+  "The Other Prepaid":
+    "Số trả trước thứ hai",
+  "Where was 080-4417-2290 when it took that call, and where did it go after? List its events since Thursday. The phone company's report tool cuts every time down to the day first.":
+    "Lúc nhận cuộc gọi đó, 080-4417-2290 ở đâu, và sau đó nó đi đâu? Liệt kê các sự kiện của nó từ thứ Năm. Công cụ báo cáo của nhà mạng cắt mọi mốc giờ xuống còn ngày trước đã.",
+  "TRUNC(event_time) is computed for every row. Does 'since Thursday' need it?":
+    "TRUNC(event_time) phải tính cho từng dòng. 'Từ thứ Năm' có cần nó không?",
+  "event_time >= Thursday keeps the same rows (B). Index (phone, event_time).":
+    "event_time >= thứ Năm giữ đúng các dòng đó (B). Index (phone, event_time).",
+  "For 'from a day on', TRUNC adds nothing: event_time >= DATE '2026-12-03' keeps exactly the same rows and leaves event_time visible to the index. Then the = column first, the range second: the prepaid's events since Thursday sit next to each other in (phone, event_time).":
+    "Với điều kiện 'từ một ngày trở đi', TRUNC không thêm gì: event_time >= DATE '2026-12-03' giữ đúng các dòng đó và để event_time lộ ra cho index. Rồi cột so bằng trước, cột khoảng sau: các sự kiện của số trả trước từ thứ Năm nằm liền nhau trong (phone, event_time).",
+  "The other prepaid":
+    "Số trả trước thứ hai",
+  "080-4417-2290 was switched on at 22:40 in Funami, Minato-ku, and took Fujimoto's call there. From 23:34 to 23:38 it was on SANNOMARU-1, the tower by the city hall, a few minutes' walk from the data center. By 00:05 it was back in Funami, and at 00:07 it was switched off. Someone came from Funami to fetch him and took him back.":
+    "080-4417-2290 được bật lúc 22:40 ở Funami, quận Minato, và nhận cuộc gọi của Fujimoto ở đó. Từ 23:34 tới 23:38 nó ở trạm SANNOMARU-1, trạm cạnh tòa thị chính, cách trung tâm dữ liệu vài phút đi bộ. Tới 00:05 nó đã về lại Funami, và lúc 00:07 thì tắt. Có người từ Funami tới đón ông ta rồi đưa về.",
+  "The second prepaid since Thursday":
+    "Số trả trước thứ hai từ thứ Năm",
+  "This stops at midnight on Thursday and loses Friday's events.":
+    "Câu này dừng lúc nửa đêm thứ Năm và mất các sự kiện của thứ Sáu.",
+  "City Hall Camera":
+    "Camera tòa thị chính",
+  "Which cars passed the camera outside the city hall between 23:25 and 23:45? The plate readers write to this table in time order, and you may index one column.":
+    "Những xe nào đi qua camera trước tòa thị chính từ 23:25 tới 23:45? Các máy đọc biển số ghi vào bảng này theo thứ tự thời gian, và bạn được index một cột.",
+  "camera matches fewer rows than twenty minutes of the whole city. But where in the table do those rows sit?":
+    "camera khớp ít dòng hơn hai mươi phút của cả thành phố. Nhưng các dòng đó nằm ở đâu trong bảng?",
+  "Index passed_at. The table is stored in passed_at order, so twenty minutes of reads sit on a few hundred neighbouring pages.":
+    "Index passed_at. Bảng được lưu theo thứ tự passed_at, nên hai mươi phút dữ liệu nằm trên vài trăm trang liền nhau.",
+  "Rows found through an index still have to be read from the table, one page each, unless they sit together. anpr is written in time order, so twenty minutes of the whole city fill about 550 neighbouring pages. One camera's 15,000 reads are spread over a month: 15,000 separate pages. Here the column that matches more rows wins, because its rows are stored together.":
+    "Các dòng tìm qua index vẫn phải đọc từ bảng, mỗi dòng một trang, trừ khi chúng nằm cạnh nhau. Bảng anpr được ghi theo thứ tự thời gian, nên hai mươi phút của cả thành phố nằm gọn trong khoảng 550 trang liền nhau. 15.000 lượt đọc của một camera thì rải khắp một tháng: 15.000 trang riêng lẻ. Ở đây cột khớp nhiều dòng hơn lại thắng, vì các dòng của nó nằm cạnh nhau.",
+  "Twice past the city hall":
+    "Hai lần qua tòa thị chính",
+  "Seven cars passed the city hall camera between 23:25 and 23:45. One passed twice, at 23:34 and again at 23:38, the same four minutes the prepaid spent on the city hall tower: NGY 300 SE 51-12. Ren Takagi's car, NGY 500 RE 33-90, the one that stopped at the Fushimi crash, passed once, at 23:33.":
+    "Bảy xe đi qua camera tòa thị chính từ 23:25 tới 23:45. Một xe đi qua hai lần, lúc 23:34 và lại lúc 23:38, đúng bốn phút số trả trước ở trạm cạnh tòa thị chính: NGY 300 SE 51-12. Xe của Ren Takagi, NGY 500 RE 33-90, chiếc đã dừng ở vụ tông xe Fushimi, đi qua một lần, lúc 23:33.",
+  "City hall camera, 23:25 to 23:45":
+    "Camera tòa thị chính, 23:25 tới 23:45",
+  "Back to Funami":
+    "Về lại Funami",
+  "The prepaid was back in Funami at 00:05. Which cars came in on the road into Funami just before? Find the last three reads of that camera before 00:05.":
+    "Lúc 00:05 số trả trước đã về Funami. Những xe nào vừa đi vào Funami ngay trước đó? Tìm ba lượt đọc cuối cùng của camera trên đường vào Funami trước 00:05.",
+  "The newest reads before 00:05, three rows.":
+    "Các lượt đọc mới nhất trước 00:05, ba dòng.",
+  "(camera, passed_at): the database starts just before 00:05 and reads back three entries.":
+    "(camera, passed_at): database bắt đầu ngay trước 00:05 và đọc lùi ba mục.",
+  "A range and ORDER BY on the same column still make a pipelined top-N. With (camera, passed_at) the database jumps to the Funami camera at 00:05 and reads three entries backwards: the range ends where the reading starts.":
+    "Khoảng và ORDER BY trên cùng một cột vẫn cho top-N chạy theo luồng. Với (camera, passed_at), database nhảy tới camera Funami lúc 00:05 và đọc lùi ba mục: khoảng kết thúc đúng chỗ việc đọc bắt đầu.",
+  "The last three cars into Funami before the prepaid got back: NGY 300 SE 51-12 at 00:03, a lorry at 23:58 and a taxi at 23:51. Only NGY 300 SE 51-12 had also been at the city hall.":
+    "Ba xe cuối cùng vào Funami trước khi số trả trước về: NGY 300 SE 51-12 lúc 00:03, một xe tải lúc 23:58 và một taxi lúc 23:51. Chỉ NGY 300 SE 51-12 là cũng đã có mặt ở tòa thị chính.",
+  "Funami road, last three before 00:05":
+    "Đường vào Funami, ba lượt cuối trước 00:05",
+  "The Shop Car":
+    "Xe của cửa hàng",
+  "Whose car is NGY 300 SE 51-12? The registry keeps every change to every car. Show the last three, newest first. The registry screen upper-cases whatever you type.":
+    "NGY 300 SE 51-12 là xe của ai? Sổ đăng ký giữ mọi thay đổi của mọi chiếc xe. Hiện ba thay đổi cuối, mới nhất trước. Màn hình tra cứu tự viết hoa mọi thứ bạn gõ.",
+  "UPPER(plate) is not plate. How are the plates stored?":
+    "UPPER(plate) không phải là plate. Biển số được lưu thế nào?",
+  "Plates are stored in capitals: compare plate = 'NGY 300 SE 51-12' (B), then index (plate, changed_at).":
+    "Biển số lưu bằng chữ hoa: so plate = 'NGY 300 SE 51-12' (B), rồi index (plate, changed_at).",
+  "UPPER(plate) hides the column from an index on plate, and here it does nothing useful: plates are stored in capitals. Compare the column as stored, and (plate, changed_at) reads the car's newest three changes backwards and stops.":
+    "UPPER(plate) giấu cột khỏi index trên plate, mà ở đây nó chẳng có ích gì: biển số vốn lưu bằng chữ hoa. So cột đúng như nó được lưu, và (plate, changed_at) đọc lùi ba thay đổi mới nhất của chiếc xe rồi dừng.",
+  "The shop car":
+    "Xe của cửa hàng",
+  "NGY 300 SE 51-12 belongs to Mizuno Auto, a used-car dealer in Funami run by Shota Mizuno. Since November its insured driver has been the shop's mechanic, Daiki Ota. Fujimoto's sister, Haruko Ueda, lives two streets from the shop.":
+    "NGY 300 SE 51-12 thuộc Mizuno Auto, một cửa hàng xe cũ ở Funami do Shota Mizuno làm chủ. Từ tháng 11, tài xế đứng tên bảo hiểm của xe là thợ máy của cửa hàng, Daiki Ota. Chị gái của Fujimoto, Haruko Ueda, sống cách cửa hàng hai con phố.",
+  "The other car":
+    "Chiếc xe kia",
+  "Shota Mizuno's own car has not moved from his house in Kanie since Thursday evening.":
+    "Xe riêng của Shota Mizuno không hề rời khỏi nhà ông ta ở Kanie từ tối thứ Năm.",
+  "NGY 300 SE 51-12, last three changes":
+    "NGY 300 SE 51-12, ba thay đổi cuối",
+  "Plates are stored in capitals. 'ngy 300 se 51-12' matches nothing.":
+    "Biển số lưu bằng chữ hoa. 'ngy 300 se 51-12' không khớp gì cả.",
+  "Two Phones":
+    "Hai chiếc điện thoại",
+  "Who was in that car? List every phone on the city hall tower, SANNOMARU-1, between 23:30 and 23:40. The tower ids are stored as fixed-width CHAR, so the phone company's script trims them. Two indexes.":
+    "Ai ngồi trong chiếc xe đó? Liệt kê mọi điện thoại ở trạm cạnh tòa thị chính, SANNOMARU-1, từ 23:30 tới 23:40. Mã trạm được lưu dạng CHAR độ dài cố định, nên script của nhà mạng cắt khoảng trắng của chúng. Hai index.",
+  "cell_id = 'SANNOMARU-1' (B), then index (cell_id, event_time).":
+    "cell_id = 'SANNOMARU-1' (B), rồi index (cell_id, event_time).",
+  "TRIM(cell_id) hides the column, and a CHAR column already equals 'SANNOMARU-1' without the padding, so drop it. Then, with two indexes allowed, (cell_id) and (event_time) side by side help no more than the better of the two. Some databases can combine two indexes, but they still read both ranges in full before matching them up. One index on (cell_id, event_time) goes straight to the tower's ten minutes.":
+    "TRIM(cell_id) giấu cột đi, mà cột CHAR vốn đã bằng 'SANNOMARU-1' khi bỏ khoảng trắng đệm, nên bỏ TRIM. Rồi, khi được hai index, (cell_id) và (event_time) đặt cạnh nhau cũng không hơn được cái tốt hơn trong hai cái. Vài hệ quản trị gộp được hai index, nhưng vẫn phải đọc trọn cả hai khoảng rồi mới khớp chúng với nhau. Một index (cell_id, event_time) đi thẳng tới mười phút của trạm đó.",
+  "Two phones":
+    "Hai chiếc điện thoại",
+  "The prepaid did not travel alone. 090-5126-3384, Shota Mizuno's own phone, came onto the city hall tower with it at 23:34 and left with it at 23:38. Neither Daiki Ota's phone nor Haruko Ueda's was there.":
+    "Số trả trước không đi một mình. 090-5126-3384, điện thoại riêng của Shota Mizuno, vào trạm tòa thị chính cùng nó lúc 23:34 và rời đi cùng nó lúc 23:38. Điện thoại của Daiki Ota và của Haruko Ueda đều không có ở đó.",
+  "Kasugai":
+    "Kasugai",
+  "Daiki Ota's phone was on the tower by his flat in Kasugai from 19:40 until 07:10 this morning.":
+    "Điện thoại của Daiki Ota ở trạm gần căn hộ của anh ta tại Kasugai từ 19:40 tới 07:10 sáng nay.",
+  "SANNOMARU-1, 23:30 to 23:40":
+    "SANNOMARU-1, 23:30 tới 23:40",
+  "'SANNOMARU-1%' also matches SANNOMARU-10 to SANNOMARU-19, ten other towers.":
+    "'SANNOMARU-1%' khớp cả SANNOMARU-10 tới SANNOMARU-19, mười trạm khác.",
+  "Standing Still":
+    "Đứng yên",
+  "Nishida won't have the shop searched yet: if Fujimoto isn't there, Kitamura Credit will hear about it within the hour. The traffic desk watches the car instead. Q1 asks every minute where it was last seen; every camera read in the city moves that car's row forward (Q2, two million times a day). Two indexes. Score = pages read per day + index upkeep per day.":
+    "Nishida chưa muốn khám cửa hàng: nếu Fujimoto không ở đó, chưa tới một tiếng Kitamura Credit sẽ biết. Bàn giao thông canh chiếc xe thay vào đó. Q1 hỏi mỗi phút xe được thấy lần cuối ở đâu; mỗi lượt đọc của camera trong thành phố đẩy dòng của chiếc xe đó lên (Q2, hai triệu lần mỗi ngày). Hai index. Điểm = số trang đọc mỗi ngày + bảo trì index mỗi ngày.",
+  "Q2 changes last_camera and last_seen two million times a day. Which of your indexes has to change with it?":
+    "Q2 đổi last_camera và last_seen hai triệu lần mỗi ngày. Index nào của bạn phải đổi theo?",
+  "One index on (plate). It serves both queries; keep the updated columns out of it.":
+    "Một index trên (plate). Nó phục vụ cả hai query; để các cột bị cập nhật ra ngoài.",
+  "An UPDATE writes only to the indexes that hold the columns it changes, and there it moves the entry: delete the old one, insert the new. (plate, last_camera, last_seen) would answer the traffic desk from the index alone, one page cheaper each minute, but every camera read in the city rewrites it. (plate) finds the row for both queries and never has to change.":
+    "Một lệnh UPDATE chỉ ghi vào những index chứa cột mà nó đổi, và ở đó nó dời mục đi: xóa mục cũ, chèn mục mới. (plate, last_camera, last_seen) trả lời bàn giao thông chỉ từ index, mỗi phút rẻ hơn một trang, nhưng mỗi lượt đọc camera trong thành phố lại phải viết lại nó. (plate) tìm được dòng cho cả hai query và không bao giờ phải đổi.",
+  "Standing still":
+    "Đứng yên",
+  "Mizuno Auto's car was last read on the road into Funami at 00:03. No camera has seen it since: it is still in Funami.":
+    "Xe của Mizuno Auto được đọc lần cuối trên đường vào Funami lúc 00:03. Từ đó không camera nào thấy nó: nó vẫn ở Funami.",
+  "Where is the shop car?":
+    "Xe của cửa hàng đang ở đâu?",
+  "Every camera read in the city":
+    "Mọi lượt đọc camera trong thành phố",
+  "One car's row moved forward.":
+    "Dòng của một chiếc xe được đẩy lên.",
+  "The Misread":
+    "Đọc nhầm",
+  "Takagi's car is still on the watch list from the crash case, so every camera that reads it raises an alert. anpr_alerts is the traffic desk's live table: 30,000 new alerts a day, a search by plate 4,000 times a day, a search by camera 1,000 times a day. Q3 runs once: at 23:36 the city hall camera read NGY 330 MO 90-17 as NGY 330 MO 90-71, a stolen car, and a patrol stopped the wrong driver. Delete that alert. Three indexes at most.":
+    "Xe của Takagi vẫn nằm trong danh sách theo dõi từ vụ tông xe, nên camera nào đọc được nó cũng bật cảnh báo. anpr_alerts là bảng sống của bàn giao thông: 30.000 cảnh báo mới mỗi ngày, tìm theo biển số 4.000 lần mỗi ngày, tìm theo camera 1.000 lần mỗi ngày. Q3 chạy một lần: lúc 23:36 camera tòa thị chính đọc NGY 330 MO 90-17 thành NGY 330 MO 90-71, một xe bị trộm, và một xe tuần tra đã chặn nhầm người. Xóa cảnh báo đó. Tối đa ba index.",
+  "Every index is written for every new alert. Does a DELETE that runs once deserve an index of its own?":
+    "Mỗi index đều phải ghi cho mỗi cảnh báo mới. Một lệnh DELETE chạy một lần có đáng một index riêng không?",
+  "Two indexes, (plate, read_at) and (camera, read_at), and write the DELETE so one of them can find the row.":
+    "Hai index, (plate, read_at) và (camera, read_at), và viết lệnh DELETE sao cho một trong hai tìm được dòng.",
+  "Each index costs writes for every new row, every day. An index built for one DELETE costs 90,000 pages a day to save a single search. Write the DELETE with columns an existing index already holds, the plate and the exact time, and it finds its row in a few pages. Every index still pays when the row goes: each one loses its entry.":
+    "Mỗi index tốn công ghi cho mỗi dòng mới, ngày nào cũng vậy. Một index dựng cho một lệnh DELETE tốn 90.000 trang mỗi ngày để tiết kiệm đúng một lần tìm. Viết lệnh DELETE bằng các cột mà một index sẵn có đã chứa, biển số và giờ chính xác, là nó tìm được dòng trong vài trang. Khi dòng bị xóa, index nào cũng vẫn phải trả giá: mỗi cái mất một mục.",
+  "Takagi's night":
+    "Đêm của Takagi",
+  "Ren Takagi's car tonight: the city hall at 23:33, then Sakae at 23:47 and again at 00:20. It never went towards Funami. And he was driving, whatever he says.":
+    "Xe của Ren Takagi đêm nay: tòa thị chính lúc 23:33, rồi Sakae lúc 23:47 và lại lúc 00:20. Nó không hề đi về phía Funami. Và anh ta có chạy xe, dù anh ta nói gì.",
+  "Traffic desk: one plate since 23:00":
+    "Bàn giao thông: một biển số từ 23:00",
+  "Traffic desk: one camera, 23:00 to 00:30":
+    "Bàn giao thông: một camera, 23:00 tới 00:30",
+  "Delete the false alert":
+    "Xóa cảnh báo sai",
+  "This deletes every alert on the stolen car's plate on 3 December, the real sightings too.":
+    "Câu này xóa mọi cảnh báo trên biển số xe bị trộm trong ngày 3 tháng 12, cả những lần thấy thật.",
+  "The false alert is gone.":
+    "Cảnh báo sai đã bị xóa.",
+  "Kitamura Credit wrote off two debts this week with no payment. Yuji Kaneda's ¥2,100,000 at 23:31 on Wednesday, twenty minutes after the prepaid phone first called him. Shota Mizuno's ¥3,600,000 at 00:40 on Friday, thirty-five minutes after the second prepaid got back to Funami.":
+    "Tuần này Kitamura Credit xóa hai khoản nợ mà không có khoản trả nào. 2.100.000 yên của Yuji Kaneda lúc 23:31 thứ Tư, hai mươi phút sau khi số trả trước gọi hắn lần đầu. 3.600.000 yên của Shota Mizuno lúc 00:40 thứ Sáu, ba mươi lăm phút sau khi số trả trước thứ hai về lại Funami.",
+  "Your indexes go on the phone company's live table. It keeps 30 days, takes 2 million new rows a day, and every night deletes the oldest day (Q3). Q1 follows one phone, Q2 one tower. Three indexes at most.":
+    "Index của bạn được đặt trên bảng sống của nhà mạng. Bảng giữ 30 ngày, nhận 2 triệu dòng mới mỗi ngày, và mỗi đêm xóa ngày cũ nhất (Q3). Q1 theo một điện thoại, Q2 theo một trạm. Tối đa ba index.",
+  "(phone, event_time) and (cell_id, event_time). Let the purge scan the table once a night instead of keeping a third index all day.":
+    "(phone, event_time) và (cell_id, event_time). Để lệnh dọn dẹp quét bảng mỗi đêm một lần thay vì giữ index thứ ba cả ngày.",
+  "At 09:12 the second prepaid made one call, to the ferry company: a cabin on tonight's 19:00 sailing to Sendai for 'K. SATO', with this number as the contact. It came on again in Funami at 15:42, and since 16:05 it has been on the Kinjo-futo tower beside the ferry terminal.":
+    "Lúc 09:12 số trả trước thứ hai gọi đúng một cuộc, tới hãng phà: một cabin trên chuyến 19:00 tối nay đi Sendai cho 'K. SATO', để số này làm số liên lạc. Lúc 15:42 nó bật lại ở Funami, và từ 16:05 nó ở trạm Kinjo-futo cạnh bến phà.",
+  "The second prepaid, since 08:00":
+    "Số trả trước thứ hai, từ 08:00",
+  "Ten events on the Kinjo-futo tower between 16:00 and 17:00. One of them is the second prepaid, arriving at 16:05.":
+    "Mười sự kiện ở trạm Kinjo-futo từ 16:00 tới 17:00. Một trong số đó là số trả trước thứ hai, tới lúc 16:05.",
 };
 </script>
 <script>
@@ -3088,7 +3079,7 @@ function openEnding(){
   openDialog(t("CASE CLOSED · {title}", {title:t(c.title).toUpperCase()}),
     c.outro.map(p => `<p>${esc(t(p))}</p>`).join("") +
     `<p class="hint">${esc(t(c.outroQuote))}</p><p>${esc(t(c.outroHook))}</p>` +
-    (c.insiderBonuses.every(id => got.includes(id)) ? `<p class="cancel">${esc(t(c.outroInsider))}</p>` : "") +
+    (c.outroInsider && c.insiderBonuses.every(id => got.includes(id)) ? `<p class="cancel">${esc(t(c.outroInsider))}</p>` : "") +
     `<div class="grade"><b>${g}</b><span>${t("RATING · suspicion {n}%", {n:Math.round(pct * 100)})}<br>${esc(t(c.grades[g]))}</span></div>` +
     `<div class="row"><button class="go" data-close="1">${t("CLOSE")}</button><button data-act="restart">${t("PLAY THIS CASE AGAIN")}</button></div>`);
 }
@@ -3325,7 +3316,7 @@ function lastMissionAction(){
                : `<p class="empty">${t("Clear every mission at ★★ to open the accusation.")}</p>`;
 }
 
-const watcher = () => CASES[state.caseIx].watcher ?? "SYS_MAINT";   // whose account reads along in this case
+const watcher = () => CASES[state.caseIx].watcher ?? "SYS_MAINT";   // whose account reads along in this case (watchLine / cleanLine replace the whole sentence)
 function renderReport(){
   const lv = cur(), r = state.result;
   if (!r){ $("report").innerHTML = `<p class="empty">${t("No run yet. Each page the database reads costs you one point. Fewer is better.")}</p>`; return; }
@@ -3340,8 +3331,8 @@ function renderReport(){
       `<dt>${t("Best possible")}</dt><dd>${r.stars===3 ? fmt(r.best) : "?"}</dd><dt>${t("Without an index")}</dt><dd>${fmt(r.none)}</dd>` +
       `</dl>` +
     (r.sus == null || CASES[state.caseIx].practice ? ""
-      : r.sus > 0 ? `<p class="watch">${t("Not the best plan: SUSPICION +{n}%. {who} logs every page read beyond the best index, and later missions are watched more closely.", {n:susPct(r.sus), who:watcher()})}</p>`
-      : `<p class="watch clean">${t("Best plan. {who} saw nothing unusual.", {who:watcher()})}</p>`) +
+      : r.sus > 0 ? `<p class="watch">${(CASES[state.caseIx].watchLine ? t(CASES[state.caseIx].watchLine, {n:susPct(r.sus)}) : t("Not the best plan: SUSPICION +{n}%. {who} logs every page read beyond the best index, and later missions are watched more closely.", {n:susPct(r.sus), who:watcher()}))}</p>`
+      : `<p class="watch clean">${(CASES[state.caseIx].cleanLine ? t(CASES[state.caseIx].cleanLine) : t("Best plan. {who} saw nothing unusual.", {who:watcher()}))}</p>`) +
     r.plans.map((p,i) => {
       const q = lv.queries[i], v = variantOf(lv, i);
       if (v.wrong) return `<div class="qres bad"><div><b>${q.label}</b> <span class="tag">${t("WRONG ROWS")}</span></div><p>${esc(t(v.wrong))}</p></div>`;
