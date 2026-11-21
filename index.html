@@ -1240,7 +1240,7 @@ const CASE4 = {
       ["Thu 23:51","S-2231","SASAKI Mei","HD-03"],
       ["Fri 07:35","S-0904","NISHIDA Aiko","HD-03"],
       ["Fri 07:52","S-0012","MORI Kazuo","HD-03"]]}],
-    clue:{id:"E4", title:"Door HD-03", text:"Since Thursday 08:00 the HD-03 door opened seven times. Rie Kondo during the day, last at 17:40. Then Mei Sasaki's badge at 23:51, one minute before K.ARAI was switched on. Nobody else until Nishida at 07:35 this morning."},
+    clue:{id:"E4", title:"Door HD-03", text:"Since Thursday 08:00 the HD-03 door opened seven times. Rie Kondo during the day, last at 17:40. Then Mei Sasaki's badge at 23:51, one minute before the K.ARAI account was switched back on at 23:52. Nobody else until Nishida at 07:35 this morning."},
   },{
     name:"Never Locked",
     table:"console_sessions", rows:1000000, perPage:50, maxCols:2,
@@ -2319,8 +2319,8 @@ const VI = {
     "Index event_at. Bảng được lưu theo thứ tự event_at, nên sự kiện của một ngày nằm trên vài trăm trang liền nhau.",
   "Rows found through an index still have to be read from the table, one page each, unless they sit together. door_events is written in time order, so a day of events fills about 550 neighbouring pages. HD-03's 5,000 events are spread over two years: 5,000 separate pages. Here the column that matches more rows wins, because its rows are stored together.":
     "Dòng tìm qua index vẫn phải đọc từ bảng, mỗi dòng một trang, trừ khi chúng nằm cạnh nhau. door_events được ghi theo thời gian, nên sự kiện của một ngày nằm gọn trong khoảng 550 trang liền nhau. 5.000 sự kiện của HD-03 rải trên hai năm: 5.000 trang khác nhau. Ở đây cột khớp nhiều dòng hơn lại thắng, vì các dòng của nó nằm cạnh nhau.",
-  "Since Thursday 08:00 the HD-03 door opened seven times. Rie Kondo during the day, last at 17:40. Then Mei Sasaki's badge at 23:51, one minute before K.ARAI was switched on. Nobody else until Nishida at 07:35 this morning.":
-    "Từ 08:00 thứ Năm cửa HD-03 mở bảy lần. Rie Kondo trong ngày, lần cuối lúc 17:40. Rồi thẻ của Mei Sasaki lúc 23:51, một phút trước khi K.ARAI được bật. Không ai khác cho tới Nishida lúc 07:35 sáng nay.",
+  "Since Thursday 08:00 the HD-03 door opened seven times. Rie Kondo during the day, last at 17:40. Then Mei Sasaki's badge at 23:51, one minute before the K.ARAI account was switched back on at 23:52. Nobody else until Nishida at 07:35 this morning.":
+    "Từ 08:00 thứ Năm cửa HD-03 mở bảy lần. Rie Kondo trong ngày, lần cuối lúc 17:40. Rồi thẻ của Mei Sasaki lúc 23:51, một phút trước khi tài khoản K.ARAI được bật lại lúc 23:52. Không ai khác cho tới Nishida lúc 07:35 sáng nay.",
   "HD-03 since Thursday 08:00":
     "HD-03 từ 08:00 thứ Năm",
   "Never Locked":
