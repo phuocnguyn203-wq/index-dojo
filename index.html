@@ -2568,6 +2568,10 @@ const VI = {
   /* ---------- sound effects ---------- */
   "SOUND EFFECTS":
     "HIỆU ỨNG ÂM THANH",
+  /* ---------- easy mode ---------- */
+  "DIFFICULTY": "ĐỘ KHÓ",
+  "NORMAL": "THƯỜNG",
+  "EASY": "DỄ",
 };
 </script>
 <script>
@@ -2814,9 +2818,10 @@ function score(lv, ixs, picks){
   return {plans, reads, writes, later, total: reads + (later?.reads ?? 0) + writes, wrong};
 }
 // A rewrite that returns different rows earns nothing, however fast it is.
-function judge(lv, ixs, picks){
+// Easy mode: the right rows are enough to pass (2★), whatever they cost; 3★ still needs the best plan.
+function judge(lv, ixs, picks, easy = false){
   const sc = score(lv, ixs, picks), s = starsFor(lv, sc.total);
-  return {...sc, ...s, stars: sc.wrong.length ? 0 : s.stars};
+  return {...sc, ...s, stars: sc.wrong.length ? 0 : easy ? Math.max(2, s.stars) : s.stars};
 }
 
 function allIndexes(lv){
@@ -3146,6 +3151,8 @@ function openStartMenu(midGame = false){
         `<option value="${th}" ${theme === th ? "selected" : ""}>${THEME_NAMES[th]}</option>`).join("") + `</select>`) +
       opt(t("MUSIC"), `<div class="row"><button data-menumusic aria-pressed="${musicOn}">${musicOn ? t("ON") : t("OFF")}</button>` +
         `<input type="range" data-menuvol min="0" max="100" step="5" value="${volume}" aria-label="${t("Volume")}"></div>`) +
+      opt(t("DIFFICULTY"), `<div class="row">` + [[false, t("NORMAL")], [true, t("EASY")]].map(([e, label]) =>
+        `<button data-menueasy="${e}" aria-pressed="${easyOn === e}">${label}</button>`).join("") + `</div>`) +
       opt(t("SOUND EFFECTS"), `<div class="row"><button data-menusfx aria-pressed="${sfxOn}">${sfxOn ? t("ON") : t("OFF")}</button></div>`) +
     `</div>` +
     (midGame ? `<div class="row"><button class="go" data-close="1">${t("CONTINUE ▶")}</button><button data-act="restart">${t("PLAY THIS CASE AGAIN")}</button></div>`
@@ -3509,6 +3516,11 @@ document.addEventListener("keydown", startMusic);
 const SFX_KEY = "index-dojo-sfx";
 let sfxOn = true, actx = null;
 function readSfx(){ try { return localStorage.getItem(SFX_KEY) !== "off"; } catch { return true; } }
+// Easy mode (settings menu): any plan that returns the right rows passes; reads don't raise suspicion.
+const EASY_KEY = "index-dojo-easy";
+let easyOn = false;
+function readEasy(){ try { return localStorage.getItem(EASY_KEY) === "on"; } catch { return false; } }
+function setEasy(on){ easyOn = on; try { localStorage.setItem(EASY_KEY, on ? "on" : "off"); } catch {} }
 function setSfx(on){ sfxOn = on; try { localStorage.setItem(SFX_KEY, on ? "on" : "off"); } catch {} }
 function audio(){
   if (!sfxOn || typeof AudioContext === "undefined") return null;
@@ -3577,7 +3589,7 @@ function goCase(ci){
 
 async function execute(){
   const lv = cur();
-  const sc = judge(lv, state.ixs, state.pick), {none, stars} = sc;
+  const sc = judge(lv, state.ixs, state.pick, easyOn), {none, stars} = sc;
   state.result = {...sc, done:false};
   const run = animTok + 1;
   $("run").disabled = true;
@@ -3594,7 +3606,7 @@ async function execute(){
   row[state.lv] = Math.max(row[state.lv] ?? 0, stars);
   if (!CASES[state.caseIx].practice) earn(state.save, state.caseIx, state.lv, stars);
   const before = suspicion(state.save, state.caseIx);
-  logRun(state.save, state.caseIx, state.lv, sc.wrong.length ? none : sc.total, stars);   // wrong rows = the work was wasted
+  logRun(state.save, state.caseIx, state.lv, easyOn ? sc.best : sc.wrong.length ? none : sc.total, stars);   // wrong rows = the work was wasted; easy mode never raises suspicion
   state.result.sus = suspicion(state.save, state.caseIx) - before;
   storeSave();
   state.result.done = true;
@@ -3655,6 +3667,7 @@ document.addEventListener("click", e => {
   else if (d.tour) d.tour === "next" ? tourNext() : endTour();
   else if (d.menulang){ setLang(d.menulang); legend(lv); if (!state.result) resetPlan(); render(); openStartMenu(state.menuMidGame); }
   else if (d.menumusic != null){ setMusic(!musicOn); openStartMenu(state.menuMidGame); }
+  else if (d.menueasy != null){ setEasy(d.menueasy === "true"); openStartMenu(state.menuMidGame); }
   else if (d.menusfx != null){ setSfx(!sfxOn); sfx.tick(); openStartMenu(state.menuMidGame); }
   else if (b.id === "start-go") startGame();
   else if (b.id === "start-tour") startGame(true);
@@ -3680,6 +3693,7 @@ function boot(d){
   setVolume(readVolume());
   setMusic(readMusic());
   sfxOn = readSfx();
+  easyOn = readEasy();
   setLang(readLang());
   state.save = d.save ?? loadSave(readSave());
   state.caseIx = Math.min(Math.max(0, d.caseIx ?? 0), CASES.length - 1);
