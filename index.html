@@ -213,6 +213,17 @@ svg{display:block; width:100%; height:auto; max-width:100%}
 .sus-cards label:has(input:focus-visible){outline:2px solid var(--yellow); outline-offset:2px}
 .slot-sel{display:grid; gap:4px}
 .slot-sel b{font-family:var(--f-ui); font-weight:400; color:var(--yellow); letter-spacing:.08em}
+.ev-btn{font:14px/1.3 var(--f-code); letter-spacing:0; text-align:left; background:var(--win); padding:6px 28px 6px 8px; position:relative; width:100%}
+.ev-btn::after{content:"▾"; position:absolute; right:8px; top:50%; transform:translateY(-50%)}
+.ev-chosen{color:var(--dim); font-size:13px; line-height:1.45}
+.ev-pop{border:2px solid var(--line); background:var(--win)}
+.ev-list{display:grid; max-height:230px; overflow-y:auto}
+.ev-list button{font:14px/1.3 var(--f-code); letter-spacing:0; text-align:left; border:0; border-bottom:1px solid var(--cell); padding:6px 10px}
+.ev-list button:focus-visible{outline:none; background:var(--line); color:var(--win)}
+.ev-list button[aria-selected="true"]{color:var(--yellow)}
+.ev-list button[aria-selected="true"]:hover,.ev-list button[aria-selected="true"]:focus-visible{color:var(--win)}
+.ev-info{margin:0; padding:8px 10px; border-top:2px solid var(--line); min-height:4.4em; font-size:13px; line-height:1.45}
+.ev-info b{color:var(--yellow); font-weight:400}
 select{font:14px var(--f-code); background:var(--win); color:var(--ink); border:2px solid var(--line); padding:6px; width:100%}
 select:focus-visible{outline:2px solid var(--yellow); outline-offset:2px}
 .grade{display:flex; align-items:center; gap:14px; border:2px solid var(--yellow); padding:8px 12px}
@@ -1184,6 +1195,7 @@ const VI = {
   "LIE": "LỜI NÓI DỐI",
   "evidence that breaks their statement": "bằng chứng nói dối",
   "Choose evidence": "Chọn bằng chứng",
+  "Point at a piece of evidence to read it here.": "Trỏ vào một bằng chứng để đọc nội dung ở đây.",
   "ACCUSE ▶": "BUỘC TỘI ▶",
   "NOT YET": "CHƯA",
   "The prosecutor isn't convinced. The evidence doesn't hold up.": "Công tố viên không bị thuyết phục. Bằng chứng không đứng vững.",
@@ -2400,20 +2412,55 @@ function openAccusation(msg = "", good = false){
     `<fieldset class="sus-cards"><legend class="eyebrow">${t("SUSPECT")}</legend>` +
       st.suspects.map(s => `<label><input type="radio" name="suspect" value="${s.id}" ${a.suspect === s.id ? "checked" : ""}><b>${esc(s.name)}</b><small>${esc(t(s.role))}</small></label>`).join("") +
     `</fieldset>` +
-    st.keys.map(k => `<label class="slot-sel"><span><b>${slotText(k)[0]}</b> · ${slotText(k)[1]}</span><select data-slotsel="${k}">` +
-      `<option value="">${t("Choose evidence")}</option>` +
-      ev.map(e => `<option value="${e.id}" ${a[k] === e.id ? "selected" : ""}>${e.bonus ? "★" : e.id} · ${esc(t(e.title))}</option>`).join("") +
-      `</select></label>`).join("") +
+    st.keys.map(k => {
+      const chosen = ev.find(e => e.id === a[k]), taken = st.keys.filter(x => x !== k).map(x => a[x]);
+      return `<div class="slot-sel"><span id="lab-${k}"><b>${slotText(k)[0]}</b> · ${slotText(k)[1]}</span>` +
+        `<button type="button" class="ev-btn" data-evopen="${k}" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="lab-${k}">${chosen ? evLabel(chosen) : t("Choose evidence")}</button>` +
+        (chosen ? `<small class="ev-chosen">${esc(t(chosen.text))}</small>` : "") +
+        `<div class="ev-pop" data-evlist="${k}" hidden><div class="ev-list" role="listbox" aria-labelledby="lab-${k}">` +
+          ev.map(e => `<button type="button" role="option" data-evpick="${k}" data-ev="${e.id}" aria-selected="${a[k] === e.id}" ${taken.includes(e.id) ? "disabled" : ""}>${evLabel(e)}</button>`).join("") +
+        `</div><p class="ev-info" aria-live="polite">${t("Point at a piece of evidence to read it here.")}</p></div></div>`;
+    }).join("") +
     `<div class="row"><button class="go" id="accuse-go">${t("ACCUSE ▶")}</button><button data-close="1">${t("NOT YET")}</button></div>`);
   syncAccusation();
 }
-// Keep the form honest: no evidence in two slots, no ACCUSE until it's complete.
+const evLabel = e => `${e.bonus ? "★" : e.id} · ${esc(t(e.title))}`;
+// Evidence picker: open one slot's list, show the text of whatever is pointed at or focused, pick, close.
+function evList(k, open){
+  document.querySelectorAll("[data-evlist]").forEach(l => {
+    const on = open && l.dataset.evlist === k;
+    l.hidden = !on;
+    document.querySelector(`[data-evopen="${l.dataset.evlist}"]`)?.setAttribute("aria-expanded", on);
+  });
+  if (open) (document.querySelector(`[data-evpick="${k}"][aria-selected="true"]`) ??
+             document.querySelector(`[data-evpick="${k}"]:not(:disabled)`))?.focus();
+}
+function evShow(opt){
+  const e = evidenceOf(CASES[state.caseIx]).find(x => x.id === opt.dataset.ev);
+  const box = opt.closest(".ev-pop")?.querySelector(".ev-info");
+  if (e && box) box.innerHTML = `<b>${evLabel(e)}</b><br>${esc(t(e.text))}`;
+}
+document.addEventListener("mouseover", e => { const o = e.target.closest("[data-evpick]"); if (o) evShow(o); });
+document.addEventListener("focusin", e => { const o = e.target.closest("[data-evpick]"); if (o) evShow(o); });
+document.addEventListener("keydown", e => {
+  const o = e.target.closest?.("[data-evpick]"); if (!o) return;
+  const opts = [...o.parentElement.querySelectorAll("button:not(:disabled)")], i = opts.indexOf(o);
+  const go = n => { e.preventDefault(); opts[Math.max(0, Math.min(opts.length - 1, n))]?.focus(); };
+  if (e.key === "ArrowDown") go(i + 1);
+  else if (e.key === "ArrowUp") go(i - 1);
+  else if (e.key === "Home") go(0);
+  else if (e.key === "End") go(opts.length - 1);
+  else if (e.key === "Escape" || e.key === "Tab"){   // Escape closes the list, not the whole dialog
+    if (e.key === "Escape") e.preventDefault();
+    const k = o.dataset.evpick; evList(k, false); document.querySelector(`[data-evopen="${k}"]`)?.focus();
+  }
+});
+// A click outside an open list closes it.
+document.addEventListener("click", e => { if (!e.target.closest(".slot-sel")) evList(null, false); });
+
+// No ACCUSE until the form is complete.
 function syncAccusation(){
   const a = state.acc, st = accStep();
-  document.querySelectorAll("[data-slotsel]").forEach(sel => {
-    const others = st.keys.filter(k => k !== sel.dataset.slotsel).map(k => a[k]);
-    [...sel.options].forEach(o => { o.disabled = !!o.value && others.includes(o.value); });
-  });
   $("accuse-go").disabled = st.check(CASES[state.caseIx], a.suspect, a) === "incomplete";
 }
 function openEnding(){
@@ -2863,6 +2910,11 @@ document.addEventListener("click", e => {
   else if (d.case) goCase(+d.case);
   else if (b.id === "brief") openBriefing();
   else if (b.id === "accuse" || d.act === "accuse") state.save.solved[state.caseIx] ? openEnding() : openAccusation();
+  else if (d.evopen) evList(d.evopen, b.getAttribute("aria-expanded") !== "true");
+  else if (d.evpick){
+    state.acc[d.evpick] = d.ev; openAccusation();
+    document.querySelector(`[data-evopen="${d.evpick}"]`)?.focus();
+  }
   else if (b.id === "accuse-go"){
     const verdict = fileAccusation(state.save, state.caseIx, state.acc.suspect, state.acc);
     storeSave(); renderBar();
@@ -2888,7 +2940,6 @@ document.addEventListener("change", e => {
   const el = e.target;
   if (el.dataset.menutheme != null){ setTheme(el.value); return; }
   if (el.name === "suspect") state.acc.suspect = el.value;
-  else if (el.dataset.slotsel) state.acc[el.dataset.slotsel] = el.value;
   else return;
   syncAccusation();
 });
