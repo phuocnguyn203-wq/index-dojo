@@ -3003,6 +3003,7 @@ function animate(lv, p, q, instant){
     const setMeter = f => {
       $("pages").textContent = String(Math.round(p.cost * f)).padStart(6, "0");
       $("prog").style.width = (f * 100) + "%";
+      loaderBlip(f);
     };
     if (!D){ setMeter(1); done(); return; }
     $("lamp").classList.add("on");
@@ -3480,12 +3481,12 @@ document.addEventListener("input", e => {
 document.addEventListener("pointerdown", e => { if (!e.target.closest("[data-menumusic]")) startMusic(); });
 document.addEventListener("keydown", startMusic);
 
-// Sound effects, synthesised (square waves and filtered noise, like a 90s PC speaker and hard disk): no files.
+// Sound effects, synthesised (square waves, like a 90s PC speaker): no files.
 // On/off in the settings menu, loudness follows the volume slider. The AudioContext starts on the first click.
 const SFX_KEY = "index-dojo-sfx";
-let sfxOn = true, actx = null, diskTimer = null;
+let sfxOn = true, actx = null;
 function readSfx(){ try { return localStorage.getItem(SFX_KEY) !== "off"; } catch { return true; } }
-function setSfx(on){ sfxOn = on; try { localStorage.setItem(SFX_KEY, on ? "on" : "off"); } catch {} if (!on) disk(false); }
+function setSfx(on){ sfxOn = on; try { localStorage.setItem(SFX_KEY, on ? "on" : "off"); } catch {} }
 function audio(){
   if (!sfxOn || typeof AudioContext === "undefined") return null;
   actx ??= new AudioContext();
@@ -3500,26 +3501,20 @@ function tone(freq, start, len, type = "square", gain = 1){
   g.gain.setValueAtTime(sfxGain() * gain, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
   o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + len + 0.02);
 }
-function noise(len, cutoff, gain){
-  const a = audio(); if (!a) return;
-  const n = Math.ceil(a.sampleRate * len), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
-  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
-  const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
-  s.buffer = buf; f.type = "bandpass"; f.frequency.value = cutoff; g.gain.value = sfxGain() * gain;
-  s.connect(f).connect(g).connect(a.destination); s.start();
-}
 const sfx = {
   tick: () => tone(1800, 0, 0.025, "square", 0.25),
   stars(n){ [523, 659, 784, 1047].slice(0, n + 1).forEach((f, i) => tone(f, i * 0.09, 0.16, "square", 0.6)); },
   buzz(){ tone(220, 0, 0.18, "sawtooth", 0.5); tone(147, 0.16, 0.3, "sawtooth", 0.5); },
   solved(){ [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, i === 5 ? 0.5 : 0.14, "square", 0.6)); },
 };
-// The hard disk while a query runs: seek clicks at random intervals, faster on a full scan.
-function disk(on, full){
-  clearTimeout(diskTimer); diskTimer = null;
-  if (!on || !audio()) return;
-  const step = () => { noise(0.012, 2500 + Math.random() * 2000, 0.9); diskTimer = setTimeout(step, (full ? 25 : 45) + Math.random() * (full ? 35 : 90)); };
-  step();
+// The loader: an 8-bit blip each time the PAGES READ bar moves on, climbing a pentatonic scale as it fills.
+const LOADER_NOTES = [262, 294, 330, 392, 440, 523, 587, 659, 784, 880, 1047, 1175, 1319];
+let lastBlip = 0;
+function loaderBlip(f){
+  const now = performance.now();
+  if (f >= 1 || now - lastBlip < 70) return;   // about 14 blips a second; the result chime marks the end
+  lastBlip = now;
+  tone(LOADER_NOTES[Math.min(LOADER_NOTES.length - 1, Math.floor(f * LOADER_NOTES.length))], 0, 0.05, "square", 0.35);
 }
 document.addEventListener("click", e => { if (e.target.closest("button") && !e.target.closest("#run")) sfx.tick(); });
 
@@ -3565,12 +3560,11 @@ async function execute(){
   $("report").innerHTML = `<p class="empty">${t("Running…")}</p>`;
   renderResults();
   oneColumn() && !tour && glide($("planwin"));   // on a phone the plan sits below the wizard: bring the run into view
-  disk(true, sc.plans.some(p => p.kind === "full"));
   for (let i = 0; i < sc.plans.length; i++){
     await showQuery(i, false);
     if (animTok !== run + i) break;   // user switched tabs mid-run
   }
-  $("run").disabled = false; disk(false);
+  $("run").disabled = false;
   stars ? sfx.stars(stars) : sfx.buzz();
   const row = state.save.stars[state.caseIx] ??= [];
   row[state.lv] = Math.max(row[state.lv] ?? 0, stars);
