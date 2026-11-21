@@ -2562,6 +2562,9 @@ const VI = {
     "Máy trả trước trên xe, từ 08:00",
   "Ten events on the Kinjo-futo tower between 16:00 and 17:00. One of them is the prepaid from the car, arriving at 16:05.":
     "Mười sự kiện ở trạm Kinjo-futo từ 16:00 tới 17:00. Một trong số đó là máy trả trước trên xe, tới lúc 16:05.",
+  /* ---------- sound effects ---------- */
+  "SOUND EFFECTS":
+    "HIỆU ỨNG ÂM THANH",
 };
 </script>
 <script>
@@ -3122,6 +3125,7 @@ function openStartMenu(midGame = false){
         `<option value="${th}" ${theme === th ? "selected" : ""}>${THEME_NAMES[th]}</option>`).join("") + `</select>`) +
       opt(t("MUSIC"), `<div class="row"><button data-menumusic aria-pressed="${musicOn}">${musicOn ? t("ON") : t("OFF")}</button>` +
         `<input type="range" data-menuvol min="0" max="100" step="5" value="${volume}" aria-label="${t("Volume")}"></div>`) +
+      opt(t("SOUND EFFECTS"), `<div class="row"><button data-menusfx aria-pressed="${sfxOn}">${sfxOn ? t("ON") : t("OFF")}</button></div>`) +
     `</div>` +
     (midGame ? `<div class="row"><button class="go" data-close="1">${t("CONTINUE ▶")}</button><button data-act="restart">${t("PLAY THIS CASE AGAIN")}</button></div>`
              : `<div class="row"><button class="go" id="start-go">${t("START ▶")}</button><button id="start-tour">${t("HOW TO PLAY")}</button></div>`));
@@ -3476,6 +3480,49 @@ document.addEventListener("input", e => {
 document.addEventListener("pointerdown", e => { if (!e.target.closest("[data-menumusic]")) startMusic(); });
 document.addEventListener("keydown", startMusic);
 
+// Sound effects, synthesised (square waves and filtered noise, like a 90s PC speaker and hard disk): no files.
+// On/off in the settings menu, loudness follows the volume slider. The AudioContext starts on the first click.
+const SFX_KEY = "index-dojo-sfx";
+let sfxOn = true, actx = null, diskTimer = null;
+function readSfx(){ try { return localStorage.getItem(SFX_KEY) !== "off"; } catch { return true; } }
+function setSfx(on){ sfxOn = on; try { localStorage.setItem(SFX_KEY, on ? "on" : "off"); } catch {} if (!on) disk(false); }
+function audio(){
+  if (!sfxOn || typeof AudioContext === "undefined") return null;
+  actx ??= new AudioContext();
+  if (actx.state === "suspended") actx.resume();
+  return actx;
+}
+const sfxGain = () => Math.min(1, volume / 100 * 1.6) * 0.3;
+function tone(freq, start, len, type = "square", gain = 1){
+  const a = audio(); if (!a) return;
+  const t0 = a.currentTime + start, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(sfxGain() * gain, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+  o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + len + 0.02);
+}
+function noise(len, cutoff, gain){
+  const a = audio(); if (!a) return;
+  const n = Math.ceil(a.sampleRate * len), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+  const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  s.buffer = buf; f.type = "bandpass"; f.frequency.value = cutoff; g.gain.value = sfxGain() * gain;
+  s.connect(f).connect(g).connect(a.destination); s.start();
+}
+const sfx = {
+  tick: () => tone(1800, 0, 0.025, "square", 0.25),
+  stars(n){ [523, 659, 784, 1047].slice(0, n + 1).forEach((f, i) => tone(f, i * 0.09, 0.16, "square", 0.6)); },
+  buzz(){ tone(220, 0, 0.18, "sawtooth", 0.5); tone(147, 0.16, 0.3, "sawtooth", 0.5); },
+  solved(){ [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, i === 5 ? 0.5 : 0.14, "square", 0.6)); },
+};
+// The hard disk while a query runs: seek clicks at random intervals, faster on a full scan.
+function disk(on, full){
+  clearTimeout(diskTimer); diskTimer = null;
+  if (!on || !audio()) return;
+  const step = () => { noise(0.012, 2500 + Math.random() * 2000, 0.9); diskTimer = setTimeout(step, (full ? 25 : 45) + Math.random() * (full ? 35 : 90)); };
+  step();
+}
+document.addEventListener("click", e => { if (e.target.closest("button") && !e.target.closest("#run")) sfx.tick(); });
+
 const LANG_KEY = "index-dojo-lang";
 function readLang(){
   try { const l = localStorage.getItem(LANG_KEY); if (l) return l; } catch {}
@@ -3518,11 +3565,13 @@ async function execute(){
   $("report").innerHTML = `<p class="empty">${t("Running…")}</p>`;
   renderResults();
   oneColumn() && !tour && glide($("planwin"));   // on a phone the plan sits below the wizard: bring the run into view
+  disk(true, sc.plans.some(p => p.kind === "full"));
   for (let i = 0; i < sc.plans.length; i++){
     await showQuery(i, false);
     if (animTok !== run + i) break;   // user switched tabs mid-run
   }
-  $("run").disabled = false;
+  $("run").disabled = false; disk(false);
+  stars ? sfx.stars(stars) : sfx.buzz();
   const row = state.save.stars[state.caseIx] ??= [];
   row[state.lv] = Math.max(row[state.lv] ?? 0, stars);
   if (!CASES[state.caseIx].practice) earn(state.save, state.caseIx, state.lv, stars);
@@ -3581,13 +3630,14 @@ document.addEventListener("click", e => {
   else if (b.id === "accuse-go"){
     const verdict = fileAccusation(state.save, state.caseIx, state.acc.suspect, state.acc);
     storeSave(); renderBar();
-    if (verdict === "next"){ state.acc = {suspect:null}; openAccusation(t(CASES[state.caseIx].accusation.second.charged), true); }
-    else verdict === "right" ? openEnding() : openAccusation(t("The prosecutor isn't convinced. The evidence doesn't hold up."));
+    if (verdict === "next"){ sfx.stars(3); state.acc = {suspect:null}; openAccusation(t(CASES[state.caseIx].accusation.second.charged), true); }
+    else verdict === "right" ? (sfx.solved(), openEnding()) : (sfx.buzz(), openAccusation(t("The prosecutor isn't convinced. The evidence doesn't hold up.")));
   }
   else if (b.id === "guide") startTour();
   else if (d.tour) d.tour === "next" ? tourNext() : endTour();
   else if (d.menulang){ setLang(d.menulang); legend(lv); if (!state.result) resetPlan(); render(); openStartMenu(state.menuMidGame); }
   else if (d.menumusic != null){ setMusic(!musicOn); openStartMenu(state.menuMidGame); }
+  else if (d.menusfx != null){ setSfx(!sfxOn); sfx.tick(); openStartMenu(state.menuMidGame); }
   else if (b.id === "start-go") startGame();
   else if (b.id === "start-tour") startGame(true);
   else if (b.id === "settings") openStartMenu(true);
@@ -3611,6 +3661,7 @@ function boot(d){
   setTheme(readTheme());
   setVolume(readVolume());
   setMusic(readMusic());
+  sfxOn = readSfx();
   setLang(readLang());
   state.save = d.save ?? loadSave(readSave());
   state.caseIx = Math.min(Math.max(0, d.caseIx ?? 0), CASES.length - 1);
