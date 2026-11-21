@@ -3495,7 +3495,7 @@ function audio(){
 }
 const sfxGain = () => Math.min(1, volume / 100 * 1.6) * 0.3;
 function tone(freq, start, len, type = "square", gain = 1){
-  const a = audio(); if (!a) return;
+  const a = audio(); if (!a || !Number.isFinite(freq)) return;
   const t0 = a.currentTime + start, o = a.createOscillator(), g = a.createGain();
   o.type = type; o.frequency.value = freq;
   g.gain.setValueAtTime(sfxGain() * gain, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
@@ -3514,7 +3514,8 @@ function loaderBlip(f){
   const now = performance.now();
   if (f >= 1 || now - lastBlip < 70) return;   // about 14 blips a second; the result chime marks the end
   lastBlip = now;
-  tone(LOADER_NOTES[Math.min(LOADER_NOTES.length - 1, Math.floor(f * LOADER_NOTES.length))], 0, 0.05, "square", 0.35);
+  const i = Math.floor(Math.max(0, f) * LOADER_NOTES.length);   // the first frame can come in a hair before t0: f < 0
+  tone(LOADER_NOTES[Math.min(LOADER_NOTES.length - 1, i)], 0, 0.05, "square", 0.35);
 }
 document.addEventListener("click", e => { if (e.target.closest("button") && !e.target.closest("#run")) sfx.tick(); });
 
