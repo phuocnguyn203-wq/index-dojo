@@ -328,6 +328,8 @@ const SMART = "can be switched off by a NULL parameter, so the database can't us
 // An index holds no entry for a row where every indexed column is NULL, so IS NULL needs a NOT NULL column (lv.notNull) in the index.
 const NULLS = "can't be searched in an index whose columns can all be NULL, because rows where every indexed column is NULL are not stored in it.";
 function isnull(col, sel){ return {col, sql:`${col} IS NULL`, kind:"null", sel, why:NULLS}; }
+// A comparison on an expression of a column (FUNC(col), col + 0): only an index on that exact expression could search it.
+function expr(col, sql, sel){ return {col, sql, kind:"range", sel}; }
 function smart(col, bind, given){ return {col, sql:`(${bind} IS NULL OR ${col} = ${bind})`, kind:"filter", sel: given ? undefined : 1, why:SMART}; }
 
 const PRACTICE = [{
@@ -816,12 +818,18 @@ const CASE2 = {
     name:"The Key Cabinet",
     table:"cabinet_log", rows:400000, perPage:50, maxCols:3,
     cols:{cabinet:300, opened_at:400000, "TRUNC(opened_at)":1500, badge_no:3000, item:50, duration_s:600},
-    story:"Endo's spare badge lives in the key cabinet of the warehouse 7 office, and the cabinet logs every opening. You only need who opened it and when.",
-    queries:[{label:"Q1", who:"W7 office cabinet, 17:00 to 06:00", select:["badge_no","opened_at"], where:[eq("cabinet","'W7-OFFICE'"),
-      range("opened_at","opened_at BETWEEN TIMESTAMP '2026-11-27 17:00:00' AND TIMESTAMP '2026-11-28 06:00:00'",0.00075)]}],
-    hint:"The query reads two columns from the table: badge_no and opened_at.",
-    hint2:"(cabinet, opened_at) finds the rows. Add badge_no and the table is never read.",
-    lesson:"Equality first, then the range, then the columns the query selects. The database answers from the index alone: an index-only range scan.",
+    story:"Endo's spare badge lives in the key cabinet of the warehouse 7 office, and the cabinet logs every opening. You only need who opened it and when. The cabinet's own report writes the time window as text.",
+    queries:[{label:"Q1", who:"W7 office cabinet, 17:00 to 06:00", variants:[
+      {select:["badge_no","opened_at"], where:[eq("cabinet","'W7-OFFICE'"),
+        expr("TO_CHAR(opened_at)","TO_CHAR(opened_at, 'YYYY-MM-DD HH24:MI') BETWEEN '2026-11-27 17:00' AND '2026-11-28 06:00'",0.00075)]},
+      {select:["badge_no","opened_at"], where:[eq("cabinet","'W7-OFFICE'"),
+        expr("TO_CHAR(opened_at)","TO_CHAR(opened_at, 'HH24:MI') BETWEEN '17:00' AND '06:00'",0.00075)],
+       wrong:"As text, '17:00' comes after '06:00', so this BETWEEN matches nothing at all."},
+      {select:["badge_no","opened_at"], where:[eq("cabinet","'W7-OFFICE'"),
+        range("opened_at","opened_at BETWEEN TIMESTAMP '2026-11-27 17:00:00' AND TIMESTAMP '2026-11-28 06:00:00'",0.00075)]}]}],
+    hint:"The time window is compared as text. Can any index see opened_at in that query?",
+    hint2:"Compare opened_at itself (B), then index (cabinet, opened_at, badge_no).",
+    lesson:"TO_CHAR turns every opened_at into text before comparing, so no index on opened_at can search it, and the index-only scan is lost too: the database must read each row to build the text. Compare opened_at as stored, and (cabinet, opened_at, badge_no) answers from the index alone.",
     results:[{columns:["badge_no","opened_at"], rows:[["0701","17:52"]]}],
     clue:{id:"E7", title:"The key cabinet", text:"The warehouse 7 office key cabinet was opened once that evening, at 17:52, with Endo's own badge 0701 as he went home. Nobody opened it during the night, so spare badge 0702 never left it."},
   },{
@@ -863,15 +871,18 @@ const CASE2 = {
     name:"The Edit",
     table:"door_events_history", rows:500000, perPage:50, maxCols:2,
     cols:{change_id:500000, changed_by:500, changed_at:500000, "TRUNC(changed_at)":1500, table_name:30, row_id:400000},
-    story:"The door log has a history table that keeps every change made to it. Find what SYS_MAINT changed on 28 November.",
+    story:"The door log has a history table that keeps every change made to it. Find what SYS_MAINT changed on 28 November. The security desk also runs Q2 on this table all day, for every account. One index.",
     queries:[{label:"Q1", who:"Changes by SYS_MAINT on 28 Nov", variants:[
       {where:[eq("changed_by","'SYS_MAINT'"), eq("TRUNC(changed_at)","DATE '2026-11-28'")]},
       {where:[eq("changed_by","'SYS_MAINT'"), range("changed_at","changed_at BETWEEN DATE '2026-11-28' AND DATE '2026-11-29'",1/1500)], wrong:BETWEEN_DAY},
-      {where:[eq("changed_by","'SYS_MAINT'"), range("changed_at","changed_at >= DATE '2026-11-28' AND changed_at < DATE '2026-11-29'",1/1500)]}]}],
-    hint:"SYS_MAINT is one value of changed_by. Now the date.",
-    hint2:"Index (changed_by, changed_at) and write the day as a range, or index (changed_by, TRUNC(changed_at)).",
-    lesson:"Both fixes from the start of this case work here: index the expression the query uses, or rewrite the day as a range on the column itself. Only the range also serves other time windows.",
-    results:[{columns:["changed_at","table_name","row_id","column","old","new"], rows:[["03:12:40","DOOR_EVENTS","88412","badge_no","0003","0702"]]}],
+      {where:[eq("changed_by","'SYS_MAINT'"), range("changed_at","changed_at >= DATE '2026-11-28' AND changed_at < DATE '2026-11-29'",1/1500)]}]},
+      {label:"Q2", who:"Desk monitor: one account, last hour", freq:2000, where:[eq("changed_by",":account"),
+        range("changed_at","changed_at >= SYSDATE - INTERVAL '1' HOUR",1/36000)]}],
+    hint:"Q2 asks for a time window on changed_at itself. Which index serves both queries?",
+    hint2:"Write Q1's day as a range on changed_at (B) and index (changed_by, changed_at).",
+    lesson:"An index on TRUNC(changed_at) serves only queries written with TRUNC, so Q2 would read the account's whole history 2,000 times a day. Rewrite Q1's day as a range on changed_at, and one plain index, (changed_by, changed_at), answers both the day and the last hour.",
+    results:[{columns:["changed_at","table_name","row_id","column","old","new"], rows:[["03:12:40","DOOR_EVENTS","88412","badge_no","0003","0702"]]},
+      {count:1, note:"The desk checks every account like this, all day."}],
     clue:{id:"E10", title:"The edit", text:"At 03:12, twenty minutes after the fire started, SYS_MAINT changed the 02:31 archive door record: badge 0003 became 0702. Badge 0003 is Rie Kubo's master badge."},
   }],
 };
@@ -978,12 +989,15 @@ const CASE3 = {
     table:"crossing_cam", rows:2000000, perPage:50, maxCols:2, two:30,
     cols:{read_id:2000000, camera:4000, passed_at:2000000, plate:100000, lane:4, speed_kmh:150},
     grows:["read_id","passed_at"], growth:{factor:365, label:"a year from now"},
-    story:"The city's new crossing cameras went live on Wednesday. They already hold 2 million reads and add 2 million a day. Pull the Fushimi camera from 08:05 to 08:20. Your index is scored on today's table and on the table a year from now.",
-    queries:[{label:"Q1", who:"Fushimi crossing, 08:05 to 08:20", where:[eq("camera","'FUSHIMI-X3'"),
-      range("passed_at","passed_at BETWEEN TIMESTAMP '2026-12-03 08:05:00' AND TIMESTAMP '2026-12-03 08:20:00'",15/1440)]}],
-    hint:"A year from now, each camera has 365 times more reads. Does your index read more of them?",
-    hint2:"Index (camera, passed_at). Fifteen minutes stay fifteen minutes however big the table gets.",
-    lesson:"An index on camera alone reads every read that camera has ever made, so it slows down as the table grows. (camera, passed_at) goes straight to the fifteen minutes you asked for. Its cost stays flat, apart from maybe one more tree level.",
+    story:"The city's new crossing cameras went live on Wednesday. They already hold 2 million reads and add 2 million a day. Pull the Fushimi camera from 08:05 to 08:20. The camera vendor's report adds 0 to passed_at, an old habit from its last database. Your index is scored on today's table and on the table a year from now.",
+    queries:[{label:"Q1", who:"Fushimi crossing, 08:05 to 08:20", variants:[
+      {where:[eq("camera","'FUSHIMI-X3'"), expr("(passed_at) + 0","passed_at + 0 BETWEEN TIMESTAMP '2026-12-03 08:05:00' AND TIMESTAMP '2026-12-03 08:20:00'",15/1440)]},
+      {where:[eq("camera","'FUSHIMI-X3'"), expr("TRUNC(passed_at)","TRUNC(passed_at) = DATE '2026-12-03'",1)],
+       wrong:"This returns the camera's whole Thursday, not the fifteen minutes."},
+      {where:[eq("camera","'FUSHIMI-X3'"), range("passed_at","passed_at BETWEEN TIMESTAMP '2026-12-03 08:05:00' AND TIMESTAMP '2026-12-03 08:20:00'",15/1440)]}]}],
+    hint:"passed_at + 0 is an expression, not the column. And a year from now each camera has 365 times more reads.",
+    hint2:"Compare passed_at as stored (B), then index (camera, passed_at).",
+    lesson:"Adding 0 looks harmless, but it turns passed_at into an expression the index doesn't hold: an old trick for switching an index off. Then only camera can be searched, and that reads every read the camera has ever made, more each day. Compare the column itself and (camera, passed_at) goes straight to the fifteen minutes, at the same cost a year from now.",
     results:[{columns:["passed_at","plate","lane","speed_kmh","note"], rows:[
       ["08:09:31","NGY 200 A 50-11","1","38","city bus"],
       ["08:11:02","NGY 300 SE 9-44","2","41","—"],
@@ -994,14 +1008,18 @@ const CASE3 = {
   },{
     name:"The Van",
     table:"fleet_log", rows:5000000, perPage:50, maxCols:2,
-    cols:{log_id:5000000, plate:20000, shift_date:1800, driver_id:3000, depot:40, status:6},
-    story:"Every company van logs who took it out each day. Q1 asks who had this van on Thursday. Q2 lists its last ten shifts. One index for both.",
+    cols:{log_id:5000000, plate:20000, "REPLACE(plate)":20000, shift_date:1800, driver_id:3000, depot:40},
+    story:"Every company van logs who took it out each day. Q1, from the depot's app, asks who had this van on Thursday; the app strips the spaces from plates before comparing. Q2 lists the van's last ten shifts. One index for both.",
     queries:[
-      {label:"Q1", who:"The van on 3 Dec", where:[eq("plate","'NGY 400 HA 18-07'"), eq("shift_date","DATE '2026-12-03'")]},
+      {label:"Q1", who:"The van on 3 Dec", variants:[
+        {where:[{col:"REPLACE(plate)", sql:"REPLACE(plate, ' ', '') = 'NGY400HA18-07'", kind:"eq", sel:1/20000}, eq("shift_date","DATE '2026-12-03'")]},
+        {where:[eq("plate","'NGY400HA18-07'"), eq("shift_date","DATE '2026-12-03'")],
+         wrong:"plate is stored with its spaces, 'NGY 400 HA 18-07'. Without them it matches nothing."},
+        {where:[eq("plate","'NGY 400 HA 18-07'"), eq("shift_date","DATE '2026-12-03'")]}]},
       {label:"Q2", who:"Its last ten shifts", where:[eq("plate","'NGY 400 HA 18-07'")], order:{col:"shift_date", dir:"DESC"}, fetch:10}],
-    hint:"Both queries start from the plate. Q2 also wants the dates in order.",
-    hint2:"Index (plate, shift_date): Q1 finds one day, Q2 reads the ten newest and stops.",
-    lesson:"One index can serve an exact lookup and a top-N list when they share the leading column. (plate, shift_date) finds Thursday directly and also hands Q2 the van's shifts newest first.",
+    hint:"Q2 compares plate itself. Does Q1 really need to strip the spaces?",
+    hint2:"Compare plate as stored (B), then index (plate, shift_date) for both queries.",
+    lesson:"An index on REPLACE(plate, ' ', '') serves Q1 as written, but Q2 compares plate itself and can't use it. Write Q1 against the stored value, and one index, (plate, shift_date), finds Thursday directly and hands Q2 the van's shifts newest first.",
     results:[
       {columns:["shift_date","owner","driver","keys_out","status"], rows:[["2026-12-03","Hayate Express","KANEDA Yuji","07:15","REPORTED STOLEN 09:40 by KANEDA Yuji: 'taken from the depot overnight'"]]},
       {count:10, note:"Kaneda drove this van on every one of its last ten shifts."}],
@@ -1022,17 +1040,17 @@ const CASE3 = {
     clue:{id:"E6", title:"The van's morning", text:"The van left the Hayate depot gate at 07:18 on Thursday morning, not overnight. Between 07:40 and 08:05 the camera on Nomura's street in Kamimaezu saw it 9 times. Fushimi at 08:12, the riverside car park at 08:50."},
   },{
     name:"Phones All Day",
-    table:"cell_events", rows:60000000, perPage:50, maxCols:2, maxIdx:2, inserts:200000,
+    table:"cell_events", rows:60000000, perPage:50, maxCols:2, maxIdx:2, inserts:2000000, two:1.3,
     cols:{event_id:60000000, phone:200000, cell_id:8000, event_time:60000000, imei:220000, event_type:4},
-    story:"The phone company runs two searches all day: by phone number (5,000 times) and by cell tower (300 times), while 200,000 new events arrive. Two indexes at most. Score = pages read per day + index upkeep per day.",
+    story:"The phone company keeps 30 days and adds 2 million events a day. Its fraud team searches by phone number 5,000 times a day. Searches by cell tower, like your Q2, come in about twice a day. Two indexes at most. Score = pages read per day + index upkeep per day.",
     queries:[
       {label:"Q1", who:"One phone, a time window", freq:5000, where:[eq("phone",KANEDA),
         range("event_time","event_time BETWEEN TIMESTAMP '2026-12-03 07:00:00' AND TIMESTAMP '2026-12-03 09:00:00'",0.02)]},
-      {label:"Q2", who:"One cell tower, a time window", freq:300, where:[eq("cell_id","'FUSHIMI-07'"),
+      {label:"Q2", who:"One cell tower, a time window", freq:2, where:[eq("cell_id","'FUSHIMI-07'"),
         range("event_time","event_time BETWEEN TIMESTAMP '2026-12-03 08:05:00' AND TIMESTAMP '2026-12-03 08:20:00'",0.0012)]}],
-    hint:"Each search has its own equality column. Every index also costs writes for each new row.",
-    hint2:"(phone, event_time) and (cell_id, event_time): each search gets its own index, and the time range comes second in both.",
-    lesson:"Two searches with different = columns need two indexes, each with the time range second. Every index you add is written for every new row, so stop at two good ones.",
+    hint:"Each index costs 3 page writes for every new event: 6 million pages a day. What does Q2 cost with no index at all?",
+    hint2:"Index (phone, event_time) for Q1 and leave Q2 to a full scan.",
+    lesson:"Two searches, but only one earns an index. (phone, event_time) pays for itself many times over at 5,000 searches a day. An index for Q2 would cost 6 million page writes a day to save two full scans of 1.2 million pages: for Q2, no index is faster than an index.",
     results:[
       {columns:["event_time","cell_id"], rows:[
         ["07:18","HAYATE-DEPOT"],["07:41","KAMIMAEZU-03"],["08:05","KAMIMAEZU-03"],["08:12","FUSHIMI-07"],["08:16","FUSHIMI-07"],["08:50","SHIRAKAWA-02"]]},
@@ -1043,11 +1061,15 @@ const CASE3 = {
     name:"Who Called",
     table:"calls", rows:20000000, perPage:50, maxCols:2,
     cols:{call_id:20000000, caller:1000000, callee:1000000, call_time:20000000, duration_s:3600, cell_id:8000},
-    story:"Who was talking to Kaneda? List the last ten calls to his phone, newest first.",
-    queries:[{label:"Q1", who:"Last ten calls to Kaneda", where:[eq("callee",KANEDA)], order:{col:"call_time", dir:"DESC"}, fetch:10}],
-    hint:"An index can be read from either end.",
-    hint2:"Index (callee, call_time). The database starts at Kaneda's newest call and reads backwards ten entries.",
-    lesson:"ORDER BY ... DESC doesn't need a descending index. The database reads an ascending index backwards (INDEX RANGE SCAN DESCENDING), so (callee, call_time) gives the newest calls first and stops after ten.",
+    story:"Who was talking to Kaneda? List the last ten calls to his phone, newest first. The phone company's search box matches the end of a number.",
+    queries:[{label:"Q1", who:"Last ten calls to Kaneda", variants:[
+      {where:[{col:"callee", sql:"callee LIKE '%2875-6614'", kind:"filter", sel:1/1000000, why:WILDCARD}], order:{col:"call_time", dir:"DESC"}, fetch:10},
+      {where:[range("callee","callee LIKE '090-2875%'",0.001)], order:{col:"call_time", dir:"DESC"}, fetch:10,
+       wrong:"This matches every number that starts 090-2875, a thousand of them."},
+      {where:[eq("callee",KANEDA)], order:{col:"call_time", dir:"DESC"}, fetch:10}]}],
+    hint:"A pattern that starts with % gives the index nothing to search. Do you know the whole number?",
+    hint2:"Compare the full number (B), then index (callee, call_time).",
+    lesson:"The search box puts % in front of the number, and a pattern that starts with a wildcard can't be searched in an index. You have Kaneda's full number, so compare it whole. ORDER BY ... DESC doesn't need a descending index either: the database reads (callee, call_time) backwards, newest call first, and stops after ten.",
     results:[{columns:["call_time","caller","duration","caller's cell"], rows:[
       ["Thu 10:05","052-881-2200 (Hayate office)","2 min","—"],
       ["Thu 09:31","052-881-2200 (Hayate office)","1 min","—"],
@@ -1065,12 +1087,17 @@ const CASE3 = {
     name:"Shared Account",
     table:"sessions", rows:3000000, perPage:50, maxCols:3, two:20,
     cols:{session_id:3000000, account:600, login_at:3000000, console:120, client_ip:5000, duration_s:3600},
-    story:"SYS_MAINT is a maintenance account several people can use. Count its sessions since 1 November by the console they came from.",
-    queries:[{label:"Q1", who:"SYS_MAINT sessions by console", select:["console","COUNT(*)"],
-      where:[eq("account","'SYS_MAINT'"), range("login_at","login_at >= DATE '2026-11-01'",0.0148)], group:{col:"console"}, groups:2}],
-    hint:"COUNT(*) needs no column. The grouping needs console.",
-    hint2:"Index (account, login_at, console): find November, count consoles from the index alone.",
-    lesson:"A GROUP BY query can be answered from the index alone when the index holds every column it groups or aggregates. Put the range before the grouping column here: rows already grouped are no use if the database must read the account's whole history to get them. And ORDER BY COUNT(*) can never stop early, because the counts exist only after every group has been read.",
+    story:"SYS_MAINT is a maintenance account several people can use. Count its sessions since 1 November by the console they came from. The audit tool picks the months with EXTRACT.",
+    queries:[{label:"Q1", who:"SYS_MAINT sessions by console", variants:[
+      {select:["console","COUNT(*)"], where:[eq("account","'SYS_MAINT'"),
+        expr("EXTRACT(login_at)","EXTRACT(YEAR FROM login_at) = 2026 AND EXTRACT(MONTH FROM login_at) >= 11",0.0148)], group:{col:"console"}, groups:2},
+      {select:["console","COUNT(*)"], where:[eq("account","'SYS_MAINT'"),
+        expr("EXTRACT(login_at)","EXTRACT(MONTH FROM login_at) >= 11",0.0148)], group:{col:"console"}, groups:2,
+       wrong:"Without the year this also counts November and December of every earlier year."},
+      {select:["console","COUNT(*)"], where:[eq("account","'SYS_MAINT'"), range("login_at","login_at >= DATE '2026-11-01'",0.0148)], group:{col:"console"}, groups:2}]}],
+    hint:"EXTRACT is computed from every row. The index can't search login_at through it, and the table must be read to compute it.",
+    hint2:"Write the months as a range on login_at (B), then index (account, login_at, console).",
+    lesson:"EXTRACT hides login_at from the index and forces a table read for every SYS_MAINT session. Written as a range on login_at, the query is answered from the index alone with (account, login_at, console): the range before the grouping column, or the database reads the account's whole history. And ORDER BY COUNT(*) can never stop early, because the counts exist only after every group has been read.",
     results:[{columns:["console","COUNT(*)"], rows:[["BK-01","33"],["NC-02","41"]]}],
     clue:{id:"E9", title:"Where SYS_MAINT logs in", text:"Since 1 November, SYS_MAINT logged in 33 times from BK-01, the backup server, every night at 02:00, and 41 times from NC-02, the night operations console, including 03:12 on 28 November, the minute the door log was edited. Not once from DC-01, the day console. Three people work those consoles."},
     bonus:{title:"Three quiet nights", text:"No SYS_MAINT session came from NC-02 on 24, 25 or 26 November."},
@@ -1079,13 +1106,18 @@ const CASE3 = {
     table:"duty_roster", rows:400000, perPage:50, maxCols:3, two:12,
     cols:{roster_id:400000, console:120, shift_date:3300, staff_id:300, shift:3, site:4},
     grows:["roster_id","shift_date"], growth:{factor:2, label:"nine years from now"},
-    story:"The data center's duty roster goes back nine years and grows every night. Who worked console NC-02 between 1 November and 3 December, and how many nights each?",
-    queries:[{label:"Q1", who:"NC-02, 1 Nov to 3 Dec", select:["staff_id","COUNT(*)","MIN(shift_date)"],
-      where:[eq("console","'NC-02'"), range("shift_date","shift_date BETWEEN DATE '2026-11-01' AND DATE '2026-12-03'",33/3300)],
-      group:{col:"staff_id"}, groups:2}],
-    hint:"One console, a date range, and a count per person. Which columns does the index need to answer alone?",
-    hint2:"Index (console, shift_date, staff_id).",
-    lesson:"Everything at once: the = column first, the range second, then the column the query groups by. The database reads one console's five weeks from the index alone, and that cost stays the same as the roster grows.",
+    story:"The data center's duty roster goes back nine years and grows every night. Who worked console NC-02 between 1 November and 3 December, and how many nights each? The roster report moves every date forward a month before comparing.",
+    queries:[{label:"Q1", who:"NC-02, 1 Nov to 3 Dec", variants:[
+      {select:["staff_id","COUNT(*)","MIN(shift_date)"], where:[eq("console","'NC-02'"),
+        expr("ADD_MONTHS(shift_date)","ADD_MONTHS(shift_date, 1) BETWEEN DATE '2026-12-01' AND DATE '2027-01-03'",33/3300)], group:{col:"staff_id"}, groups:2},
+      {select:["staff_id","COUNT(*)","MIN(shift_date)"], where:[eq("console","'NC-02'"),
+        range("shift_date","shift_date BETWEEN DATE '2026-12-01' AND DATE '2027-01-03'",33/3300)], group:{col:"staff_id"}, groups:2,
+       wrong:"The month went the wrong way: this asks for December, not November."},
+      {select:["staff_id","COUNT(*)","MIN(shift_date)"], where:[eq("console","'NC-02'"),
+        range("shift_date","shift_date BETWEEN DATE '2026-11-01' AND DATE '2026-12-03'",33/3300)], group:{col:"staff_id"}, groups:2}]}],
+    hint:"ADD_MONTHS is applied to shift_date in every row. Can the arithmetic move to the dates you compare with?",
+    hint2:"Take the month off the constants (B), then index (console, shift_date, staff_id).",
+    lesson:"Arithmetic belongs on the constant side. ADD_MONTHS(shift_date, 1) hides shift_date from the index; shift_date between 1 November and 3 December asks the same thing. Then the = column first, the range second, the grouping column last: one console's five weeks from the index alone, at the same cost as the roster grows.",
     results:[{columns:["staff","COUNT(*)","MIN(shift_date)"], rows:[["FUJIMOTO Goro","30","2026-11-01"],["SASAKI Mei","3","2026-11-24"]]}],
     clue:{id:"E10", title:"The night console", text:"Goro Fujimoto worked console NC-02 on 30 of the 33 nights since 1 November. Mei Sasaki covered 24 to 26 November while he was on leave. Nishida works days on DC-01. Iida has no shifts; only his backup jobs run, on BK-01."},
   }],
@@ -1155,11 +1187,14 @@ const CASE4 = {
     name:"A Retired Name",
     table:"account_audit", rows:5000000, perPage:50, maxCols:2,
     cols:{audit_id:5000000, user_id:40000, action:12, at:5000000, console:300, done_by:2000},
-    story:"Whose account is K.ARAI, and what has happened to it lately? The audit table keeps every change to every account. Show its last five events, newest first.",
-    queries:[{label:"Q1", who:"K.ARAI, last five events", where:[eq("user_id",KARAI)], order:{col:"at", dir:"DESC"}, fetch:5}],
-    hint:"Newest first, five rows. An index can be read backwards.",
-    hint2:"Index (user_id, at): find K.ARAI, start at the newest entry, stop after five.",
-    lesson:"(user_id, at) keeps K.ARAI's events together in time order. The database reads them backwards from the newest and stops after five. With user_id alone it reads the account's whole history and sorts it first.",
+    story:"Whose account is K.ARAI, and what has happened to it lately? The audit table keeps every change to every account. Show its last five events, newest first. The audit screen upper-cases whatever you type.",
+    queries:[{label:"Q1", who:"K.ARAI, last five events", variants:[
+      {where:[{col:"UPPER(user_id)", sql:"UPPER(user_id) = 'K.ARAI'", kind:"eq", sel:1/40000}], order:{col:"at", dir:"DESC"}, fetch:5},
+      {where:[eq("user_id","'k.arai'")], order:{col:"at", dir:"DESC"}, fetch:5, wrong:"User ids are stored in capitals. 'k.arai' matches nothing."},
+      {where:[eq("user_id",KARAI)], order:{col:"at", dir:"DESC"}, fetch:5}]}],
+    hint:"UPPER(user_id) is not user_id. How are the ids stored?",
+    hint2:"Ids are stored in capitals: compare user_id = 'K.ARAI' (B), then index (user_id, at).",
+    lesson:"UPPER(user_id) hides the column from an index on user_id, and here it does nothing useful: ids are stored in capitals. Compare the column as stored, and (user_id, at) reads K.ARAI's newest five entries backwards and stops.",
     results:[{columns:["at","action","console","done_by"], rows:[
       ["Fri 00:38","LOGIN","VPN","K.ARAI"],
       ["Thu 23:52","PASSWORD_RESET","HD-03","R.KONDO"],
@@ -1210,12 +1245,15 @@ const CASE4 = {
     name:"Never Locked",
     table:"console_sessions", rows:1000000, perPage:50, maxCols:2,
     cols:{session_id:1000000, console:300, user_id:3000, login_at:1000000, logout_at:1000000, screen_locks:40},
-    story:"HD-03 is the helpdesk console. List its sessions since Thursday: who signed in, when, when the session ended, and how often the screen locked. console_sessions lives on the building's access server, out of the delete job's reach.",
-    queries:[{label:"Q1", who:"HD-03 sessions since Thursday", select:["user_id","login_at","logout_at","screen_locks"],
-      where:[eq("console","'HD-03'"), range("login_at","login_at >= DATE '2026-12-03'",0.0009)]}],
-    hint:"One console, sessions from a date on.",
-    hint2:"(console, login_at).",
-    lesson:"The = column first, then the range: HD-03's sessions since Thursday sit next to each other in (console, login_at). Put login_at first and the database reads every console's sessions since Thursday to find HD-03's.",
+    story:"HD-03 is the helpdesk console. List its sessions since Thursday: who signed in, when, when the session ended, and how often the screen locked. console_sessions lives on the building's access server, out of the delete job's reach. Its report cuts every login down to the day first.",
+    queries:[{label:"Q1", who:"HD-03 sessions since Thursday", variants:[
+      {select:["user_id","login_at","logout_at","screen_locks"], where:[eq("console","'HD-03'"), expr("TRUNC(login_at)","TRUNC(login_at) >= DATE '2026-12-03'",0.0009)]},
+      {select:["user_id","login_at","logout_at","screen_locks"], where:[eq("console","'HD-03'"), range("login_at","login_at BETWEEN DATE '2026-12-03' AND DATE '2026-12-04'",0.0009)],
+       wrong:"This stops at midnight on Thursday and loses Friday's session."},
+      {select:["user_id","login_at","logout_at","screen_locks"], where:[eq("console","'HD-03'"), range("login_at","login_at >= DATE '2026-12-03'",0.0009)]}]}],
+    hint:"TRUNC(login_at) is computed for every row. Does 'since Thursday' need it?",
+    hint2:"login_at >= Thursday keeps the same rows (B). Index (console, login_at).",
+    lesson:"For 'from a day on', TRUNC adds nothing: login_at >= DATE '2026-12-03' keeps exactly the same rows and leaves login_at visible to the index. Then the = column first, the range second: HD-03's sessions since Thursday sit next to each other in (console, login_at).",
     results:[{columns:["user_id","login_at","logout_at","screen_locks"], rows:[
       ["R.KONDO","Thu 08:58","Thu 12:30","2"],
       ["R.KONDO","Thu 13:12","Fri 00:05 (forced by K.MORI)","0"],
@@ -1225,12 +1263,18 @@ const CASE4 = {
     name:"The Two O'Clock Copy",
     table:"door_events_history", rows:540000, perPage:50, maxCols:2, maxIdx:2, two:3, clustered:"changed_at",
     cols:{change_id:540000, changed_at:540000, changed_by:500, op:3, row_id:540000, door:4000},
-    story:"Nomura's history trigger copied every change to door_events into door_events_history. The delete job wiped that table at 02:30, but the 02:00 backup kept it: BK-01 was being patched that night, and the patch finished at 01:41, in time for the backup to run. What did K.ARAI change between 01:00 and 01:30? Two indexes.",
-    queries:[{label:"Q1", who:"K.ARAI's changes, 01:00 to 01:30", where:[eq("changed_by",KARAI),
-      range("changed_at","changed_at BETWEEN TIMESTAMP '2026-12-04 01:00:00' AND TIMESTAMP '2026-12-04 01:30:00'",0.00185)]}],
-    hint:"Two one-column indexes are not one two-column index.",
-    hint2:"(changed_by, changed_at): K.ARAI first, then the half hour.",
-    lesson:"Here the database uses one index for the query, so (changed_by) and (changed_at) side by side help no more than the better of the two. Some databases can combine two indexes, but they still read both ranges in full before matching them up. One index on (changed_by, changed_at) goes straight to K.ARAI's half hour.",
+    story:"Nomura's history trigger copied every change to door_events into door_events_history. The delete job wiped that table at 02:30, but the 02:00 backup kept it: BK-01 was being patched that night, and the patch finished at 01:41, in time for the backup to run. What did K.ARAI change between 01:00 and 01:30? changed_by is a fixed-width CHAR column, so the restore script trims it. Two indexes.",
+    queries:[{label:"Q1", who:"K.ARAI's changes, 01:00 to 01:30", variants:[
+      {where:[{col:"TRIM(changed_by)", sql:"TRIM(changed_by) = 'K.ARAI'", kind:"eq", sel:1/500},
+        range("changed_at","changed_at BETWEEN TIMESTAMP '2026-12-04 01:00:00' AND TIMESTAMP '2026-12-04 01:30:00'",0.00185)]},
+      {where:[{col:"changed_by", sql:"changed_by LIKE 'K.ARAI%'", kind:"range", sel:2/500},
+        range("changed_at","changed_at BETWEEN TIMESTAMP '2026-12-04 01:00:00' AND TIMESTAMP '2026-12-04 01:30:00'",0.00185)],
+       wrong:"'K.ARAI%' also matches K.ARAIKAWA, a clerk on the day shift."},
+      {where:[eq("changed_by",KARAI),
+        range("changed_at","changed_at BETWEEN TIMESTAMP '2026-12-04 01:00:00' AND TIMESTAMP '2026-12-04 01:30:00'",0.00185)]}]}],
+    hint:"A CHAR column already compares equal to the text without its padding. And two one-column indexes are not one two-column index.",
+    hint2:"changed_by = 'K.ARAI' (B), then index (changed_by, changed_at).",
+    lesson:"TRIM(changed_by) hides the column, and a CHAR column already equals 'K.ARAI' without the padding, so drop it. Then, with two indexes allowed, (changed_by) and (changed_at) side by side help no more than the better of the two. Some databases can combine two indexes, but they still read both ranges in full before matching them up. One index on (changed_by, changed_at) goes straight to K.ARAI's half hour.",
     results:[{columns:["changed_at","op","changed_by","badge","door","event_at"], rows:[
       ["01:15:08","DELETE","K.ARAI","V-4","HD-03","Thu 23:50:12"],
       ["01:15:31","INSERT","K.ARAI","S-2231","HD-03","Thu 23:51:40"]]}],
@@ -1277,17 +1321,21 @@ const CASE4 = {
     bonus:{title:"Sasaki's quarter hour", text:"Mei Sasaki's badge: the NC-02 room at 23:36, the yard door at 23:44, the NC-02 room again at 23:59. She did leave the room, to phone the bar in Sakae where she works nights, which city staff are not allowed to do. She never went near HD-03."},
   },{
     name:"Written Off",
-    table:"loans", rows:300000, perPage:50, maxCols:2,
+    table:"loans", rows:300000, perPage:50, maxCols:2, maxIdx:2, two:1.1,
     cols:{loan_id:300000, borrower:40000, status:5, changed_at:300000, amount:5000, agent:60},
-    story:"Kaneda's phone led police to his lender, Kitamura Credit. They searched its office at 09:00 and brought you the server. Which debts did they write off this week, with no payment at all?",
-    queries:[{label:"Q1", who:"Debts written off since Tuesday", where:[{...eq("status","'WRITTEN_OFF'"), sel:0.01},
-      range("changed_at","changed_at >= DATE '2026-12-01'",0.000667)]}],
-    hint:"WRITTEN_OFF is rare, and the date range is short.",
-    hint2:"(status, changed_at): the = column first, then the range.",
-    lesson:"Equality before range, again: (status, changed_at) keeps this week's write-offs side by side. (changed_at, status) walks every ledger change since Tuesday and checks the status of each in the leaf pages: a few pages more.",
+    story:"Kaneda's phone led police to his lender, Kitamura Credit. They searched its office at 09:00 and brought you the server. Which debts did they write off this week, with no payment at all? Q2 lists one collector's loans; you will run it for each of the three collectors questioned today. One of them is head office, HQ, which booked 40% of all loans. Two indexes at most.",
+    queries:[
+      {label:"Q1", who:"Debts written off since Tuesday", where:[{...eq("status","'WRITTEN_OFF'"), sel:0.01},
+        range("changed_at","changed_at >= DATE '2026-12-01'",0.000667)]},
+      {label:"Q2", who:"One collector's loans", freq:3, variants:[{binds:":agent = each collector questioned today, HQ among them",
+        where:[{...eq("agent",":agent"), hot:{val:"'HQ'", sel:0.4, share:1/3}}]}]}],
+    hint:"Q2 runs with a different collector each time, but the database picks one plan for all of them. What does that plan cost when the collector is HQ?",
+    hint2:"(status, changed_at) for Q1, and no index for Q2: a full scan costs the same for every collector.",
+    lesson:"With a bind parameter the database picks one plan for every value. An index on agent is quick for a small collector and terrible for HQ, whose 120,000 loans it would fetch one table read at a time: on average slower than reading the whole table. Q1 still wants (status, changed_at), equality before range. Q2 is better off with no index at all.",
     results:[{columns:["borrower","amount","status","changed_at"], rows:[
       ["KANEDA Yuji","¥2,100,000","WRITTEN_OFF","Wed 23:31"],
-      ["KURODA Daisuke","¥8,400,000","WRITTEN_OFF","Fri 00:31"]]}],
+      ["KURODA Daisuke","¥8,400,000","WRITTEN_OFF","Fri 00:31"]]},
+      {count:5000, note:"One collector's loan book. HQ's holds 120,000."}],
     clue:{id:"E9", title:"Written off", text:"Kitamura Credit wrote off two debts this week with no payment. Yuji Kaneda's ¥2,100,000 at 23:31 on Wednesday, twenty minutes after the prepaid phone first called him. Daisuke Kuroda's ¥8,400,000 at 00:31 on Friday, thirty-nine minutes after K.ARAI was switched on."},
   },{
     name:"Kinjo Pier",
@@ -1404,6 +1452,7 @@ const VI = {
   "Each changed row moves its entry in every index that holds {cols} ({k} here): delete + insert, 2 × {p} pages, {w} pages per run.": "Mỗi dòng bị đổi phải dời mục của nó trong mọi index chứa {cols} (ở đây có {k}): xóa + chèn, 2 × {p} trang, {w} trang mỗi lần chạy.",
   "No index holds {cols}, so the update rewrites no index entries.": "Không index nào chứa {cols}, nên lệnh UPDATE không phải ghi lại mục index nào.",
   "The table is stored in {col} order, so the {n} rows found sit together on {k} table pages.": "Bảng được lưu theo thứ tự {col}, nên {n} dòng tìm được nằm liền nhau trên {k} trang bảng.",
+  "The plan is chosen once, for a typical {col}. In {pct}% of runs {col} is {val}, and the same plan reads {rows} rows: {hc} pages. Averaged over every run: {avg} pages.": "Kế hoạch được chọn một lần, cho một giá trị {col} bình thường. Trong {pct}% số lần chạy, {col} là {val}, và cùng kế hoạch đó phải đọc {rows} dòng: {hc} trang. Tính trung bình mọi lần chạy: {avg} trang.",
   "Rows are stored in {col} order: each new row goes at the end of the table.": "Các dòng được lưu theo thứ tự {col}: mỗi dòng mới nằm ở cuối bảng.",
   "EVIDENCE": "BẰNG CHỨNG",
   "BONUS": "THƯỞNG",
@@ -1923,14 +1972,6 @@ const VI = {
     "Từ tháng 3/2024. Lô nào cũng nhận vào và xuất đi trong cùng ngày. Nhập liệu W7-01, phê duyệt OPS-01.",
   "The Key Cabinet":
     "Tủ khóa",
-  "Endo's spare badge lives in the key cabinet of the warehouse 7 office, and the cabinet logs every opening. You only need who opened it and when.":
-    "Thẻ dự phòng của Endo nằm trong tủ khóa của văn phòng kho 7, và tủ ghi lại mỗi lần được mở. Bạn chỉ cần biết ai mở và lúc nào.",
-  "The query reads two columns from the table: badge_no and opened_at.":
-    "Truy vấn đọc hai cột từ bảng: badge_no và opened_at.",
-  "(cabinet, opened_at) finds the rows. Add badge_no and the table is never read.":
-    "(cabinet, opened_at) tìm ra các dòng. Thêm badge_no thì không cần đọc bảng nữa.",
-  "Equality first, then the range, then the columns the query selects. The database answers from the index alone: an index-only range scan.":
-    "Điều kiện bằng trước, rồi tới khoảng, rồi tới các cột truy vấn cần lấy. Database trả lời chỉ từ index: quét khoảng chỉ trên index.",
   "The key cabinet":
     "Tủ khóa",
   "The warehouse 7 office key cabinet was opened once that evening, at 17:52, with Endo's own badge 0701 as he went home. Nobody opened it during the night, so spare badge 0702 never left it.":
@@ -1975,14 +2016,6 @@ const VI = {
     "Nagoya đi trước UTC chín tiếng, nên 02:00 ở Nagoya là 17:00 UTC của ngày hôm trước. Câu này hỏi nhầm giờ.",
   "The Edit":
     "Bản sửa",
-  "The door log has a history table that keeps every change made to it. Find what SYS_MAINT changed on 28 November.":
-    "Nhật ký cửa có một bảng lịch sử giữ lại mọi thay đổi. Hãy tìm xem SYS_MAINT đã sửa gì trong ngày 28 tháng 11.",
-  "SYS_MAINT is one value of changed_by. Now the date.":
-    "SYS_MAINT là một giá trị của changed_by. Giờ tới ngày.",
-  "Index (changed_by, changed_at) and write the day as a range, or index (changed_by, TRUNC(changed_at)).":
-    "Index (changed_by, changed_at) và viết ngày thành một khoảng, hoặc index (changed_by, TRUNC(changed_at)).",
-  "Both fixes from the start of this case work here: index the expression the query uses, or rewrite the day as a range on the column itself. Only the range also serves other time windows.":
-    "Cả hai cách sửa từ đầu hồ sơ này đều dùng được ở đây: index đúng biểu thức truy vấn dùng, hoặc viết lại ngày thành khoảng trên chính cột đó. Chỉ có khoảng phục vụ được thêm các khung giờ khác.",
   "The edit":
     "Bản sửa",
   "At 03:12, twenty minutes after the fire started, SYS_MAINT changed the 02:31 archive door record: badge 0003 became 0702. Badge 0003 is Rie Kubo's master badge.":
@@ -2105,29 +2138,14 @@ const VI = {
 
   "Fushimi X3": "Fushimi X3",
   "a year from now": "một năm sau",
-  "The city's new crossing cameras went live on Wednesday. They already hold 2 million reads and add 2 million a day. Pull the Fushimi camera from 08:05 to 08:20. Your index is scored on today's table and on the table a year from now.":
-    "Hệ thống camera ngã tư mới của thành phố chạy từ thứ Tư. Nó đã có 2 triệu lượt ghi và mỗi ngày thêm 2 triệu. Lấy dữ liệu camera Fushimi từ 08:05 đến 08:20. Index của bạn được chấm trên bảng hôm nay và trên bảng một năm sau.",
   "Fushimi crossing, 08:05 to 08:20": "Ngã tư Fushimi, 08:05 đến 08:20",
-  "A year from now, each camera has 365 times more reads. Does your index read more of them?":
-    "Một năm sau, mỗi camera có gấp 365 lần số lượt ghi. Index của bạn có phải đọc nhiều hơn không?",
-  "Index (camera, passed_at). Fifteen minutes stay fifteen minutes however big the table gets.":
-    "Index (camera, passed_at). Mười lăm phút vẫn là mười lăm phút, bảng lớn đến đâu cũng vậy.",
-  "An index on camera alone reads every read that camera has ever made, so it slows down as the table grows. (camera, passed_at) goes straight to the fifteen minutes you asked for. Its cost stays flat, apart from maybe one more tree level.":
-    "Index chỉ có camera phải đọc mọi lượt ghi camera đó từng có, nên chậm dần khi bảng lớn lên. (camera, passed_at) đi thẳng tới mười lăm phút bạn cần. Chi phí của nó gần như không đổi, có chăng thêm một tầng cây.",
   "The crossing camera": "Camera ngã tư",
   "A white van, NGY 400 HA 18-07, crossed at 08:12 at 61 km/h. A minute later NGY 500 RE 33-90, a private car registered to Ren Takagi, stopped for 40 seconds, then drove on.":
     "Một chiếc van trắng, NGY 400 HA 18-07, qua ngã tư lúc 08:12 với tốc độ 61 km/h. Một phút sau NGY 500 RE 33-90, xe riêng đứng tên Ren Takagi, dừng 40 giây rồi chạy tiếp.",
 
   "The Van": "Chiếc van",
-  "Every company van logs who took it out each day. Q1 asks who had this van on Thursday. Q2 lists its last ten shifts. One index for both.":
-    "Mỗi chiếc van của công ty ghi lại ai lái nó mỗi ngày. Q1 hỏi ai giữ chiếc van này hôm thứ Năm. Q2 liệt kê mười ca gần nhất của nó. Một index cho cả hai.",
   "The van on 3 Dec": "Chiếc van ngày 3/12",
   "Its last ten shifts": "Mười ca gần nhất",
-  "Both queries start from the plate. Q2 also wants the dates in order.": "Cả hai query đều bắt đầu từ biển số. Q2 còn cần ngày theo thứ tự.",
-  "Index (plate, shift_date): Q1 finds one day, Q2 reads the ten newest and stops.":
-    "Index (plate, shift_date): Q1 tìm đúng một ngày, Q2 đọc mười ca mới nhất rồi dừng.",
-  "One index can serve an exact lookup and a top-N list when they share the leading column. (plate, shift_date) finds Thursday directly and also hands Q2 the van's shifts newest first.":
-    "Một index phục vụ được cả tra cứu chính xác lẫn danh sách top-N khi chúng chung cột đầu. (plate, shift_date) tìm thẳng tới thứ Năm, và cũng đưa cho Q2 các ca của chiếc van, mới nhất trước.",
   "Kaneda drove this van on every one of its last ten shifts.": "Kaneda lái chiếc van này trong cả mười ca gần nhất.",
   "The van": "Chiếc van",
   "NGY 400 HA 18-07 belongs to Hayate Express. Its regular driver, Yuji Kaneda, took the keys at 07:15 on Thursday. At 09:40 he reported the van stolen 'from the depot overnight'.":
@@ -2148,16 +2166,8 @@ const VI = {
     "Chiếc van ra cổng kho Hayate lúc 07:18 sáng thứ Năm, không phải trong đêm. Từ 07:40 đến 08:05, camera trên phố nhà Nomura ở Kamimaezu thấy nó 9 lần. Fushimi lúc 08:12, bãi xe bờ sông lúc 08:50.",
 
   "Phones All Day": "Điện thoại cả ngày",
-  "The phone company runs two searches all day: by phone number (5,000 times) and by cell tower (300 times), while 200,000 new events arrive. Two indexes at most. Score = pages read per day + index upkeep per day.":
-    "Nhà mạng chạy hai kiểu tìm kiếm cả ngày: theo số điện thoại (5.000 lần) và theo trạm phát sóng (300 lần), trong khi có 200.000 sự kiện mới đổ về. Tối đa hai index. Điểm = số trang đọc mỗi ngày + công cập nhật index mỗi ngày.",
   "One phone, a time window": "Một số điện thoại, một khung giờ",
   "One cell tower, a time window": "Một trạm phát sóng, một khung giờ",
-  "Each search has its own equality column. Every index also costs writes for each new row.":
-    "Mỗi kiểu tìm kiếm có cột so bằng riêng. Index nào cũng tốn công ghi cho mỗi dòng mới.",
-  "(phone, event_time) and (cell_id, event_time): each search gets its own index, and the time range comes second in both.":
-    "(phone, event_time) và (cell_id, event_time): mỗi kiểu tìm kiếm một index, và khoảng thời gian đứng thứ hai ở cả hai.",
-  "Two searches with different = columns need two indexes, each with the time range second. Every index you add is written for every new row, so stop at two good ones.":
-    "Hai kiểu tìm kiếm với hai cột so bằng khác nhau cần hai index, mỗi index đặt khoảng thời gian thứ hai. Thêm index nào là phải ghi vào nó cho mọi dòng mới, nên dừng ở hai index tốt.",
   "Nine phones on the Fushimi tower in those fifteen minutes. Kaneda's at 08:12.":
     "Chín điện thoại bắt sóng trạm Fushimi trong mười lăm phút đó. Của Kaneda lúc 08:12.",
   "Kaneda's phone": "Điện thoại của Kaneda",
@@ -2168,14 +2178,7 @@ const VI = {
     "Điện thoại của Ren Takagi bắt sóng trạm Fushimi lúc 08:13, đúng phút xe anh dừng ở ngã tư.",
 
   "Who Called": "Ai đã gọi",
-  "Who was talking to Kaneda? List the last ten calls to his phone, newest first.":
-    "Ai đã nói chuyện với Kaneda? Liệt kê mười cuộc gọi gần nhất đến số của hắn, mới nhất trước.",
   "Last ten calls to Kaneda": "Mười cuộc gọi gần nhất đến Kaneda",
-  "An index can be read from either end.": "Index đọc được từ cả hai đầu.",
-  "Index (callee, call_time). The database starts at Kaneda's newest call and reads backwards ten entries.":
-    "Index (callee, call_time). Database bắt đầu từ cuộc gọi mới nhất đến Kaneda và đọc ngược mười mục.",
-  "ORDER BY ... DESC doesn't need a descending index. The database reads an ascending index backwards (INDEX RANGE SCAN DESCENDING), so (callee, call_time) gives the newest calls first and stops after ten.":
-    "ORDER BY ... DESC không cần index giảm dần. Database đọc ngược một index tăng dần (INDEX RANGE SCAN DESCENDING), nên (callee, call_time) cho các cuộc gọi mới nhất trước và dừng sau mười cuộc.",
   "The prepaid phone": "Điện thoại trả trước",
   "A prepaid number, 080-6203-1958, called Kaneda at 23:10 on Wednesday and again at 08:16 on Thursday, four minutes after the crash. Both calls came through tower SANNOMARU-2, beside the city data center.":
     "Một số trả trước, 080-6203-1958, gọi Kaneda lúc 23:10 thứ Tư và lần nữa lúc 08:16 thứ Năm, bốn phút sau vụ tông xe. Cả hai cuộc đều qua trạm SANNOMARU-2, ngay cạnh trung tâm dữ liệu thành phố.",
@@ -2183,14 +2186,7 @@ const VI = {
   "The prepaid phone has called one number in its life: Kaneda's.": "Chiếc điện thoại trả trước này chỉ từng gọi đúng một số: số của Kaneda.",
 
   "Shared Account": "Tài khoản dùng chung",
-  "SYS_MAINT is a maintenance account several people can use. Count its sessions since 1 November by the console they came from.":
-    "SYS_MAINT là tài khoản bảo trì mà nhiều người dùng được. Đếm các phiên của nó từ 1/11 theo console mà chúng xuất phát.",
   "SYS_MAINT sessions by console": "Phiên SYS_MAINT theo console",
-  "COUNT(*) needs no column. The grouping needs console.": "COUNT(*) không cần cột nào. Gom nhóm cần console.",
-  "Index (account, login_at, console): find November, count consoles from the index alone.":
-    "Index (account, login_at, console): tìm tháng 11, rồi đếm console ngay trong index.",
-  "A GROUP BY query can be answered from the index alone when the index holds every column it groups or aggregates. Put the range before the grouping column here: rows already grouped are no use if the database must read the account's whole history to get them. And ORDER BY COUNT(*) can never stop early, because the counts exist only after every group has been read.":
-    "Query GROUP BY trả lời được chỉ từ index khi index chứa mọi cột mà nó gom nhóm hoặc tính gộp. Ở đây hãy đặt khoảng trước cột gom nhóm: dòng ra sẵn theo nhóm chẳng ích gì nếu database phải đọc cả lịch sử của tài khoản mới có được chúng. Còn ORDER BY COUNT(*) thì không bao giờ dừng sớm được, vì số đếm chỉ có sau khi đã đọc hết mọi nhóm.",
   "Where SYS_MAINT logs in": "SYS_MAINT đăng nhập từ đâu",
   "Since 1 November, SYS_MAINT logged in 33 times from BK-01, the backup server, every night at 02:00, and 41 times from NC-02, the night operations console, including 03:12 on 28 November, the minute the door log was edited. Not once from DC-01, the day console. Three people work those consoles.":
     "Từ 1/11, SYS_MAINT đăng nhập 33 lần từ BK-01, máy chủ sao lưu, đều đặn 02:00 mỗi đêm, và 41 lần từ NC-02, console vận hành ca đêm, trong đó có lúc 03:12 ngày 28/11, đúng phút nhật ký cửa bị sửa. Không lần nào từ DC-01, console ca ngày. Có ba người làm việc ở các console đó.",
@@ -2201,14 +2197,7 @@ const VI = {
   "The Night Console": "Console ca đêm",
   "nine years from now":
     "chín năm sau",
-  "The data center's duty roster goes back nine years and grows every night. Who worked console NC-02 between 1 November and 3 December, and how many nights each?":
-    "Lịch trực của trung tâm dữ liệu kéo dài chín năm và dài thêm mỗi đêm. Ai đã trực console NC-02 từ 1/11 đến 3/12, và mỗi người bao nhiêu đêm?",
   "NC-02, 1 Nov to 3 Dec": "NC-02, 1/11 đến 3/12",
-  "One console, a date range, and a count per person. Which columns does the index need to answer alone?":
-    "Một console, một khoảng ngày, và số đêm của mỗi người. Index cần những cột nào để tự trả lời?",
-  "Index (console, shift_date, staff_id).": "Index (console, shift_date, staff_id).",
-  "Everything at once: the = column first, the range second, then the column the query groups by. The database reads one console's five weeks from the index alone, and that cost stays the same as the roster grows.":
-    "Tất cả cùng lúc: cột so bằng trước, khoảng thứ hai, rồi tới cột query gom nhóm. Database đọc năm tuần của một console chỉ từ index, và chi phí đó giữ nguyên khi lịch trực dài thêm.",
   "The night console": "Console ca đêm",
   "Goro Fujimoto worked console NC-02 on 30 of the 33 nights since 1 November. Mei Sasaki covered 24 to 26 November while he was on leave. Nishida works days on DC-01. Iida has no shifts; only his backup jobs run, on BK-01.":
     "Goro Fujimoto trực console NC-02 30 trong 33 đêm kể từ 1/11. Mei Sasaki trực thay từ 24 đến 26/11 khi ông ta nghỉ phép. Nishida làm ca ngày ở DC-01. Iida không có ca trực, chỉ có tác vụ sao lưu chạy trên BK-01.",
@@ -2286,14 +2275,6 @@ const VI = {
     "Tác vụ của NC-02 từ 23:00",
   "A Retired Name":
     "Một cái tên đã nghỉ hưu",
-  "Whose account is K.ARAI, and what has happened to it lately? The audit table keeps every change to every account. Show its last five events, newest first.":
-    "K.ARAI là tài khoản của ai, và gần đây nó đã gặp chuyện gì? Bảng kiểm toán giữ mọi thay đổi của mọi tài khoản. Hiện năm sự kiện gần nhất, mới nhất trước.",
-  "Newest first, five rows. An index can be read backwards.":
-    "Mới nhất trước, năm dòng. Index có thể đọc ngược.",
-  "Index (user_id, at): find K.ARAI, start at the newest entry, stop after five.":
-    "Index (user_id, at): tìm K.ARAI, bắt đầu từ mục mới nhất, dừng sau năm mục.",
-  "(user_id, at) keeps K.ARAI's events together in time order. The database reads them backwards from the newest and stops after five. With user_id alone it reads the account's whole history and sorts it first.":
-    "(user_id, at) giữ các sự kiện của K.ARAI nằm cạnh nhau theo thời gian. Database đọc ngược từ mục mới nhất và dừng sau năm mục. Chỉ có user_id thì nó phải đọc toàn bộ lịch sử của tài khoản rồi sắp xếp trước.",
   "A retired name":
     "Một cái tên đã nghỉ hưu",
   "K.ARAI belonged to Kenzo Arai, a night administrator who retired in March 2024. The account had been disabled since. At 23:52 on Thursday it was switched back on and given a new password from helpdesk console HD-03, inside a session signed in as R.KONDO.":
@@ -2344,14 +2325,6 @@ const VI = {
     "HD-03 từ 08:00 thứ Năm",
   "Never Locked":
     "Không bao giờ khóa",
-  "HD-03 is the helpdesk console. List its sessions since Thursday: who signed in, when, when the session ended, and how often the screen locked. console_sessions lives on the building's access server, out of the delete job's reach.":
-    "HD-03 là console của helpdesk. Liệt kê các phiên của nó từ thứ Năm: ai đăng nhập, lúc nào, phiên kết thúc lúc nào, và màn hình đã khóa mấy lần. console_sessions nằm trên máy chủ kiểm soát ra vào của tòa nhà, ngoài tầm với của tác vụ xóa.",
-  "One console, sessions from a date on.":
-    "Một console, các phiên từ một ngày trở đi.",
-  "(console, login_at).":
-    "(console, login_at).",
-  "The = column first, then the range: HD-03's sessions since Thursday sit next to each other in (console, login_at). Put login_at first and the database reads every console's sessions since Thursday to find HD-03's.":
-    "Cột so bằng trước, rồi tới khoảng: các phiên của HD-03 từ thứ Năm nằm cạnh nhau trong (console, login_at). Đặt login_at lên trước thì database phải đọc phiên của mọi console từ thứ Năm để tìm ra của HD-03.",
   "The open session":
     "Phiên để mở",
   "Rie Kondo signed in to HD-03 at 13:12 on Thursday. The screen never locked, though the activity log shows nothing typed between 17:44 and 23:52, and the session stayed open until Kazuo Mori forced it closed at 00:05, when your team asked him to lock the building down. K.ARAI was switched on inside it at 23:52.":
@@ -2360,14 +2333,6 @@ const VI = {
     "Các phiên của HD-03 từ thứ Năm",
   "The Two O'Clock Copy":
     "Bản sao lúc hai giờ",
-  "Nomura's history trigger copied every change to door_events into door_events_history. The delete job wiped that table at 02:30, but the 02:00 backup kept it: BK-01 was being patched that night, and the patch finished at 01:41, in time for the backup to run. What did K.ARAI change between 01:00 and 01:30? Two indexes.":
-    "Trigger lịch sử của Nomura đã chép mọi thay đổi của door_events vào door_events_history. Tác vụ xóa đã xóa sạch bảng đó lúc 02:30, nhưng bản sao lưu 02:00 vẫn giữ nó: đêm đó BK-01 đang được vá, và bản vá xong lúc 01:41, kịp cho tác vụ sao lưu chạy. K.ARAI đã đổi gì từ 01:00 tới 01:30? Hai index.",
-  "Two one-column indexes are not one two-column index.":
-    "Hai index một cột không phải là một index hai cột.",
-  "(changed_by, changed_at): K.ARAI first, then the half hour.":
-    "(changed_by, changed_at): K.ARAI trước, rồi tới nửa giờ đó.",
-  "Here the database uses one index for the query, so (changed_by) and (changed_at) side by side help no more than the better of the two. Some databases can combine two indexes, but they still read both ranges in full before matching them up. One index on (changed_by, changed_at) goes straight to K.ARAI's half hour.":
-    "Ở đây database dùng một index cho query, nên (changed_by) và (changed_at) đặt cạnh nhau cũng chỉ giúp được bằng cái tốt hơn trong hai. Vài hệ quản trị gộp được hai index, nhưng vẫn phải đọc trọn cả hai khoảng rồi mới ghép lại. Một index (changed_by, changed_at) đi thẳng tới nửa giờ của K.ARAI.",
   "Edited at 01:15":
     "Sửa lúc 01:15",
   "At 01:15:08 K.ARAI deleted a swipe from door_events: visitor badge V-4 at HD-03, 23:50:12. At 01:15:31 it inserted one: Mei Sasaki's badge S-2231 at HD-03, 23:51:40. The 23:51 swipe was written nearly an hour and a half after the time it claims.":
@@ -2428,14 +2393,6 @@ const VI = {
     "Lần quẹt K.ARAI cài vào lúc 01:15 đã bị xóa.",
   "Written Off":
     "Xóa nợ",
-  "Kaneda's phone led police to his lender, Kitamura Credit. They searched its office at 09:00 and brought you the server. Which debts did they write off this week, with no payment at all?":
-    "Điện thoại của Kaneda dẫn cảnh sát tới chỗ cho hắn vay tiền, Kitamura Credit. Họ khám văn phòng lúc 09:00 và mang máy chủ về cho bạn. Tuần này Kitamura Credit đã xóa những khoản nợ nào mà không nhận một đồng trả nợ?",
-  "WRITTEN_OFF is rare, and the date range is short.":
-    "WRITTEN_OFF hiếm, và khoảng ngày thì ngắn.",
-  "(status, changed_at): the = column first, then the range.":
-    "(status, changed_at): cột so bằng trước, rồi tới khoảng.",
-  "Equality before range, again: (status, changed_at) keeps this week's write-offs side by side. (changed_at, status) walks every ledger change since Tuesday and checks the status of each in the leaf pages: a few pages more.":
-    "Lại là so bằng trước khoảng: (status, changed_at) giữ các khoản xóa nợ tuần này nằm cạnh nhau. (changed_at, status) phải đi qua mọi thay đổi sổ cái từ thứ Ba và kiểm tra status của từng dòng trong các trang lá: thêm vài trang.",
   "Written off":
     "Xóa nợ",
   "Kitamura Credit wrote off two debts this week with no payment. Yuji Kaneda's ¥2,100,000 at 23:31 on Wednesday, twenty minutes after the prepaid phone first called him. Daisuke Kuroda's ¥8,400,000 at 00:31 on Friday, thirty-nine minutes after K.ARAI was switched on.":
@@ -2466,6 +2423,130 @@ const VI = {
     "Mười sự kiện trên trạm Kinjo-futo từ 16:00 tới 17:00. Một trong số đó là SIM đứng sau K.ARAI, bắt sóng lúc 16:05.",
   "The oldest day, 4 November, is gone.":
     "Ngày cũ nhất, 4/11, đã bị xóa.",
+
+  /* ---------- harder missions (cases 2-4) ---------- */
+  "Endo's spare badge lives in the key cabinet of the warehouse 7 office, and the cabinet logs every opening. You only need who opened it and when. The cabinet's own report writes the time window as text.":
+    "Thẻ dự phòng của Endo nằm trong tủ chìa khóa ở văn phòng kho 7, và tủ ghi lại mỗi lần mở. Bạn chỉ cần biết ai mở và lúc nào. Báo cáo của chính cái tủ ghi khoảng thời gian dưới dạng chữ.",
+  "The time window is compared as text. Can any index see opened_at in that query?":
+    "Khoảng thời gian được so như chữ. Trong query đó, có index nào nhìn thấy opened_at không?",
+  "Compare opened_at itself (B), then index (cabinet, opened_at, badge_no).":
+    "So sánh chính opened_at (B), rồi index (cabinet, opened_at, badge_no).",
+  "TO_CHAR turns every opened_at into text before comparing, so no index on opened_at can search it, and the index-only scan is lost too: the database must read each row to build the text. Compare opened_at as stored, and (cabinet, opened_at, badge_no) answers from the index alone.":
+    "TO_CHAR biến mọi opened_at thành chữ trước khi so, nên không index nào trên opened_at tìm được, và cũng mất luôn index-only scan: database phải đọc từng dòng để dựng chuỗi chữ. So sánh opened_at như được lưu, thì (cabinet, opened_at, badge_no) trả lời chỉ từ index.",
+  "As text, '17:00' comes after '06:00', so this BETWEEN matches nothing at all.":
+    "Theo kiểu chữ, '17:00' đứng sau '06:00', nên BETWEEN này không khớp dòng nào.",
+  "The door log has a history table that keeps every change made to it. Find what SYS_MAINT changed on 28 November. The security desk also runs Q2 on this table all day, for every account. One index.":
+    "Nhật ký cửa có một bảng lịch sử giữ mọi thay đổi trên nó. Tìm xem SYS_MAINT đã đổi gì ngày 28/11. Bàn bảo vệ cũng chạy Q2 trên bảng này suốt ngày, cho mọi tài khoản. Một index.",
+  "Q2 asks for a time window on changed_at itself. Which index serves both queries?":
+    "Q2 hỏi một khoảng thời gian trên chính changed_at. Index nào phục vụ được cả hai query?",
+  "Write Q1's day as a range on changed_at (B) and index (changed_by, changed_at).":
+    "Viết ngày của Q1 thành một khoảng trên changed_at (B) và index (changed_by, changed_at).",
+  "An index on TRUNC(changed_at) serves only queries written with TRUNC, so Q2 would read the account's whole history 2,000 times a day. Rewrite Q1's day as a range on changed_at, and one plain index, (changed_by, changed_at), answers both the day and the last hour.":
+    "Index trên TRUNC(changed_at) chỉ phục vụ query viết bằng TRUNC, nên Q2 sẽ phải đọc toàn bộ lịch sử của tài khoản 2.000 lần mỗi ngày. Viết lại ngày của Q1 thành khoảng trên changed_at, và một index thường, (changed_by, changed_at), trả lời được cả ngày đó lẫn giờ vừa qua.",
+  "Desk monitor: one account, last hour":
+    "Màn hình theo dõi: một tài khoản, giờ vừa qua",
+  "The desk checks every account like this, all day.":
+    "Bàn bảo vệ kiểm tra mọi tài khoản như thế này, suốt ngày.",
+  "The city's new crossing cameras went live on Wednesday. They already hold 2 million reads and add 2 million a day. Pull the Fushimi camera from 08:05 to 08:20. The camera vendor's report adds 0 to passed_at, an old habit from its last database. Your index is scored on today's table and on the table a year from now.":
+    "Camera ngã tư mới của thành phố chạy từ thứ Tư. Chúng đã có 2 triệu lượt ghi và thêm 2 triệu mỗi ngày. Lấy camera Fushimi từ 08:05 tới 08:20. Báo cáo của hãng camera cộng 0 vào passed_at, thói quen từ database cũ của họ. Index của bạn được chấm trên bảng hôm nay và trên bảng một năm sau.",
+  "passed_at + 0 is an expression, not the column. And a year from now each camera has 365 times more reads.":
+    "passed_at + 0 là một biểu thức, không phải cột. Và một năm sau mỗi camera có gấp 365 lần lượt ghi.",
+  "Compare passed_at as stored (B), then index (camera, passed_at).":
+    "So sánh passed_at như được lưu (B), rồi index (camera, passed_at).",
+  "Adding 0 looks harmless, but it turns passed_at into an expression the index doesn't hold: an old trick for switching an index off. Then only camera can be searched, and that reads every read the camera has ever made, more each day. Compare the column itself and (camera, passed_at) goes straight to the fifteen minutes, at the same cost a year from now.":
+    "Cộng 0 trông vô hại, nhưng nó biến passed_at thành một biểu thức mà index không chứa: một mẹo cũ để tắt index. Khi đó chỉ còn camera là tìm được, và nó đọc mọi lượt ghi camera từng có, mỗi ngày một nhiều hơn. So sánh chính cột đó thì (camera, passed_at) đi thẳng tới mười lăm phút, với cùng chi phí một năm sau.",
+  "This returns the camera's whole Thursday, not the fifteen minutes.":
+    "Lệnh này trả về cả ngày thứ Năm của camera, không phải mười lăm phút.",
+  "Every company van logs who took it out each day. Q1, from the depot's app, asks who had this van on Thursday; the app strips the spaces from plates before comparing. Q2 lists the van's last ten shifts. One index for both.":
+    "Mỗi xe van của công ty ghi lại ai lấy xe mỗi ngày. Q1, từ ứng dụng của kho, hỏi ai giữ chiếc van này ngày thứ Năm; ứng dụng xóa khoảng trắng trong biển số trước khi so. Q2 liệt kê mười ca gần nhất của xe. Một index cho cả hai.",
+  "Q2 compares plate itself. Does Q1 really need to strip the spaces?":
+    "Q2 so sánh chính plate. Q1 có thật sự cần xóa khoảng trắng không?",
+  "Compare plate as stored (B), then index (plate, shift_date) for both queries.":
+    "So sánh plate như được lưu (B), rồi index (plate, shift_date) cho cả hai query.",
+  "An index on REPLACE(plate, ' ', '') serves Q1 as written, but Q2 compares plate itself and can't use it. Write Q1 against the stored value, and one index, (plate, shift_date), finds Thursday directly and hands Q2 the van's shifts newest first.":
+    "Index trên REPLACE(plate, ' ', '') phục vụ Q1 như được viết, nhưng Q2 so sánh chính plate nên không dùng được. Viết Q1 theo giá trị được lưu, và một index, (plate, shift_date), tìm thẳng ngày thứ Năm và đưa cho Q2 các ca của xe, mới nhất trước.",
+  "plate is stored with its spaces, 'NGY 400 HA 18-07'. Without them it matches nothing.":
+    "plate được lưu kèm khoảng trắng, 'NGY 400 HA 18-07'. Bỏ khoảng trắng thì không khớp dòng nào.",
+  "The phone company keeps 30 days and adds 2 million events a day. Its fraud team searches by phone number 5,000 times a day. Searches by cell tower, like your Q2, come in about twice a day. Two indexes at most. Score = pages read per day + index upkeep per day.":
+    "Nhà mạng giữ 30 ngày và thêm 2 triệu sự kiện mỗi ngày. Đội chống gian lận tìm theo số điện thoại 5.000 lần mỗi ngày. Tìm theo trạm phát sóng, như Q2 của bạn, chỉ khoảng hai lần mỗi ngày. Tối đa hai index. Điểm = số trang đọc mỗi ngày + bảo trì index mỗi ngày.",
+  "Each index costs 3 page writes for every new event: 6 million pages a day. What does Q2 cost with no index at all?":
+    "Mỗi index tốn 3 trang ghi cho mỗi sự kiện mới: 6 triệu trang mỗi ngày. Không có index thì Q2 tốn bao nhiêu?",
+  "Index (phone, event_time) for Q1 and leave Q2 to a full scan.":
+    "Index (phone, event_time) cho Q1 và để Q2 quét toàn bảng.",
+  "Two searches, but only one earns an index. (phone, event_time) pays for itself many times over at 5,000 searches a day. An index for Q2 would cost 6 million page writes a day to save two full scans of 1.2 million pages: for Q2, no index is faster than an index.":
+    "Hai kiểu tìm, nhưng chỉ một đáng có index. (phone, event_time) bù lại chi phí của nó gấp nhiều lần với 5.000 lần tìm mỗi ngày. Một index cho Q2 tốn 6 triệu trang ghi mỗi ngày để tiết kiệm hai lần quét toàn bảng 1,2 triệu trang: với Q2, không có index còn nhanh hơn có index.",
+  "Who was talking to Kaneda? List the last ten calls to his phone, newest first. The phone company's search box matches the end of a number.":
+    "Ai đã nói chuyện với Kaneda? Liệt kê mười cuộc gọi gần nhất tới máy của hắn, mới nhất trước. Ô tìm kiếm của nhà mạng so khớp phần cuối của số.",
+  "A pattern that starts with % gives the index nothing to search. Do you know the whole number?":
+    "Một mẫu bắt đầu bằng % không cho index chỗ nào để tìm. Bạn có biết trọn số không?",
+  "Compare the full number (B), then index (callee, call_time).":
+    "So sánh nguyên số (B), rồi index (callee, call_time).",
+  "The search box puts % in front of the number, and a pattern that starts with a wildcard can't be searched in an index. You have Kaneda's full number, so compare it whole. ORDER BY ... DESC doesn't need a descending index either: the database reads (callee, call_time) backwards, newest call first, and stops after ten.":
+    "Ô tìm kiếm đặt % trước số điện thoại, và một mẫu bắt đầu bằng ký tự đại diện thì không tìm được trong index. Bạn có trọn số của Kaneda, nên hãy so nguyên số. ORDER BY ... DESC cũng không cần index giảm dần: database đọc ngược (callee, call_time), cuộc gọi mới nhất trước, và dừng sau mười.",
+  "This matches every number that starts 090-2875, a thousand of them.":
+    "Lệnh này khớp mọi số bắt đầu bằng 090-2875, cả nghìn số.",
+  "SYS_MAINT is a maintenance account several people can use. Count its sessions since 1 November by the console they came from. The audit tool picks the months with EXTRACT.":
+    "SYS_MAINT là tài khoản bảo trì mà nhiều người có thể dùng. Đếm số phiên của nó từ 1/11 theo console mà phiên đó đến từ. Công cụ kiểm toán chọn tháng bằng EXTRACT.",
+  "EXTRACT is computed from every row. The index can't search login_at through it, and the table must be read to compute it.":
+    "EXTRACT được tính từ mọi dòng. Index không tìm login_at qua nó được, và phải đọc bảng để tính.",
+  "Write the months as a range on login_at (B), then index (account, login_at, console).":
+    "Viết các tháng thành một khoảng trên login_at (B), rồi index (account, login_at, console).",
+  "EXTRACT hides login_at from the index and forces a table read for every SYS_MAINT session. Written as a range on login_at, the query is answered from the index alone with (account, login_at, console): the range before the grouping column, or the database reads the account's whole history. And ORDER BY COUNT(*) can never stop early, because the counts exist only after every group has been read.":
+    "EXTRACT che login_at khỏi index và buộc phải đọc bảng cho mọi phiên của SYS_MAINT. Viết thành một khoảng trên login_at, query được trả lời chỉ từ index với (account, login_at, console): khoảng đứng trước cột gom nhóm, không thì database phải đọc cả lịch sử của tài khoản. Và ORDER BY COUNT(*) không bao giờ dừng sớm được, vì số đếm chỉ có sau khi đọc hết mọi nhóm.",
+  "Without the year this also counts November and December of every earlier year.":
+    "Không có năm thì lệnh này đếm cả tháng 11 và 12 của mọi năm trước.",
+  "The data center's duty roster goes back nine years and grows every night. Who worked console NC-02 between 1 November and 3 December, and how many nights each? The roster report moves every date forward a month before comparing.":
+    "Lịch trực của trung tâm dữ liệu kéo dài chín năm và dài thêm mỗi đêm. Ai đã trực console NC-02 từ 1/11 tới 3/12, và mỗi người bao nhiêu đêm? Báo cáo lịch trực dời mọi ngày lên một tháng trước khi so.",
+  "ADD_MONTHS is applied to shift_date in every row. Can the arithmetic move to the dates you compare with?":
+    "ADD_MONTHS được áp vào shift_date ở mọi dòng. Phép tính có chuyển sang phía các ngày đem so được không?",
+  "Take the month off the constants (B), then index (console, shift_date, staff_id).":
+    "Trừ một tháng ở các hằng số (B), rồi index (console, shift_date, staff_id).",
+  "Arithmetic belongs on the constant side. ADD_MONTHS(shift_date, 1) hides shift_date from the index; shift_date between 1 November and 3 December asks the same thing. Then the = column first, the range second, the grouping column last: one console's five weeks from the index alone, at the same cost as the roster grows.":
+    "Phép tính nên nằm ở phía hằng số. ADD_MONTHS(shift_date, 1) che shift_date khỏi index; shift_date từ 1/11 tới 3/12 hỏi đúng điều đó. Rồi cột so bằng trước, khoảng thứ hai, cột gom nhóm cuối cùng: năm tuần của một console chỉ từ index, với cùng chi phí khi lịch trực dài thêm.",
+  "The month went the wrong way: this asks for December, not November.":
+    "Tháng bị dời sai chiều: lệnh này hỏi tháng 12, không phải tháng 11.",
+  "Whose account is K.ARAI, and what has happened to it lately? The audit table keeps every change to every account. Show its last five events, newest first. The audit screen upper-cases whatever you type.":
+    "K.ARAI là tài khoản của ai, và gần đây nó đã gặp chuyện gì? Bảng kiểm toán giữ mọi thay đổi của mọi tài khoản. Hiện năm sự kiện gần nhất, mới nhất trước. Màn hình kiểm toán viết hoa mọi thứ bạn gõ.",
+  "UPPER(user_id) is not user_id. How are the ids stored?":
+    "UPPER(user_id) không phải user_id. Các id được lưu thế nào?",
+  "Ids are stored in capitals: compare user_id = 'K.ARAI' (B), then index (user_id, at).":
+    "Id được lưu bằng chữ hoa: so user_id = 'K.ARAI' (B), rồi index (user_id, at).",
+  "UPPER(user_id) hides the column from an index on user_id, and here it does nothing useful: ids are stored in capitals. Compare the column as stored, and (user_id, at) reads K.ARAI's newest five entries backwards and stops.":
+    "UPPER(user_id) che cột khỏi index trên user_id, mà ở đây nó chẳng làm gì có ích: id được lưu bằng chữ hoa. So sánh cột như được lưu, và (user_id, at) đọc ngược năm mục mới nhất của K.ARAI rồi dừng.",
+  "User ids are stored in capitals. 'k.arai' matches nothing.":
+    "Id người dùng được lưu bằng chữ hoa. 'k.arai' không khớp dòng nào.",
+  "HD-03 is the helpdesk console. List its sessions since Thursday: who signed in, when, when the session ended, and how often the screen locked. console_sessions lives on the building's access server, out of the delete job's reach. Its report cuts every login down to the day first.":
+    "HD-03 là console của helpdesk. Liệt kê các phiên của nó từ thứ Năm: ai đăng nhập, lúc nào, phiên kết thúc lúc nào, và màn hình đã khóa mấy lần. console_sessions nằm trên máy chủ kiểm soát ra vào của tòa nhà, ngoài tầm với của tác vụ xóa. Báo cáo của nó cắt mọi lần đăng nhập về ngày trước.",
+  "TRUNC(login_at) is computed for every row. Does 'since Thursday' need it?":
+    "TRUNC(login_at) được tính cho mọi dòng. 'Từ thứ Năm' có cần nó không?",
+  "login_at >= Thursday keeps the same rows (B). Index (console, login_at).":
+    "login_at >= thứ Năm giữ đúng những dòng đó (B). Index (console, login_at).",
+  "For 'from a day on', TRUNC adds nothing: login_at >= DATE '2026-12-03' keeps exactly the same rows and leaves login_at visible to the index. Then the = column first, the range second: HD-03's sessions since Thursday sit next to each other in (console, login_at).":
+    "Với 'từ một ngày trở đi', TRUNC không thêm gì: login_at >= DATE '2026-12-03' giữ đúng những dòng đó và để login_at lộ ra cho index. Rồi cột so bằng trước, khoảng thứ hai: các phiên của HD-03 từ thứ Năm nằm cạnh nhau trong (console, login_at).",
+  "This stops at midnight on Thursday and loses Friday's session.":
+    "Lệnh này dừng ở nửa đêm thứ Năm và mất phiên của ngày thứ Sáu.",
+  "Nomura's history trigger copied every change to door_events into door_events_history. The delete job wiped that table at 02:30, but the 02:00 backup kept it: BK-01 was being patched that night, and the patch finished at 01:41, in time for the backup to run. What did K.ARAI change between 01:00 and 01:30? changed_by is a fixed-width CHAR column, so the restore script trims it. Two indexes.":
+    "Trigger lịch sử của Nomura đã chép mọi thay đổi của door_events vào door_events_history. Tác vụ xóa đã xóa sạch bảng đó lúc 02:30, nhưng bản sao lưu 02:00 vẫn giữ nó: đêm đó BK-01 đang được vá, và bản vá xong lúc 01:41, kịp cho tác vụ sao lưu chạy. K.ARAI đã đổi gì từ 01:00 tới 01:30? changed_by là cột CHAR độ dài cố định, nên script khôi phục cắt bỏ khoảng trắng. Hai index.",
+  "A CHAR column already compares equal to the text without its padding. And two one-column indexes are not one two-column index.":
+    "Một cột CHAR vốn đã bằng chuỗi không có khoảng trắng đệm. Và hai index một cột không phải là một index hai cột.",
+  "changed_by = 'K.ARAI' (B), then index (changed_by, changed_at).":
+    "changed_by = 'K.ARAI' (B), rồi index (changed_by, changed_at).",
+  "TRIM(changed_by) hides the column, and a CHAR column already equals 'K.ARAI' without the padding, so drop it. Then, with two indexes allowed, (changed_by) and (changed_at) side by side help no more than the better of the two. Some databases can combine two indexes, but they still read both ranges in full before matching them up. One index on (changed_by, changed_at) goes straight to K.ARAI's half hour.":
+    "TRIM(changed_by) che cột đi, mà một cột CHAR vốn đã bằng 'K.ARAI' khi không có khoảng trắng đệm, nên bỏ nó đi. Rồi, khi được hai index, (changed_by) và (changed_at) đặt cạnh nhau cũng chỉ giúp được bằng cái tốt hơn trong hai. Vài hệ quản trị gộp được hai index, nhưng vẫn phải đọc trọn cả hai khoảng rồi mới ghép lại. Một index (changed_by, changed_at) đi thẳng tới nửa giờ của K.ARAI.",
+  "'K.ARAI%' also matches K.ARAIKAWA, a clerk on the day shift.":
+    "'K.ARAI%' còn khớp cả K.ARAIKAWA, một nhân viên văn phòng ca ngày.",
+  "Kaneda's phone led police to his lender, Kitamura Credit. They searched its office at 09:00 and brought you the server. Which debts did they write off this week, with no payment at all? Q2 lists one collector's loans; you will run it for each of the three collectors questioned today. One of them is head office, HQ, which booked 40% of all loans. Two indexes at most.":
+    "Điện thoại của Kaneda dẫn cảnh sát tới chỗ cho hắn vay tiền, Kitamura Credit. Họ khám văn phòng lúc 09:00 và mang máy chủ về cho bạn. Tuần này họ đã xóa những khoản nợ nào mà không nhận một đồng trả nợ? Q2 liệt kê các khoản vay của một người thu nợ; bạn sẽ chạy nó cho từng người trong ba người thu nợ được hỏi cung hôm nay. Một trong số đó là trụ sở, HQ, nơi ghi 40% tổng số khoản vay. Tối đa hai index.",
+  "Q2 runs with a different collector each time, but the database picks one plan for all of them. What does that plan cost when the collector is HQ?":
+    "Mỗi lần Q2 chạy với một người thu nợ khác, nhưng database chọn một kế hoạch cho tất cả. Kế hoạch đó tốn bao nhiêu khi người thu nợ là HQ?",
+  "(status, changed_at) for Q1, and no index for Q2: a full scan costs the same for every collector.":
+    "(status, changed_at) cho Q1, và không index cho Q2: quét toàn bảng tốn như nhau với mọi người thu nợ.",
+  "With a bind parameter the database picks one plan for every value. An index on agent is quick for a small collector and terrible for HQ, whose 120,000 loans it would fetch one table read at a time: on average slower than reading the whole table. Q1 still wants (status, changed_at), equality before range. Q2 is better off with no index at all.":
+    "Với bind parameter, database chọn một kế hoạch cho mọi giá trị. Index trên agent nhanh với người thu nợ nhỏ nhưng tệ hại với HQ, vì nó lấy 120.000 khoản vay của HQ mỗi khoản một lần đọc bảng: tính trung bình còn chậm hơn đọc cả bảng. Q1 vẫn cần (status, changed_at), so bằng trước khoảng. Q2 tốt hơn khi không có index nào.",
+  "One collector's loans":
+    "Các khoản vay của một người thu nợ",
+  "One collector's loan book. HQ's holds 120,000.":
+    "Sổ cho vay của một người thu nợ. Sổ của HQ có 120.000 khoản.",
 };
 </script>
 <script>
@@ -2652,7 +2733,16 @@ function plan(lv, ixs, v){
   const usable = tries.filter(t => !t.bad).sort((a,b) => a.cost - b.cost);
   if (!usable.length) return {...full, why:"lead", lead:tries[0].lead, many: real.length > 1};
   if (usable[0].cost >= T) return {...full, why:"ignored", ix:usable[0]};
-  return usable[0];
+  return withHot(lv, usable[0], v);
+}
+// A bind parameter on a skewed column (p.hot = {val, sel, share}): the plan is chosen once, for a typical value,
+// and the share of runs that bind the common value pay for it. Cost = the average over all runs.
+function withHot(lv, p, v){
+  const hp = v.where.find(w => w.hot);
+  if (!hp) return p;
+  const h = planIndex(lv, p.idx, {...v, where: v.where.map(w => w === hp ? {...w, sel: hp.hot.sel} : w)});
+  return {...p, typCost: p.cost, cost: Math.round((1 - hp.hot.share) * p.cost + hp.hot.share * h.cost),
+    hot: {...hp.hot, col: hp.col, cost: h.cost, rows: h.out}};
 }
 
 // The same mission after the table has grown (lv.growth.factor times the rows). Columns in lv.grows (times, ids)
@@ -2787,7 +2877,9 @@ function writeNote(lv, p, v){
 }
 function explain(lv, p, v){
   const note = writeNote(lv, p, v), base = explainRead(lv, p, v);
-  return note ? base + " " + note : base;
+  const hot = p.hot ? t("The plan is chosen once, for a typical {col}. In {pct}% of runs {col} is {val}, and the same plan reads {rows} rows: {hc} pages. Averaged over every run: {avg} pages.",
+    {col:p.hot.col, pct:Math.round(p.hot.share * 100), val:p.hot.val, rows:fmt(p.hot.rows), hc:fmt(p.hot.cost), avg:fmt(p.cost)}) : "";
+  return [base, hot, note].filter(Boolean).join(" ");
 }
 function explainRead(lv, p, v){
   const T = fmt(p.T);
@@ -3244,7 +3336,7 @@ function renderReport(){
     `<dl class="score">` +
       (upkeep ? `<dt>${perDay ? t("Pages read per day") : t("Pages read")}</dt><dd>${fmt(r.reads)}</dd><dt>${t("Index upkeep per day")}</dt><dd>${fmt(r.writes)}</dd>` : "") +
       (r.later ? `<dt>${t("Pages read today")}</dt><dd>${fmt(r.reads)}</dd><dt>${esc(cap(t(lv.growth.label)))}</dt><dd>${fmt(r.later.reads)}</dd>` : "") +
-      `<dt>${upkeep ? t("Total per day") : r.later ? t("Total") : t("Pages read")}</dt><dd>${fmt(r.total)}</dd>` +
+      `<dt>${upkeep ? t("Total per day") : r.later ? t("Total") : perDay ? t("Pages read per day") : t("Pages read")}</dt><dd>${fmt(r.total)}</dd>` +
       `<dt>${t("Best possible")}</dt><dd>${r.stars===3 ? fmt(r.best) : "?"}</dd><dt>${t("Without an index")}</dt><dd>${fmt(r.none)}</dd>` +
       `</dl>` +
     (r.sus == null || CASES[state.caseIx].practice ? ""
